@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
 
 t_config* iniciar_config_io(void)
 {
-	t_config* nuevo_config = config_create("config/default.config");
+	t_config* nuevo_config = config_create("/home/utnso/so1C2024/tp-2024-1c-Aprobamos-O-Aprobamos/entradasalida/config/default.config");
 
 	if (nuevo_config == NULL)
 	{
