@@ -5,7 +5,7 @@
 #include "main.h"
 
 int main(int argc, char* argv[]) {
-    decir_hola("una Interfaz de Entrada/Salida");
+    decir_hola("una Interfaz de Entrada/Salida\n");
 
     int conexion_file_descriptor = 1;
     char* ip;
@@ -14,14 +14,32 @@ int main(int argc, char* argv[]) {
 
     t_config* config;
 
+    printf("POR INICIAR CONFIGURACIÓN\n"); // para debug
+	
     config = iniciar_config_io();
 
+    printf("CONFIGURACIÓN INICIADA\n");  // para debug
+	
+    printf("POR OBTENER DATOS DE CONFIG\n");  // para debug
+	
 	ip = config_get_string_value(config, "IP_KERNEL");
 	puerto = config_get_string_value(config, "PUERTO_KERNEL");
 
+    printf("DATOS DE CONFIG OBTENIDOS\n");  // para debug
+
+    printf("POR CREAR CONEXION\n");  // para debug
+
     conexion_file_descriptor = crear_conexion(ip, puerto);
 
-    enviar_mensaje("Hola Kernel, como va.", conexion_file_descriptor);
+    printf("CONEXION ESTABLECIDA\n");  // para debug
+
+    printf("POR ENVIAR MENSAJE\n");  // para debug
+
+    enviar_mensaje("Hola Kernel, como va. Soy IO.", conexion_file_descriptor);
+
+    printf("MENSAJE ENVIADO\n");  // para debug
+
+    printf("TERMINANDO PROGRAMA\n");  // para debug
 
     terminar_programa(conexion_file_descriptor, config);
 
