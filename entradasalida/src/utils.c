@@ -45,22 +45,56 @@ int crear_conexion(char *ip, char* puerto)
 
     void enviar_mensaje(char* mensaje, int socket_emisor)
 {
+	printf("por asignar memoria a paquete\n"); // para debug
+	
 	t_paquete* paquete = malloc(sizeof(t_paquete));
+
+	printf("memoria a paquete asignada\n"); // para debug
+
+	printf("por cargar cod. op y por asignar memoria a buffer\n"); // para debug
 
 	paquete->codigo_operacion = MENSAJE;
 	paquete->buffer = malloc(sizeof(t_buffer));
+
+	printf("cod cargado y memoria asignada\n"); // para debug
+
+	printf("por cargar size del stream y por asignar memoria a stream\n"); // para debug
+	
 	paquete->buffer->size = strlen(mensaje) + 1;
 	paquete->buffer->stream = malloc(paquete->buffer->size);
+
+        printf("size cargado y memoria asignada\n"); // para debug
+
+	printf("por copiar mensaje a stream\n"); // para debug
+	
 	memcpy(paquete->buffer->stream, mensaje, paquete->buffer->size);
+
+	printf("mensaje copiado\n"); // para debug
+
+	printf("por calcular bytes de paquete\n"); // para debug
 
 	int bytes = paquete->buffer->size + 2*sizeof(int);
 
+	printf("bytes calculados\n"); // para debug
+
+	printf("por serializar\n"); // para debug
+
 	void* a_enviar = serializar_paquete(paquete, bytes);
+
+	printf("serializado\n"); // para debug
+
+	printf("por enviar\n"); // para debug
 
 	send(socket_emisor, a_enviar, bytes, 0);
 
+	printf("enviado\n"); // para debug
+
+	printf("por liberar memoria\n"); // para debug
+
 	free(a_enviar);
 	eliminar_paquete(paquete);
+
+	printf("memoria liberada\n"); // para debug
 }
 
 void crear_buffer(t_paquete* paquete)
