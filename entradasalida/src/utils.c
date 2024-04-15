@@ -41,6 +41,16 @@ int crear_conexion(char *ip, char* puerto)
 		printf("error en funcion socket()\n");
 		exit(3);
 	}
+
+	// Ahora que tenemos el socket, vamos a conectarlo
+	err = connect(socket_conexion_destino_file_descriptor, destino_info->ai_addr, destino_info->ai_addrlen);
+	if(err != 0)
+	{
+		printf("error en funcion connect()\n");
+		exit(3);
+	}
+
+	freeaddrinfo(destino_info);	
 }
 
     void enviar_mensaje(char* mensaje, int socket_emisor)
