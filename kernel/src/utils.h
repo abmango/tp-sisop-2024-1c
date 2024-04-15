@@ -19,7 +19,7 @@ typedef enum
 	PAQUETE
 }op_code;
 
-extern t_log* logger = log_create("log_del_kernel", "Kernel", 1, LOG_LEVEL_DEBUG);
+extern t_log* logger;
 
 void* recibir_buffer(int*, int);
 
