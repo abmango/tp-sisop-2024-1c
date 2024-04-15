@@ -2,8 +2,6 @@
 
 int iniciar_servidor(void)
 {	
-	logger = log_create("log_del_kernel", "Kernel", 1, LOG_LEVEL_DEBUG);
-	
 	struct addrinfo hints;
 	struct addrinfo *servinfo;
 	// struct addrinfo *p;
@@ -90,7 +88,7 @@ void* recibir_buffer(int* size, int socket_cliente)
 	return buffer;
 }
 
-void recibir_mensaje(int socket_cliente)
+void recibir_mensaje(t_log* logger, int socket_cliente)
 {
 	int size;
 	char* buffer = recibir_buffer(&size, socket_cliente);
