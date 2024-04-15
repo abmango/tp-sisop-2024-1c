@@ -1,7 +1,9 @@
 #include "utils.h"
 
 int iniciar_servidor(void)
-{
+{	
+	logger = log_create("log_del_kernel", "Kernel", 1, LOG_LEVEL_DEBUG);
+	
 	struct addrinfo hints;
 	struct addrinfo *servinfo;
 	// struct addrinfo *p;
