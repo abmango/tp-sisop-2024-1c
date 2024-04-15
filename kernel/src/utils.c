@@ -92,7 +92,8 @@ void recibir_mensaje(int socket_cliente)
 {
 	int size;
 	char* buffer = recibir_buffer(&size, socket_cliente);
-	decir_hola("Me llego el mensaje %s", buffer);
+	decir_hola("Me llego el mensaje: ");
+	decir_hola(buffer);
 	free(buffer);
 }
 
