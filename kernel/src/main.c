@@ -5,8 +5,6 @@
 #include "main.h"
 
 int main(int argc, char* argv[]) {
-
-    t_log* logger = log_create("log_del_kernel", "Kernel", 1, LOG_LEVEL_DEBUG);
 	
     decir_hola("Kernel");
 
@@ -19,7 +17,7 @@ int main(int argc, char* argv[]) {
 		int cod_op = recibir_operacion(socket_io_file_descriptor);
 		switch (cod_op) {
 		case MENSAJE:
-			recibir_mensaje(logger, socket_io_file_descriptor);
+			recibir_mensaje(socket_io_file_descriptor);
 			break;
 		case PAQUETE:
 			lista = recibir_paquete(socket_io_file_descriptor);

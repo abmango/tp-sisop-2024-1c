@@ -11,7 +11,7 @@
 #include<string.h>
 #include<assert.h>
 
-#define PUERTO "8444"
+#define PUERTO "47297"
 
 typedef enum
 {
@@ -24,9 +24,11 @@ typedef enum
 void* recibir_buffer(int*, int);
 
 int iniciar_servidor(void);
+void imprimir_mensaje(char* mensaje);
+void imprimir_entero(int num);
 int esperar_cliente(int);
 t_list* recibir_paquete(int);
-void recibir_mensaje(t_log*, int);
+void recibir_mensaje(int);
 int recibir_operacion(int);
 
 #endif /* UTILS_H_ */

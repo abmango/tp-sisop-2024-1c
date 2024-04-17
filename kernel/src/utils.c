@@ -45,10 +45,30 @@ int iniciar_servidor(void)
 	}
 
 	freeaddrinfo(servinfo);
-	printf("Listo para escuchar a mi cliente");
+	decir_hola("Listo para escuchar a mi cliente");
 
 	return socket_servidor_fd;
 }
+
+
+///////////////////////////////////////////////////////////////
+// Estas dos funciones las agregué para tener formas
+// más faciles de imprimir. Además de que cuando invocamos
+// el printf() directamente, a veces el texto no aparece en
+// consola al momento. En cambio asi metido dentro de otra
+// función si aparece.
+///////////////////////////////////////////////////////////////
+void imprimir_mensaje(char* mensaje)
+{
+	printf("%s\n", mensaje);
+}
+
+void imprimir_entero(int num)
+{
+	printf("%d\n", num);
+}
+///////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////
 
 int esperar_cliente(int socket_servidor_fd)
 {
@@ -56,11 +76,11 @@ int esperar_cliente(int socket_servidor_fd)
 	int socket_cliente_fd = accept(socket_servidor_fd, NULL, NULL);
 	if(socket_cliente_fd == -1)
 	{
-		printf("error en funcion accept()\n");
+		imprimir_mensaje("error en funcion accept()");
 		exit(3);
 	}
 
-	printf("Se conecto un cliente!");
+	imprimir_mensaje("Se conecto un cliente!");
 
 	return socket_cliente_fd;
 }
@@ -88,11 +108,12 @@ void* recibir_buffer(int* size, int socket_cliente)
 	return buffer;
 }
 
-void recibir_mensaje(t_log* logger, int socket_cliente)
+void recibir_mensaje(int socket_cliente)
 {
 	int size;
 	char* buffer = recibir_buffer(&size, socket_cliente);
-	log_info(logger, "Me llego el mensaje %s", buffer);
+	imprimir_mensaje("Me llego el mensaje:");
+	imprimir_mensaje(buffer);
 	free(buffer);
 }
 
