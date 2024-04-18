@@ -8,10 +8,17 @@
 #include<netdb.h>
 #include<commons/log.h>
 #include<commons/collections/list.h>
+#include<commons/config.h>
 #include<string.h>
 #include<assert.h>
 
-#define PUERTO "47297"
+#define PUERTO "51689"
+// Ahora el puerto escucha esta definido en la config
+
+
+//t_config* config = iniciar_config();
+
+//char* puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
 
 typedef enum
 {

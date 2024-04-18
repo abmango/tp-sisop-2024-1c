@@ -12,6 +12,6 @@
 
 t_config* iniciar_config_io(void);
 void paquete(int);
-void terminar_programa(int, t_config*);
+void terminar_programa(int, int, t_config*);
 
 #endif /* CLIENT_H_ */

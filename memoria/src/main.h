@@ -10,4 +10,6 @@
 
 void iterator(char* value);
 
+t_config* iniciar_config(void);
+
 #endif /* SERVER_H_ */

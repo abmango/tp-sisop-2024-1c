@@ -19,17 +19,17 @@ int iniciar_servidor(void)
 	}
 
 	// Creamos el socket de escucha del servidor
-	int socket_servidor_fd = socket(servinfo->ai_family,
+	int socket_servidor_mm = socket(servinfo->ai_family,
 									 servinfo->ai_socktype,
 									 servinfo->ai_protocol);
-	if(socket_servidor_fd == -1)
+	if(socket_servidor_mm == -1)
 	{
 		printf("error en funcion socket()\n");
 		exit(3);
 	}
 
 	// Asociamos el socket a un puerto
-	err = bind(socket_servidor_fd, servinfo->ai_addr, servinfo->ai_addrlen);
+	err = bind(socket_servidor_mm, servinfo->ai_addr, servinfo->ai_addrlen);
 	if(err != 0)
 	{
 		printf("error en funcion bind()\n");
@@ -37,7 +37,7 @@ int iniciar_servidor(void)
 	}
 
 	// Escuchamos las conexiones entrantes
-	err = listen(socket_servidor_fd, SOMAXCONN);
+	err = listen(socket_servidor_mm, SOMAXCONN);
 	if(err != 0)
 	{
 		printf("error en funcion listen()\n");
@@ -47,7 +47,7 @@ int iniciar_servidor(void)
 	freeaddrinfo(servinfo);
 	decir_hola("Listo para escuchar a mi cliente");
 
-	return socket_servidor_fd;
+	return socket_servidor_mm;
 }
 
 
@@ -70,11 +70,11 @@ void imprimir_entero(int num)
 ///////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
 
-int esperar_cliente(int socket_servidor_fd)
+int esperar_cliente(int socket_servidor_mm)
 {
 	// Aceptamos un nuevo cliente
-	int socket_cliente_fd = accept(socket_servidor_fd, NULL, NULL);
-	if(socket_cliente_fd == -1)
+	int socket_cliente_mm = accept(socket_servidor_mm, NULL, NULL);
+	if(socket_cliente_mm == -1)
 	{
 		imprimir_mensaje("error en funcion accept()");
 		exit(3);
@@ -82,7 +82,7 @@ int esperar_cliente(int socket_servidor_fd)
 
 	imprimir_mensaje("Se conecto un cliente!");
 
-	return socket_cliente_fd;
+	return socket_cliente_mm;
 }
 
 int recibir_operacion(int socket_cliente)
