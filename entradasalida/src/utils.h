@@ -1,16 +1,16 @@
 #ifndef UTILS_IO_H_
 #define UTILS_IO_H_
 
-#include<stdio.h>
-#include<stdlib.h>
-#include<signal.h>
-#include<unistd.h>
-#include<sys/types.h>
-#include<sys/socket.h>
-#include<netdb.h>
-#include<string.h>
-#include<commons/log.h>
-
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <string.h>
+#include <utils/general.h>
+#include <commons/log.h>
 
 typedef enum
 {
@@ -39,7 +39,5 @@ void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
 void enviar_paquete(t_paquete* paquete, int socket_cliente);
 void liberar_conexion(int socket_cliente);
 void eliminar_paquete(t_paquete* paquete);
-void imprimir_mensaje(char* mensaje);
-void imprimir_entero(int num);
 
 #endif /* UTILS_H_ */

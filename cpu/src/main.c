@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <utils/hello.h>
+#include <utils/general.h>
 
 #include "main.h"
 
@@ -13,9 +13,7 @@ int main(int argc, char* argv[]) {
 	char* puerto;
 	char* valor;
 
-    t_config* config;
-	
-    config = iniciar_config_cpu();
+    t_config* config = iniciar_config("default");
 	
 	ip = config_get_string_value(config, "IP_MEMORIA");
 	puerto = config_get_string_value(config, "PUERTO_MEMORIA");
@@ -54,24 +52,6 @@ int main(int argc, char* argv[]) {
     terminar_programa(conexion_memoria, config);
 
     return 0;
-}
-
-t_config* iniciar_config_cpu(void)
-{
-	t_config* nuevo_config = config_create("/home/utnso/tp-2024-1c-Aprobamos-O-Aprobamos/cpu/config/default.config");
-
-	if (nuevo_config == NULL)
-	{
-		imprimir_mensaje("archivo  \"default.config\" no encontrado");
-		imprimir_mensaje("no se pudo instanciar la config del cliente");
-		exit(3);
-
-	} else
-	{
-		imprimir_mensaje("config del cliente instanciada");
-	}
-
-	return nuevo_config;
 }
 
 void terminar_programa(int socket_conexion_cpu, t_config* config)

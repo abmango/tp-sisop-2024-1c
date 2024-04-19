@@ -123,13 +123,3 @@ void liberar_conexion(int socket_cliente)
 {
 	close(socket_cliente);
 }
-
-void imprimir_mensaje(char* mensaje)
-{
-	printf("%s\n", mensaje);
-}
-
-void imprimir_entero(int num)
-{
-	printf("%d\n", num);
-}

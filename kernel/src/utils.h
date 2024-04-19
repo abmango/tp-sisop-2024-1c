@@ -1,18 +1,25 @@
 #ifndef UTILS_KERNEL_H_
 #define UTILS_KERNLE_H_
 
-#include<stdio.h>
-#include<stdlib.h>
-#include<sys/socket.h>
-#include<sys/types.h>
-#include<unistd.h>
-#include<netdb.h>
-#include<commons/log.h>
-#include<commons/collections/list.h>
-#include<string.h>
-#include<assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <string.h>
+#include <assert.h>
+#include <utils/general.h>
+#include <commons/log.h>
+#include <commons/collections/list.h>
 
 #define PUERTO "47297"
+
+// Tenemos que lograr próximamente que el puerto escucha
+// esté definido en la config, y tomarlo de ahí
+// ---- Algo asi:
+//t_config* config = iniciar_config();
+//char* puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
 
 typedef enum
 {
@@ -38,8 +45,6 @@ void* recibir_buffer(int*, int);
 
 int crear_conexion(char* ip, char* puerto);
 int iniciar_servidor(void);
-void imprimir_mensaje(char* mensaje);
-void imprimir_entero(int num);
 int esperar_cliente(int);
 t_list* recibir_paquete(int);
 void recibir_mensaje(int);

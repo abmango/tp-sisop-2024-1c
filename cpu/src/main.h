@@ -15,7 +15,6 @@ void iterator(char* value);
 
 //t_config* iniciar_config(void);
 
-t_config* iniciar_config_cpu(void);
 void paquete(int);
 void terminar_programa(int, t_config*);
 

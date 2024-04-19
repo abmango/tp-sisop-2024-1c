@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <utils/hello.h>
+#include <utils/general.h>
 
 #include "main.h"
 
@@ -91,24 +91,6 @@ int main(int argc, char* argv[]) {
 	return EXIT_SUCCESS;
 
 
-}
-
-t_config* iniciar_config(void)
-{
-	t_config* nuevo_config = config_create("config/default.config");
-
-	if (nuevo_config == NULL)
-	{
-		imprimir_mensaje("archivo  \"cliente.config\" no encontrado");
-		imprimir_mensaje("no se pudo instanciar la config del cliente");
-		exit(3);
-
-	} else
-	{
-		imprimir_mensaje("config del cliente instanciada");
-	}
-
-	return nuevo_config;
 }
 
 void iterator(char* value) {

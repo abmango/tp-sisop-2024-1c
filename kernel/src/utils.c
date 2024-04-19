@@ -50,26 +50,6 @@ int iniciar_servidor(void)
 	return socket_servidor_fd;
 }
 
-
-///////////////////////////////////////////////////////////////
-// Estas dos funciones las agregué para tener formas
-// más faciles de imprimir. Además de que cuando invocamos
-// el printf() directamente, a veces el texto no aparece en
-// consola al momento. En cambio asi metido dentro de otra
-// función si aparece.
-///////////////////////////////////////////////////////////////
-void imprimir_mensaje(char* mensaje)
-{
-	printf("%s\n", mensaje);
-}
-
-void imprimir_entero(int num)
-{
-	printf("%d\n", num);
-}
-///////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////
-
 int esperar_cliente(int socket_servidor_fd)
 {
 	// Aceptamos un nuevo cliente
