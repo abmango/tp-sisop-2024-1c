@@ -11,9 +11,10 @@
 
 #include "utils.h"
 
-t_config* iniciar_config_io(void);
+t_config* iniciar_config_kernel(void);
 void paquete(int);
-void terminar_programa(int, int, t_config*);
+void terminar_programa(t_config*);
 void iterator(char* value);
+void cerrar_conexion(int);
 
 #endif /* SERVER_H_ */

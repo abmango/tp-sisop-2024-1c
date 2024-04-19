@@ -18,13 +18,6 @@ int main(int argc, char* argv[]) {
 	
     config = iniciar_config_kernel();
 	
-	ip = config_get_string_value(config, "IP_CPU");
-	puerto = config_get_string_value(config, "PUERTO_CPU");
-
-    conexion_cpu = crear_conexion(ip, puerto);
-
-    enviar_mensaje("Hola CPU, como va. Soy KERNEL.", conexion_cpu);
-
 	ip = config_get_string_value(config, "IP_MEMORIA");
 	puerto = config_get_string_value(config, "PUERTO_MEMORIA");
 
@@ -32,52 +25,18 @@ int main(int argc, char* argv[]) {
 
 	enviar_mensaje("Hola Memoria, como va. Soy KERNEL.", conexion_memoria);
 
-    terminar_programa(conexion_cpu, conexion_memoria, config);
-
-    return 0;
-}
-
-t_config* iniciar_config_kernel(void)
-{
-	t_config* nuevo_config = config_create("/home/utnso/tp-2024-1c-Aprobamos-O-Aprobamos/kernel/config/default.config");
-
-	if (nuevo_config == NULL)
-	{
-		printf("archivo  \"default.config\" no encontrado");
-		printf("no se pudo instanciar la config del cliente");
-		exit(3);
-
-	} else
-	{
-		printf("config del cliente instanciada");
-	}
-
-	return nuevo_config;
-}
-
-void terminar_programa(int socket1, socket2, t_config* config)
-{
-	// Y por ultimo, hay que liberar lo que utilizamos (conexion, log y config) 
-	 // con las funciones de las commons y del TP mencionadas en el enunciado /
-	int err = close(socket1);
-	if(err != 0)
-	{
-		printf("error en funcion close()\n");
-		exit(3);
-	}
+	cerrar_conexion(conexion_memoria);
 	
-	err = close(socket2);
-	if(err != 0)
-	{
-		printf("error en funcion close()\n");
-		exit(3);
-	}
-	config_destroy(config);
-}
+	ip = config_get_string_value(config, "IP_CPU");
+	puerto = config_get_string_value(config, "PUERTO_CPU_DISPATCH");
 
-// Hasta aca se creo la conexion con la cpu y memoria.
+    conexion_cpu = crear_conexion(ip, puerto);
 
-    int socket_escucha_file_descriptor = iniciar_servidor();
+    enviar_mensaje("Hola CPU, como va. Soy KERNEL.", conexion_cpu);
+
+	cerrar_conexion(conexion_cpu);
+
+	int socket_escucha_file_descriptor = iniciar_servidor();
 
     int socket_io_file_descriptor = esperar_cliente(socket_escucha_file_descriptor);
 
@@ -90,20 +49,60 @@ void terminar_programa(int socket1, socket2, t_config* config)
 			break;
 		case PAQUETE:
 			lista = recibir_paquete(socket_io_file_descriptor);
-			printf("Me llegaron los siguientes valores:\n");
+			imprimir_mensaje("Me llegaron los siguientes valores:");
 			list_iterate(lista, (void*) iterator);
 			break;
 		case -1:
-			printf("el cliente se desconecto. Terminando servidor");
+			imprimir_mensaje("el cliente se desconecto. Terminando servidor");
+		    terminar_programa(config);
 			return EXIT_FAILURE;
 		default:
-			printf("Operacion desconocida. No quieras meter la pata");
+			imprimir_mensaje("Operacion desconocida. No quieras meter la pata");
 			break;
 		}
 	}
 	return EXIT_SUCCESS;
+
+    return 0;
 }
+
+t_config* iniciar_config_kernel(void)
+{
+	t_config* nuevo_config = config_create("/home/utnso/tp-2024-1c-Aprobamos-O-Aprobamos/kernel/config/default.config");
+
+	if (nuevo_config == NULL)
+	{
+		imprimir_mensaje("archivo  \"default.config\" no encontrado");
+		imprimir_mensaje("no se pudo instanciar la config del cliente");
+		exit(3);
+
+	} else
+	{
+		imprimir_mensaje("config del cliente instanciada");
+	}
+
+	return nuevo_config;
+}
+
+void terminar_programa(t_config* config)
+{
+	// Y por ultimo, hay que liberar lo que utilizamos (conexion, log y config) 
+	 // con las funciones de las commons y del TP mencionadas en el enunciado /
+	config_destroy(config);
+}
+
+// Hasta aca se creo la conexion con la cpu y memoria.
+
 
 void iterator(char* value) {
 	printf("%s", value);
+}
+
+void cerrar_conexion(int socket_conexion) {
+	int err = close(socket_conexion);
+	if(err != 0)
+	{
+		imprimir_mensaje("error en funcion close()");
+		exit(3);
+	}
 }

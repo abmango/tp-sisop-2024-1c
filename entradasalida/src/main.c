@@ -43,13 +43,13 @@ t_config* iniciar_config_io(void)
 
 	if (nuevo_config == NULL)
 	{
-		printf("archivo  \"defaut.config\" no encontrado");
-		printf("no se pudo instanciar la config del cliente");
+		imprimir_mensaje("archivo  \"defaut.config\" no encontrado");
+		imprimir_mensaje("no se pudo instanciar la config del cliente");
 		exit(3);
 
 	} else
 	{
-		printf("config del cliente instanciada");
+		imprimir_mensaje("config del cliente instanciada");
 	}
 
 	return nuevo_config;
@@ -62,14 +62,14 @@ void terminar_programa(int socket1, int socket2, t_config* config)
 	int err = close(socket1);
 	if(err != 0)
 	{
-		printf("error en funcion close()\n");
+		imprimir_mensaje("error en funcion close()");
 		exit(3);
 	}
 
 	err = close(socket2);
 	if(err != 0)
 	{
-		printf("error en funcion close()\n");
+		imprimir_mensaje("error en funcion close()");
 		exit(3);
 	}
 	config_destroy(config);

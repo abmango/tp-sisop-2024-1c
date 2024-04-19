@@ -10,34 +10,13 @@ int main(int argc, char* argv[]) {
 
     int socket_escucha_memoria = iniciar_servidor();
 
-    int socket_io_memoria = esperar_cliente(socket_escucha_memoria);
-
-	t_list* lista;
-	while (1) {
-		int cod_op = recibir_operacion(socket_io_memoria);
-		switch (cod_op) {
-		case MENSAJE:
-			recibir_mensaje(socket_io_memoria);
-			break;
-		case PAQUETE:
-			lista = recibir_paquete(socket_io_memoria);
-			printf("Me llegaron los siguientes valores:\n");
-			list_iterate(lista, (void*) iterator);
-			break;
-		case -1:
-			printf("el cliente se desconecto. Terminando servidor");
-			return EXIT_FAILURE;
-		default:
-			printf("Operacion desconocida. No quieras meter la pata");
-			break;
-		}
-	}
-	return EXIT_SUCCESS;
-
-
 	int socket_cpu_memoria = esperar_cliente(socket_escucha_memoria);
+	
+	t_list* lista;
 
-	while (1) {
+	bool cliente_conectado = true;
+
+	while (cliente_conectado) {
 		int cod_op = recibir_operacion(socket_cpu_memoria);
 		switch (cod_op) {
 		case MENSAJE:
@@ -45,23 +24,25 @@ int main(int argc, char* argv[]) {
 			break;
 		case PAQUETE:
 			lista = recibir_paquete(socket_cpu_memoria);
-			printf("Me llegaron los siguientes valores:\n");
+			imprimir_mensaje("Me llegaron los siguientes valores:");
 			list_iterate(lista, (void*) iterator);
 			break;
 		case -1:
-			printf("el cliente se desconecto. Terminando servidor");
-			return EXIT_FAILURE;
+			imprimir_mensaje("el cpu se desconecto.");
+			cliente_conectado = false;
+			break;
 		default:
-			printf("Operacion desconocida. No quieras meter la pata");
+			imprimir_mensaje("Operacion desconocida. No quieras meter la pata");
 			break;
 		}
 	}
-	return EXIT_SUCCESS;
 
 
 	int socket_file_descriptor_memoria = esperar_cliente(socket_escucha_memoria);	
 
-	while (1) {
+	cliente_conectado = true;
+
+	while (cliente_conectado ) {
 		int cod_op = recibir_operacion(socket_file_descriptor_memoria);
 		switch (cod_op) {
 		case MENSAJE:
@@ -69,19 +50,45 @@ int main(int argc, char* argv[]) {
 			break;
 		case PAQUETE:
 			lista = recibir_paquete(socket_file_descriptor_memoria);
-			printf("Me llegaron los siguientes valores:\n");
+			imprimir_mensaje("Me llegaron los siguientes valores:");
 			list_iterate(lista, (void*) iterator);
 			break;
 		case -1:
-			printf("el cliente se desconecto. Terminando servidor");
+			imprimir_mensaje("el Kernel se desconecto.");
+			cliente_conectado = false;
+			break;
+		default:
+			imprimir_mensaje("Operacion desconocida. No quieras meter la pata");
+			break;
+		}
+	}
+
+
+    int socket_io_memoria = esperar_cliente(socket_escucha_memoria);
+
+	cliente_conectado = true;
+
+	while (cliente_conectado) {
+		int cod_op = recibir_operacion(socket_io_memoria);
+		switch (cod_op) {
+		case MENSAJE:
+			recibir_mensaje(socket_io_memoria);
+			break;
+		case PAQUETE:
+			lista = recibir_paquete(socket_io_memoria);
+			imprimir_mensaje("Me llegaron los siguientes valores:");
+			list_iterate(lista, (void*) iterator);
+			break;
+		case -1:
+			imprimir_mensaje("el I/O se desconecto. Terminando servidor");
+			cliente_conectado = false;
 			return EXIT_FAILURE;
 		default:
-			printf("Operacion desconocida. No quieras meter la pata");
+			imprimir_mensaje("Operacion desconocida. No quieras meter la pata");
 			break;
 		}
 	}
 	return EXIT_SUCCESS;
-
 
 
 }
@@ -92,13 +99,13 @@ t_config* iniciar_config(void)
 
 	if (nuevo_config == NULL)
 	{
-		printf("archivo  \"cliente.config\" no encontrado");
-		printf("no se pudo instanciar la config del cliente");
+		imprimir_mensaje("archivo  \"cliente.config\" no encontrado");
+		imprimir_mensaje("no se pudo instanciar la config del cliente");
 		exit(3);
 
 	} else
 	{
-		printf("config del cliente instanciada");
+		imprimir_mensaje("config del cliente instanciada");
 	}
 
 	return nuevo_config;

@@ -15,7 +15,7 @@
 #include<string.h>
 #include<assert.h>
 
-#define PUERTO "51689"
+#define PUERTO "48219"
 // Ahora el puerto escucha esta definido en la config
 
 //t_config* config = iniciar_config();
