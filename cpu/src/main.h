@@ -3,6 +3,7 @@
 
 #include<stdio.h>
 #include<stdlib.h>
+#include<string.h>
 #include<commons/log.h>
 #include<commons/string.h>
 #include<commons/config.h>
@@ -10,7 +11,11 @@
 
 #include "utils.h"
 
-t_config* iniciar_config_io(void);
+void iterator(char* value);
+
+//t_config* iniciar_config(void);
+
+t_config* iniciar_config_cpu(void);
 void paquete(int);
 void terminar_programa(int, t_config*);
 

@@ -5,9 +5,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <commons/log.h>
+#include<commons/string.h>
+#include<commons/config.h>
+#include<readline/readline.h>
 
 #include "utils.h"
 
+t_config* iniciar_config_io(void);
+void paquete(int);
+void terminar_programa(int, int, t_config*);
 void iterator(char* value);
 
 #endif /* SERVER_H_ */
