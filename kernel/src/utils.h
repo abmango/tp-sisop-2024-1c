@@ -11,6 +11,7 @@
 #include <assert.h>
 #include <utils/general.h>
 #include <commons/log.h>
+#include <commons/string.h>
 #include <commons/collections/list.h>
 
 #define PUERTO "47297"

@@ -8,6 +8,7 @@ int main(int argc, char* argv[]) {
 	
     decir_hola("Kernel");
 
+
 	int conexion_cpu = 1;
 	int conexion_memoria = 1;
     char* ip;
@@ -61,6 +62,41 @@ int main(int argc, char* argv[]) {
 			break;
 		}
 	}
+//////////////////////////////////
+
+	while (1) {
+		char* comando_ingresado = string_new();
+		fgets(comando_ingresado, 100, stdin);
+		// scanf("%s", comando_ingresado);
+
+		char** palabras_comando_ingresado = string_split(comando_ingresado, " ");
+
+		if (strcmp(palabras_comando_ingresado[0], "EJECUTAR_SCRIPT") == 0) {
+				
+
+		}
+		if (strcmp(palabras_comando_ingresado[0], "INICIAR_PROCESO") == 0) {
+				
+				
+		}
+		if (strcmp(palabras_comando_ingresado[0], "DETENER_PLANIFICACION") == 0) {
+				
+				
+		}
+		if (strcmp(palabras_comando_ingresado[0], "INICIAR_PLANIFICACION") == 0) {
+				
+				
+		}
+		if (strcmp(palabras_comando_ingresado[0], "MULTIPROGRAMACION") == 0) {
+				
+				
+		}
+		if (strcmp(palabras_comando_ingresado[0], "PROCESO_ESTADO") == 0) {
+				
+				
+		}
+	}
+
 	return EXIT_SUCCESS;
 
     return 0;

@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <utils/general.h>
 #include <commons/log.h>
+#include <commons/process.h>
 #include <commons/collections/list.h>
 #include <commons/config.h>
 
