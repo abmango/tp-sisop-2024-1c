@@ -24,10 +24,22 @@
 
 typedef enum
 {
+	INICIAR_PROCESO,
+	FINALIZAR_PROCESO
+} op_code_kernel;
+
+typedef struct
+{
+	op_code_kernel codigo_operacion;
+	t_buffer* buffer;
+} t_paquete_kernel;
+
+//////////////////////////////
+typedef enum
+{
 	MENSAJE,
 	PAQUETE
-}op_code;
-
+} op_code;
 typedef struct
 {
 	int size;
@@ -56,5 +68,11 @@ void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
 void enviar_paquete(t_paquete* paquete, int socket_cliente);
 void liberar_conexion(int socket_cliente);
 void eliminar_paquete(t_paquete* paquete);
+
+////////////////////////////////////
+t_paquete_kernel* crear_paquete(int cod_op);
+void agregar_a_paquete(t_paquete_kernel* paquete, void* valor, int tamanio);
+void enviar_paquete(t_paquete_kernel* paquete, int socket_cliente);
+void eliminar_paquete(t_paquete_kernel* paquete);
 
 #endif /* UTILS_H_ */

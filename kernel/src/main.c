@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
 			break;
 		}
 	}
-//////////////////////////////////
+////////////////////////////////////////////////////
 
 	while (1) {
 		char* comando_ingresado = string_new();
@@ -72,29 +72,47 @@ int main(int argc, char* argv[]) {
 		char** palabras_comando_ingresado = string_split(comando_ingresado, " ");
 
 		if (strcmp(palabras_comando_ingresado[0], "EJECUTAR_SCRIPT") == 0) {
-				
+			
 
 		}
+
 		if (strcmp(palabras_comando_ingresado[0], "INICIAR_PROCESO") == 0) {
-				
-				
+
+// Acá tiene que crear el PCB
+// --------------------------
+			ip = config_get_string_value(config, "IP_MEMORIA");
+			puerto = config_get_string_value(config, "PUERTO_MEMORIA");
+			conexion_memoria = crear_conexion(ip, puerto);
+
+			t_paquete_kernel* paquete = crear_paquete(INICIAR_PROCESO);
+			int tamanio_path = strlen(palabras_comando_ingresado[1]) + 1;
+			agregar_a_paquete(paquete, palabras_comando_ingresado[1], tamanio_path);
+			enviar_paquete(paquete, conexion_memoria);
+			eliminar_paquete(paquete);
 		}
+
 		if (strcmp(palabras_comando_ingresado[0], "DETENER_PLANIFICACION") == 0) {
 				
 				
 		}
+
 		if (strcmp(palabras_comando_ingresado[0], "INICIAR_PLANIFICACION") == 0) {
 				
 				
 		}
+
 		if (strcmp(palabras_comando_ingresado[0], "MULTIPROGRAMACION") == 0) {
 				
 				
 		}
+
 		if (strcmp(palabras_comando_ingresado[0], "PROCESO_ESTADO") == 0) {
 				
 				
 		}
+
+		string_array_destroy(palabras_comando_ingresado);
+		free(comando_ingresado);
 	}
 
 	return EXIT_SUCCESS;
@@ -108,9 +126,6 @@ void terminar_programa(t_config* config)
 	 // con las funciones de las commons y del TP mencionadas en el enunciado /
 	config_destroy(config);
 }
-
-// Hasta aca se creo la conexion con la cpu y memoria.
-
 
 void iterator(char* value) {
 	printf("%s", value);
