@@ -1,13 +1,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <utils/general.h>
+#include <utils/conexiones.h>
 
 #include "main.h"
 
 int main(int argc, char* argv[]) {
 	
     decir_hola("Kernel");
-
 
 	int conexion_cpu = 1;
 	int conexion_memoria = 1;
@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
 
 	enviar_mensaje("Hola Memoria, como va. Soy KERNEL.", conexion_memoria);
 
-	cerrar_conexion(conexion_memoria);
+	liberar_conexion(conexion_memoria);
 	
 	ip = config_get_string_value(config, "IP_CPU");
 	puerto = config_get_string_value(config, "PUERTO_CPU_DISPATCH");
@@ -35,9 +35,11 @@ int main(int argc, char* argv[]) {
 
     enviar_mensaje("Hola CPU, como va. Soy KERNEL.", conexion_cpu);
 
-	cerrar_conexion(conexion_cpu);
+	liberar_conexion(conexion_cpu);
 
-	int socket_escucha_file_descriptor = iniciar_servidor();
+	puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
+
+	int socket_escucha_file_descriptor = iniciar_servidor(puerto);
 
     int socket_io_file_descriptor = esperar_cliente(socket_escucha_file_descriptor);
 
@@ -62,7 +64,7 @@ int main(int argc, char* argv[]) {
 			break;
 		}
 	}
-	
+
 ////////////////////////////////////////////////////
 
 	while (1) {
@@ -117,8 +119,10 @@ int main(int argc, char* argv[]) {
 	}
 
 	return EXIT_SUCCESS;
+}
 
-    return 0;
+void iterator(char* value) {
+	printf("%s", value);
 }
 
 void terminar_programa(t_config* config)
@@ -126,17 +130,4 @@ void terminar_programa(t_config* config)
 	// Y por ultimo, hay que liberar lo que utilizamos (conexion, log y config) 
 	 // con las funciones de las commons y del TP mencionadas en el enunciado /
 	config_destroy(config);
-}
-
-void iterator(char* value) {
-	printf("%s", value);
-}
-
-void cerrar_conexion(int socket_conexion) {
-	int err = close(socket_conexion);
-	if(err != 0)
-	{
-		imprimir_mensaje("error en funcion close()");
-		exit(3);
-	}
 }

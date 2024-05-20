@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <utils/general.h>
+#include <utils/conexiones.h>
 
 #include "main.h"
 
@@ -22,8 +23,9 @@ int main(int argc, char* argv[]) {
 
     enviar_mensaje("Hola Memoria, como va. Soy CPU.", conexion_cpu);
 
+	puerto = config_get_string_value(config, "PUERTO_ESCUCHA_DISPATCH");
 
-	int socket_escucha_cpu = iniciar_servidor();
+	int socket_escucha_cpu = iniciar_servidor(puerto);
 
     int socket_file_descriptor_cpu = esperar_cliente(socket_escucha_cpu);
 
@@ -34,7 +36,7 @@ int main(int argc, char* argv[]) {
 		case MENSAJE:
 			recibir_mensaje(socket_file_descriptor_cpu);
 			break;
-		case PAQUETE:
+		case VARIOS_MENSAJES:
 			lista = recibir_paquete(socket_file_descriptor_cpu);
 			imprimir_mensaje("Me llegaron los siguientes valores:");
 			list_iterate(lista, (void*) iterator);

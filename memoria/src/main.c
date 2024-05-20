@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <utils/general.h>
+#include <utils/conexiones.h>
 
 #include "main.h"
 
@@ -8,7 +9,11 @@ int main(int argc, char* argv[]) {
 	
     decir_hola("Memoria");
 
-    int socket_escucha_memoria = iniciar_servidor();
+	t_config* config = iniciar_config("default");
+
+	char* puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
+
+    int socket_escucha_memoria = iniciar_servidor(puerto);
 
 	int socket_cpu_memoria = esperar_cliente(socket_escucha_memoria);
 	
@@ -22,7 +27,7 @@ int main(int argc, char* argv[]) {
 		case MENSAJE:
 			recibir_mensaje(socket_cpu_memoria);
 			break;
-		case PAQUETE:
+		case VARIOS_MENSAJES:
 			lista = recibir_paquete(socket_cpu_memoria);
 			imprimir_mensaje("Me llegaron los siguientes valores:");
 			list_iterate(lista, (void*) iterator);
@@ -48,7 +53,7 @@ int main(int argc, char* argv[]) {
 		case MENSAJE:
 			recibir_mensaje(socket_file_descriptor_memoria);
 			break;
-		case PAQUETE:
+		case VARIOS_MENSAJES:
 			lista = recibir_paquete(socket_file_descriptor_memoria);
 			imprimir_mensaje("Me llegaron los siguientes valores:");
 			list_iterate(lista, (void*) iterator);
@@ -63,7 +68,6 @@ int main(int argc, char* argv[]) {
 		}
 	}
 
-
     int socket_io_memoria = esperar_cliente(socket_escucha_memoria);
 
 	cliente_conectado = true;
@@ -74,7 +78,7 @@ int main(int argc, char* argv[]) {
 		case MENSAJE:
 			recibir_mensaje(socket_io_memoria);
 			break;
-		case PAQUETE:
+		case VARIOS_MENSAJES:
 			lista = recibir_paquete(socket_io_memoria);
 			imprimir_mensaje("Me llegaron los siguientes valores:");
 			list_iterate(lista, (void*) iterator);
@@ -82,6 +86,7 @@ int main(int argc, char* argv[]) {
 		case -1:
 			imprimir_mensaje("el I/O se desconecto. Terminando servidor");
 			cliente_conectado = false;
+			terminar_programa(config);
 			return EXIT_FAILURE;
 		default:
 			imprimir_mensaje("Operacion desconocida. No quieras meter la pata");
@@ -95,4 +100,11 @@ int main(int argc, char* argv[]) {
 
 void iterator(char* value) {
 	printf("%s", value);
+}
+
+void terminar_programa(t_config* config)
+{
+	// Y por ultimo, hay que liberar lo que utilizamos (conexion, log y config) 
+	 // con las funciones de las commons y del TP mencionadas en el enunciado /
+	config_destroy(config);
 }

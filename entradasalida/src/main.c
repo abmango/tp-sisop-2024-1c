@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <utils/general.h>
+#include <utils/conexiones.h>
 
 #include "main.h"
 

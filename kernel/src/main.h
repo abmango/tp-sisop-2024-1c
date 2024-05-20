@@ -12,8 +12,7 @@
 #include "utils.h"
 
 void paquete(int);
-void terminar_programa(t_config*);
 void iterator(char* value);
-void cerrar_conexion(int);
+void terminar_programa(t_config*);
 
 #endif /* SERVER_H_ */
