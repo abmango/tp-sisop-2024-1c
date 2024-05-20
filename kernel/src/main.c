@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
 		case MENSAJE:
 			recibir_mensaje(socket_io_file_descriptor);
 			break;
-		case PAQUETE:
+		case VARIOS_MENSAJES:
 			lista = recibir_paquete(socket_io_file_descriptor);
 			imprimir_mensaje("Me llegaron los siguientes valores:");
 			list_iterate(lista, (void*) iterator);
@@ -62,6 +62,7 @@ int main(int argc, char* argv[]) {
 			break;
 		}
 	}
+	
 ////////////////////////////////////////////////////
 
 	while (1) {
@@ -84,7 +85,7 @@ int main(int argc, char* argv[]) {
 			puerto = config_get_string_value(config, "PUERTO_MEMORIA");
 			conexion_memoria = crear_conexion(ip, puerto);
 
-			t_paquete_kernel* paquete = crear_paquete(INICIAR_PROCESO);
+			t_paquete* paquete = crear_paquete(INICIAR_PROCESO);
 			int tamanio_path = strlen(palabras_comando_ingresado[1]) + 1;
 			agregar_a_paquete(paquete, palabras_comando_ingresado[1], tamanio_path);
 			enviar_paquete(paquete, conexion_memoria);
