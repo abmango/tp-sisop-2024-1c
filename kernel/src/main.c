@@ -9,8 +9,8 @@ int main(int argc, char* argv[]) {
 	
     decir_hola("Kernel");
 
-	int conexion_cpu = 1;
-	int conexion_memoria = 1;
+	int socket_memoria = 1;
+	int socket_cpu_dispatch = 1;
     char* ip;
 	char* puerto;
 	char* valor;
@@ -21,39 +21,32 @@ int main(int argc, char* argv[]) {
 	
 	ip = config_get_string_value(config, "IP_MEMORIA");
 	puerto = config_get_string_value(config, "PUERTO_MEMORIA");
-
-	conexion_memoria = crear_conexion(ip, puerto);
-
-	enviar_mensaje("Hola Memoria, como va. Soy KERNEL.", conexion_memoria);
-
-	liberar_conexion(conexion_memoria);
+	socket_memoria = crear_conexion(ip, puerto);
+	enviar_mensaje("Hola Memoria, como va. Soy KERNEL.", socket_memoria);
 	
 	ip = config_get_string_value(config, "IP_CPU");
 	puerto = config_get_string_value(config, "PUERTO_CPU_DISPATCH");
-
-    conexion_cpu = crear_conexion(ip, puerto);
-
-    enviar_mensaje("Hola CPU, como va. Soy KERNEL.", conexion_cpu);
-
-	liberar_conexion(conexion_cpu);
+    socket_cpu_dispatch = crear_conexion(ip, puerto);
+    enviar_mensaje("Hola CPU puerto Dispatch, como va. Soy KERNEL.", socket_cpu_dispatch);
 
 	puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
+	int socket_escucha = iniciar_servidor(puerto);
 
-	int socket_escucha_file_descriptor = iniciar_servidor(puerto);
-
-    int socket_io_file_descriptor = esperar_cliente(socket_escucha_file_descriptor);
+    int socket_io = esperar_cliente(socket_escucha);
+	bool io_conectado = true;
+	recibir_mensaje(socket_io); // el I/O se presenta
 
 	t_list* lista;
 	while (1) {
-		int cod_op = recibir_operacion(socket_io_file_descriptor);
+		int cod_op = recibir_operacion(socket_io);
 		switch (cod_op) {
 		case MENSAJE:
-			recibir_mensaje(socket_io_file_descriptor);
+			recibir_mensaje(socket_io);
 			break;
 		case VARIOS_MENSAJES:
-			lista = recibir_paquete(socket_io_file_descriptor);
+			lista = recibir_paquete(socket_io);
 			imprimir_mensaje("Me llegaron los siguientes valores:");
-			list_iterate(lista, (void*) iterator);
+			list_iterate(lista, (void*)iterator);
 			break;
 		case -1:
 			imprimir_mensaje("el cliente se desconecto. Terminando servidor");
@@ -85,12 +78,12 @@ int main(int argc, char* argv[]) {
 // --------------------------
 			ip = config_get_string_value(config, "IP_MEMORIA");
 			puerto = config_get_string_value(config, "PUERTO_MEMORIA");
-			conexion_memoria = crear_conexion(ip, puerto);
+			//socket_memoria = crear_conexion(ip, puerto);
 
 			t_paquete* paquete = crear_paquete(INICIAR_PROCESO);
 			int tamanio_path = strlen(palabras_comando_ingresado[1]) + 1;
 			agregar_a_paquete(paquete, palabras_comando_ingresado[1], tamanio_path);
-			enviar_paquete(paquete, conexion_memoria);
+			enviar_paquete(paquete, socket_memoria);
 			eliminar_paquete(paquete);
 		}
 
@@ -125,9 +118,11 @@ void iterator(char* value) {
 	printf("%s", value);
 }
 
-void terminar_programa(t_config* config)
+void terminar_programa(int socket_memoria, int socket_cpu, t_config* config)
 {
-	// Y por ultimo, hay que liberar lo que utilizamos (conexion, log y config) 
+	// Y por ultimo, hay que liberar lo que utilizamos (conexiones, log y config)
 	 // con las funciones de las commons y del TP mencionadas en el enunciado /
+	liberar_conexion(socket_memoria);
+	liberar_conexion(socket_cpu);
 	config_destroy(config);
 }

@@ -85,7 +85,7 @@ int iniciar_servidor(char* puerto)
 	}
 
 	freeaddrinfo(servinfo);
-	decir_hola("Listo para escuchar a mi cliente");
+	imprimir_mensaje("Listo para escuchar a mi cliente");
 
 	return socket_servidor_fd;
 }
@@ -154,7 +154,7 @@ t_list* recibir_paquete(int socket_cliente)
 {
 	int size;
 	int desplazamiento = 0;
-	void * buffer;
+	void* buffer;
 	t_list* valores = list_create();
 	int tamanio;
 
@@ -174,7 +174,7 @@ t_list* recibir_paquete(int socket_cliente)
 
 void* serializar_paquete(t_paquete* paquete, int bytes)
 {
-	void * magic = malloc(bytes);
+	void* magic = malloc(bytes);
 	int desplazamiento = 0;
 
 	memcpy(magic + desplazamiento, &(paquete->codigo_operacion), sizeof(int));

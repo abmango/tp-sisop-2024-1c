@@ -13,6 +13,6 @@
 
 void paquete(int);
 void iterator(char* value);
-void terminar_programa(t_config*);
+void terminar_programa(int socket_memoria, int socket_cpu, t_config* config);
 
 #endif /* SERVER_H_ */
