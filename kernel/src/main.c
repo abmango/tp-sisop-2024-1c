@@ -5,6 +5,12 @@
 
 #include "main.h"
 
+t_list* cola_new = list_create();
+t_list* cola_ready = list_create();
+t_list* proceso_exec = list_create();
+t_list* procesos_blocked = list_create();
+t_list* procesos_exit = list_create();
+
 int main(int argc, char* argv[]) {
 	
     decir_hola("Kernel");
