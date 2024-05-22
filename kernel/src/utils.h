@@ -52,6 +52,14 @@ typedef struct
 
 ////////////////////////////////////
 
+// Inicializa un PCB con los datos recibidos
+t_pcb* pcb_new(int pid);
+
+// Limpia un PCB de la memoria
+void pcb_destroy(t_pcb* pcb);
+
+
+
 // funciones para cumplir con operaciones ordenadas por consola
 void op_ejecutar_script();
 void op_iniciar_proceso();
