@@ -71,8 +71,7 @@ int main(int argc, char* argv[]) {
 			
 
 		}
-
-		if (strcmp(palabras_comando_ingresado[0], "INICIAR_PROCESO") == 0) {
+		else if (strcmp(palabras_comando_ingresado[0], "INICIAR_PROCESO") == 0) {
 
 // Acá tiene que crear el PCB
 // --------------------------
@@ -86,25 +85,24 @@ int main(int argc, char* argv[]) {
 			enviar_paquete(paquete, socket_memoria);
 			eliminar_paquete(paquete);
 		}
-
-		if (strcmp(palabras_comando_ingresado[0], "DETENER_PLANIFICACION") == 0) {
+		else if (strcmp(palabras_comando_ingresado[0], "DETENER_PLANIFICACION") == 0) {
 				
 				
 		}
-
-		if (strcmp(palabras_comando_ingresado[0], "INICIAR_PLANIFICACION") == 0) {
+		else if (strcmp(palabras_comando_ingresado[0], "INICIAR_PLANIFICACION") == 0) {
 				
 				
 		}
-
-		if (strcmp(palabras_comando_ingresado[0], "MULTIPROGRAMACION") == 0) {
+		else if (strcmp(palabras_comando_ingresado[0], "MULTIPROGRAMACION") == 0) {
 				
 				
 		}
-
-		if (strcmp(palabras_comando_ingresado[0], "PROCESO_ESTADO") == 0) {
+		else if (strcmp(palabras_comando_ingresado[0], "PROCESO_ESTADO") == 0) {
 				
 				
+		}
+		else {
+			// nada
 		}
 
 		string_array_destroy(palabras_comando_ingresado);

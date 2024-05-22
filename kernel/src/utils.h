@@ -52,5 +52,17 @@ typedef struct
 
 ////////////////////////////////////
 
+// funciones para cumplir con operaciones ordenadas por consola
+void op_ejecutar_script();
+void op_iniciar_proceso();
+void op_finalizar_proceso();
+void op_detener_planificacion();
+void op_iniciar_planificacion();
+void op_multiprogramacion();
+void op_proceso_estado();
+
+// funciones para pasarle a hilos
+void planificacion_corto_plazo();
+void quantum();
 
 #endif /* UTILS_H_ */
