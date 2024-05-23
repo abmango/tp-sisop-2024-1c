@@ -58,7 +58,10 @@ t_pcb* pcb_new(int pid);
 // Limpia un PCB de la memoria
 void pcb_destroy(t_pcb* pcb);
 
-
+// FUNCIONES AUXILIARES PARA MANEJAR LAS LISTAS DE ESTADOS:
+void imprimir_elemento_pid(int* value);
+void listar_pid_de_lista(t_list* lista_de_pid);
+void listar_pid_de_lista_de_listas(t_list* lista_de_listas_de_pid);
 
 // funciones para cumplir con operaciones ordenadas por consola
 void op_ejecutar_script();
