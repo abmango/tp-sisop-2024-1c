@@ -54,7 +54,7 @@ void enviar_mensaje(char* mensaje, int socket_cliente);
 void crear_buffer(t_paquete* paquete);
 t_paquete* crear_paquete(int cod_op);
 void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
-void enviar_paquete(t_paquete* paquete, int socket_cliente);
+void enviar_paquete(t_paquete* paquete, int socket);
 void eliminar_paquete(t_paquete* paquete);
 
 #endif

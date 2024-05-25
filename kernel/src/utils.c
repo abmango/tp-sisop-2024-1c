@@ -1,55 +1,89 @@
 #include "utils.h"
 
 ////////////////////////////////////
-extern t_list* cola_new;
-extern t_list* cola_ready;
-extern t_list* proceso_exec;
-extern t_list* lista_colas_blocked_io;
-extern t_list* lista_colas_blocked_recursos;
-extern t_list* procesos_exit;
+extern int contador_pid;
 ////////////////////////////////////
 
-void op_proceso_estado() {
-    imprimir_mensaje("PROCESOS EN NEW:");
-    listar_pid_de_lista(cola_new);
-    imprimir_mensaje("PROCESOS EN READY:");
-    listar_pid_de_lista(cola_ready);
-    imprimir_mensaje("PROCESO EN EXEC:");
-    listar_pid_de_lista(proceso_exec);
-    imprimir_mensaje("PROCESOS EN BLOCKED:");
-    listar_pid_de_lista_de_listas(lista_colas_blocked_io);
-    listar_pid_de_lista_de_listas(lista_colas_blocked_recursos);
-    imprimir_mensaje("PROCESOS EN EXIT:");
-    listar_pid_de_lista(procesos_exit);
-}
+////////////////////////////////////////////////////////////////////
 
-t_pcb* pcb_new(int pid) {
-	t_pcb* pcb = s_malloc(sizeof(t_pcb));
-	pcb->pid = pid;
-    //pcb->pc = pc;
-    //pcb->quantum = quantum;
-    //pcb->reg_cpu_uso_general;
+t_pcb* crear_pcb() {
+	t_pcb* pcb = malloc(sizeof(t_pcb));
+	pcb->pid = contador_pid;
+    contador_pid++;
+    pcb->quantum = 0;
+    pcb->PC = 0;
+    pcb->reg_cpu_uso_general.AX = 0;
+    pcb->reg_cpu_uso_general.BX = 0;
+    pcb->reg_cpu_uso_general.CX = 0;
+    pcb->reg_cpu_uso_general.DX = 0;
+    pcb->reg_cpu_uso_general.EAX = 0;
+    pcb->reg_cpu_uso_general.EBX = 0;
+    pcb->reg_cpu_uso_general.ECX = 0;
+    pcb->reg_cpu_uso_general.EDX = 0;
+    pcb->reg_cpu_uso_general.SI = 0;
+    pcb->reg_cpu_uso_general.DI = 0;
 	return pcb;
 }    
 
-void pcb_destroy(t_pcb* pcb) {
-	//execution_context_destroy(pcb->execution_context);
-	//dictionary_destroy(pcb->local_files);
-	pcb->local_files = NULL;
+void destruir_pcb(t_pcb* pcb) {
 	free(pcb);
 	pcb = NULL;
 }
 
-void imprimir_elemento_pid(int* value) {
-	printf("%d\n", *value);
+int tamanio_de_pcb(void) {
+    return 2*sizeof(int) + 4*sizeof(uint8_t) + 7*sizeof(uint32_t);
 }
 
-void listar_pid_de_lista(t_list* lista_de_pid) {
-    list_iterate(lista_de_pid, (void*)imprimir_elemento_pid);
+void* serializar_pcb(t_pcb* pcb) {
+    int size = tamanio_de_pcb();
+	void* magic = malloc(size);
+	int desplazamiento = 0;
+
+	memcpy(magic + desplazamiento, &(pcb->pid), sizeof(int));
+	desplazamiento += sizeof(int);
+	memcpy(magic + desplazamiento, &(pcb->quantum), sizeof(int));
+	desplazamiento += sizeof(int);
+	memcpy(magic + desplazamiento, &(pcb->PC), sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+	memcpy(magic + desplazamiento, &(pcb->reg_cpu_uso_general.AX), sizeof(uint8_t));
+	desplazamiento += sizeof(uint8_t);
+	memcpy(magic + desplazamiento, &(pcb->reg_cpu_uso_general.BX), sizeof(uint8_t));
+	desplazamiento += sizeof(uint8_t);
+	memcpy(magic + desplazamiento, &(pcb->reg_cpu_uso_general.CX), sizeof(uint8_t));
+	desplazamiento += sizeof(uint8_t);
+	memcpy(magic + desplazamiento, &(pcb->reg_cpu_uso_general.DX), sizeof(uint8_t));
+	desplazamiento += sizeof(uint8_t);
+	memcpy(magic + desplazamiento, &(pcb->reg_cpu_uso_general.EAX), sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+	memcpy(magic + desplazamiento, &(pcb->reg_cpu_uso_general.EBX), sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+	memcpy(magic + desplazamiento, &(pcb->reg_cpu_uso_general.ECX), sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+	memcpy(magic + desplazamiento, &(pcb->reg_cpu_uso_general.EDX), sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+	memcpy(magic + desplazamiento, &(pcb->reg_cpu_uso_general.SI), sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+    memcpy(magic + desplazamiento, &(pcb->reg_cpu_uso_general.DI), sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+
+	return magic;
 }
 
-void listar_pid_de_lista_de_listas(t_list* lista_de_listas_de_pid) {
-    t_list* lista_aplastada = list_flatten(lista_de_listas_de_pid);
-    list_iterate(lista_aplastada, (void*)imprimir_elemento_pid);
+void imprimir_pid_de_pcb(t_pcb* pcb) {
+    imprimir_entero(pcb->pid);
+}
+
+void imprimir_pid_de_lista_de_pcb(t_list* lista_de_pcb) {
+    if(!list_is_empty(lista_de_pcb)) {
+        list_iterate(lista_de_pcb, (void*)imprimir_pid_de_pcb);
+    } else {
+        imprimir_mensaje("Ninguno.");
+    }
+    
+}
+
+void imprimir_pid_de_lista_de_listas_de_pcb(t_list* lista_de_listas_de_pcb) {
+    t_list* lista_aplastada = list_flatten(lista_de_listas_de_pcb);
+    imprimir_pid_de_lista_de_pcb(lista_aplastada);
     list_destroy(lista_aplastada);
 }

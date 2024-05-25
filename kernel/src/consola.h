@@ -1,0 +1,34 @@
+#ifndef HILO_CONSOLA_KERNEL_H_
+#define HILO_CONSOLA_KERNEL_H_
+
+#include <commons/config.h>
+
+#include "utils.h"
+
+///////////////////////////////////
+
+typedef struct // estructura de parametros. EN PROCESO
+{
+    t_config* config;
+    int socket_memoria;
+
+} t_parametros_consola;
+
+///////////////////////////////////
+
+void rutina_consola(t_parametros_consola* parametros);
+
+//////////////////////////////////////////////////////////////////////////
+/////////////  operaciones ordenadas por consola  ////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
+void op_ejecutar_script();
+void op_iniciar_proceso(int socket_memoria, char* path);
+
+void op_finalizar_proceso();
+void op_detener_planificacion();
+void op_iniciar_planificacion();
+void op_multiprogramacion();
+void op_proceso_estado();
+
+#endif

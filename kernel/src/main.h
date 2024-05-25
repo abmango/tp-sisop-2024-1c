@@ -11,7 +11,6 @@
 
 #include "utils.h"
 
-void paquete(int);
 void iterator(char* value);
 void terminar_programa(int socket_memoria, int socket_cpu, t_config* config);
 

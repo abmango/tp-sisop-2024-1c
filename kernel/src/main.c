@@ -1,19 +1,30 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <commons/collections/list.h>
 #include <utils/general.h>
 #include <utils/conexiones.h>
+#include "hilos.h"
 
 #include "main.h"
 
-t_list* cola_new = list_create();
-t_list* cola_ready = list_create();
-t_list* proceso_exec = list_create();
-t_list* lista_colas_blocked_io = list_create();
-t_list* lista_colas_blocked_recursos = list_create();
-t_list* procesos_exit = list_create();
+int contador_pid = 0;
+t_list* cola_new = NULL;
+t_list* cola_ready = NULL;
+t_list* proceso_exec = NULL;
+t_list* lista_colas_blocked_io = NULL;
+t_list* lista_colas_blocked_recursos = NULL;
+t_list* procesos_exit = NULL;
 
 int main(int argc, char* argv[]) {
 	
+	cola_new = list_create();
+	cola_ready = list_create();
+	proceso_exec = list_create();
+	lista_colas_blocked_io = list_create();
+	lista_colas_blocked_recursos = list_create();
+	procesos_exit = list_create();
+
+
     decir_hola("Kernel");
 
 	int socket_memoria = 1;
@@ -22,9 +33,7 @@ int main(int argc, char* argv[]) {
 	char* puerto;
 	char* valor;
 
-    t_config* config;
-	
-    config = iniciar_config("default");
+    t_config* config = iniciar_config("default");
 	
 	ip = config_get_string_value(config, "IP_MEMORIA");
 	puerto = config_get_string_value(config, "PUERTO_MEMORIA");
@@ -57,7 +66,7 @@ int main(int argc, char* argv[]) {
 			break;
 		case -1:
 			imprimir_mensaje("el cliente se desconecto. Terminando servidor");
-		    terminar_programa(config);
+		    terminar_programa(socket_memoria, socket_cpu_dispatch, config);
 			return EXIT_FAILURE;
 		default:
 			imprimir_mensaje("Operacion desconocida. No quieras meter la pata");
@@ -65,56 +74,6 @@ int main(int argc, char* argv[]) {
 		}
 	}
 
-////////////////////////////////////////////////////
-
-	while (1) {
-		char* comando_ingresado = string_new();
-		fgets(comando_ingresado, 100, stdin);
-		// scanf("%s", comando_ingresado);
-
-		char** palabras_comando_ingresado = string_split(comando_ingresado, " ");
-
-		if (strcmp(palabras_comando_ingresado[0], "EJECUTAR_SCRIPT") == 0) {
-			
-
-		}
-		else if (strcmp(palabras_comando_ingresado[0], "INICIAR_PROCESO") == 0) {
-
-// Acá tiene que crear el PCB
-// --------------------------
-			ip = config_get_string_value(config, "IP_MEMORIA");
-			puerto = config_get_string_value(config, "PUERTO_MEMORIA");
-			//socket_memoria = crear_conexion(ip, puerto);
-
-			t_paquete* paquete = crear_paquete(INICIAR_PROCESO);
-			int tamanio_path = strlen(palabras_comando_ingresado[1]) + 1;
-			agregar_a_paquete(paquete, palabras_comando_ingresado[1], tamanio_path);
-			enviar_paquete(paquete, socket_memoria);
-			eliminar_paquete(paquete);
-		}
-		else if (strcmp(palabras_comando_ingresado[0], "DETENER_PLANIFICACION") == 0) {
-				
-				
-		}
-		else if (strcmp(palabras_comando_ingresado[0], "INICIAR_PLANIFICACION") == 0) {
-				
-				
-		}
-		else if (strcmp(palabras_comando_ingresado[0], "MULTIPROGRAMACION") == 0) {
-				
-				
-		}
-		else if (strcmp(palabras_comando_ingresado[0], "PROCESO_ESTADO") == 0) {
-				
-				
-		}
-		else {
-			// nada
-		}
-
-		string_array_destroy(palabras_comando_ingresado);
-		free(comando_ingresado);
-	}
 
 	return EXIT_SUCCESS;
 }
@@ -131,3 +90,4 @@ void terminar_programa(int socket_memoria, int socket_cpu, t_config* config)
 	liberar_conexion(socket_cpu);
 	config_destroy(config);
 }
+

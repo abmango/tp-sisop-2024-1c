@@ -15,14 +15,7 @@
 #include <commons/config.h>
 #include <commons/collections/list.h>
 #include <utils/general.h>
-
-//#define PUERTO "48219"
-
-// Tenemos que lograr próximamente que el puerto escucha
-// esté definido en la config, y tomarlo de ahí
-// ---- Algo asi:
-//t_config* config = iniciar_config();
-//char* puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
+#include <utils/conexiones.h>
 
 typedef struct
 {
@@ -41,5 +34,11 @@ typedef struct
 } t_reg_cpu;
 
 ////////////////////////////////////
+
+t_pcb* recibir_pcb();
+
+// funciones para pasarle a hilos
+void planificacion_corto_plazo();
+void esperar_interrupcion();
 
 #endif /* UTILS_H_ */

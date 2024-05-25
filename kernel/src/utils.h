@@ -1,5 +1,5 @@
 #ifndef UTILS_KERNEL_H_
-#define UTILS_KERNLE_H_
+#define UTILS_KERNEL_H_
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,15 +13,9 @@
 #include <commons/log.h>
 #include <commons/string.h>
 #include <commons/collections/list.h>
+#include <commons/collections/dictionary.h>
 #include <utils/general.h>
-
-//#define PUERTO "47297"
-
-// Tenemos que lograr próximamente que el puerto escucha
-// esté definido en la config, y tomarlo de ahí
-// ---- Algo asi:
-//t_config* config = iniciar_config();
-//char* puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
+#include <utils/conexiones.h>
 
 //////////////////////////////
 
@@ -40,37 +34,33 @@ typedef struct
     uint32_t EBX;
     uint32_t ECX;
     uint32_t EDX;
+    uint32_t SI;
+    uint32_t DI;
 } t_reg_cpu_uso_general;
 
 typedef struct
 {
     int pid;
-    uint32_t pc;
     int quantum;
-    t_reg_cpu_uso_general* reg_cpu_uso_general;
+    uint32_t PC;
+    t_reg_cpu_uso_general reg_cpu_uso_general;
 } t_pcb;
 
 ////////////////////////////////////
 
-// Inicializa un PCB con los datos recibidos
-t_pcb* pcb_new(int pid);
+// Crea e inicializa un PCB
+t_pcb* crear_pcb();
+// Destruye un PCB
+void destruir_pcb(t_pcb* pcb);
 
-// Limpia un PCB de la memoria
-void pcb_destroy(t_pcb* pcb);
+int tamanio_de_pcb(void);
+void* serializar_pcb(t_pcb* pcb);
 
 // FUNCIONES AUXILIARES PARA MANEJAR LAS LISTAS DE ESTADOS:
-void imprimir_elemento_pid(int* value);
-void listar_pid_de_lista(t_list* lista_de_pid);
-void listar_pid_de_lista_de_listas(t_list* lista_de_listas_de_pid);
+void imprimir_pid_de_pcb(t_pcb* pcb);
+void imprimir_pid_de_lista_de_pcb(t_list* lista_de_pcb);
+void imprimir_pid_de_lista_de_listas_de_pcb(t_list* lista_de_listas_de_pcb);
 
-// funciones para cumplir con operaciones ordenadas por consola
-void op_ejecutar_script();
-void op_iniciar_proceso();
-void op_finalizar_proceso();
-void op_detener_planificacion();
-void op_iniciar_planificacion();
-void op_multiprogramacion();
-void op_proceso_estado();
 
 // funciones para pasarle a hilos
 void planificacion_corto_plazo();
