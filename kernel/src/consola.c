@@ -11,7 +11,7 @@ extern t_list* lista_colas_blocked_recursos;
 extern t_list* procesos_exit;
 /////////////////////////////////////////////////////
 
-void rutina_consola(t_parametros_consola* parametros) {
+void* rutina_consola(t_parametros_consola* parametros) {
 
     char* ip = NULL;
     char* puerto = NULL;
@@ -20,8 +20,7 @@ void rutina_consola(t_parametros_consola* parametros) {
     int socket_memoria = parametros->socket_memoria;
 
     while (1) {
-        char* comando_ingresado = string_new();
-        fgets(comando_ingresado, 100, stdin);
+        char* comando_ingresado = readline("> ");
         char** palabras_comando_ingresado = string_split(comando_ingresado, " ");
 
         if (strcmp(palabras_comando_ingresado[0], "EJECUTAR_SCRIPT") == 0) {
@@ -54,6 +53,8 @@ void rutina_consola(t_parametros_consola* parametros) {
         string_array_destroy(palabras_comando_ingresado);
         free(comando_ingresado);
     }
+
+    return NULL;
 }
 
 ///////////////////////////////////////////////////////////////////

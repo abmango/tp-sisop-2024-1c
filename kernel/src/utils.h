@@ -10,6 +10,7 @@
 #include <netdb.h>
 #include <string.h>
 #include <assert.h>
+#include <readline/readline.h>
 #include <commons/log.h>
 #include <commons/string.h>
 #include <commons/collections/list.h>
