@@ -31,5 +31,15 @@ void* rutina_planificador(t_parametros_planificador* parametros) {
 /////////////////////////////////////////////////////
 
 void planificar_con_algoritmo_fifo(void) {
+    
+    // Tendría que empezar con al menos 1 proceso en la cola ready.
+    // Eso creo que se puede arreglar con semáforos.
+    // Así como también hay que usar semáforos para cada vez que un proceso
+    // se mueve de un estado a otro.
+    t_pcb* proceso_a_ejecutar = list_remove(cola_ready, 0);
+    list_add(proceso_exec, proceso_a_ejecutar);
     // EN DESARROLLO
 }
+
+/////////////////////////////////////////////////////
+
