@@ -118,25 +118,25 @@ void liberar_conexion(int socket_cliente)
 /////////////////////////////////////////////////////
 /////////////////////////////////////////////////////
 
-void* recibir_buffer(int* size, int socket_cliente)
+void* recibir_buffer(int* size, int socket)
 {
 	void* buffer;
 
-	recv(socket_cliente, size, sizeof(int), MSG_WAITALL);
+	recv(socket, size, sizeof(int), MSG_WAITALL);
 	buffer = malloc(*size);
-	recv(socket_cliente, buffer, *size, MSG_WAITALL);
+	recv(socket, buffer, *size, MSG_WAITALL);
 
 	return buffer;
 }
 
-int recibir_operacion(int socket_cliente)
+int recibir_codigo(int socket)
 {
-	int cod_op;
-	if(recv(socket_cliente, &cod_op, sizeof(int), MSG_WAITALL) > 0)
-		return cod_op;
+	int cod;
+	if(recv(socket, &cod, sizeof(int), MSG_WAITALL) > 0)
+		return cod;
 	else
 	{
-		close(socket_cliente);
+		close(socket);
 		return -1;
 	}
 }

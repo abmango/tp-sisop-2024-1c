@@ -54,7 +54,7 @@ void* rutina_consola(t_parametros_consola* parametros) {
         free(comando_ingresado);
     }
 
-    return NULL;
+    return NULL; // acá no sé que es correcto retornar.
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -82,8 +82,8 @@ void op_iniciar_proceso(int socket_memoria, char* path) {
     t_paquete* paquete = crear_paquete(INICIAR_PROCESO);
     int tamanio_path = strlen(path) + 1;
     agregar_a_paquete(paquete, path, tamanio_path);
-    void* pcb_serializado = serializar_pcb(nuevo_pcb);
     int tamanio_pcb = tamanio_de_pcb();
+    void* pcb_serializado = serializar_pcb(nuevo_pcb, tamanio_pcb);
     agregar_a_paquete(paquete, pcb_serializado, tamanio_pcb);
     enviar_paquete(paquete, socket_memoria);
 

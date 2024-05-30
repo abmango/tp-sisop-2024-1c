@@ -7,6 +7,8 @@
 
 #include "main.h"
 
+int grado_multiprogramacion;
+int procesos_activos = 0;
 int contador_pid = 0;
 t_list* cola_new = NULL;
 t_list* cola_ready = NULL;
@@ -17,12 +19,16 @@ t_list* procesos_exit = NULL;
 
 int main(int argc, char* argv[]) {
 	
+	
 	cola_new = list_create();
 	cola_ready = list_create();
 	proceso_exec = list_create();
 	lista_colas_blocked_io = list_create();
 	lista_colas_blocked_recursos = list_create();
 	procesos_exit = list_create();
+
+	t_config* config = iniciar_config("default");
+	grado_multiprogramacion = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");
 
 
     decir_hola("Kernel");
@@ -32,8 +38,6 @@ int main(int argc, char* argv[]) {
     char* ip;
 	char* puerto;
 	char* valor;
-
-    t_config* config = iniciar_config("default");
 	
 	ip = config_get_string_value(config, "IP_MEMORIA");
 	puerto = config_get_string_value(config, "PUERTO_MEMORIA");
@@ -54,7 +58,7 @@ int main(int argc, char* argv[]) {
 
 	t_list* lista;
 	while (1) {
-		int cod_op = recibir_operacion(socket_io);
+		int cod_op = recibir_codigo(socket_io);
 		switch (cod_op) {
 		case MENSAJE:
 			recibir_mensaje(socket_io);

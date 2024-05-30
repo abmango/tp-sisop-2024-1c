@@ -21,8 +21,18 @@ typedef enum
 	MENSAJE,
 	VARIOS_MENSAJES,
     INICIAR_PROCESO,
-    FINALIZAR_PROCESO
+    FINALIZAR_PROCESO,
+	CONTEXTO_DE_EJECUCION
 } op_code;
+
+typedef enum
+{
+	EXIT,
+	ERROR,
+	INTERRUPCION,
+    WAIT,
+    SIGNAL
+} motivo_desalojo_code;
 
 typedef struct
 {
@@ -46,7 +56,7 @@ void liberar_conexion(int socket_cliente);
 //////////////////////////////////////////////
 
 void* recibir_buffer(int*, int);
-int recibir_operacion(int);
+int recibir_codigo(int);
 void recibir_mensaje(int);
 t_list* recibir_paquete(int);
 void* serializar_paquete(t_paquete* paquete, int bytes);

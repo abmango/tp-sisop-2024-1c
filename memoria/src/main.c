@@ -25,7 +25,7 @@ int main(int argc, char* argv[]) {
 	t_list* lista;
 
 	while (cpu_conectado) {
-		int cod_op = recibir_operacion(socket_cpu);
+		int cod_op = recibir_codigo(socket_cpu);
 		switch (cod_op) {
 		case MENSAJE:
 			recibir_mensaje(socket_cpu);
@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
 ///////////////////////////////////////////////////////////
 /*
 	while (kernel_conectado ) {
-		int cod_op = recibir_operacion(socket_kernel);
+		int cod_op = recibir_codigo(socket_kernel);
 		switch (cod_op) {
 		case MENSAJE:
 			recibir_mensaje(socket_kernel);
@@ -77,7 +77,7 @@ int main(int argc, char* argv[]) {
 	bool io_conectado = true;
 
 	while (io_conectado) {
-		int cod_op = recibir_operacion(socket_io);
+		int cod_op = recibir_codigo(socket_io);
 		switch (cod_op) {
 		case MENSAJE:
 			recibir_mensaje(socket_io);

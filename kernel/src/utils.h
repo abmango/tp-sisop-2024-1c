@@ -54,14 +54,20 @@ t_pcb* crear_pcb();
 // Destruye un PCB
 void destruir_pcb(t_pcb* pcb);
 
-int tamanio_de_pcb(void);
-void* serializar_pcb(t_pcb* pcb);
+void* serializar_pcb(t_pcb* pcb, int bytes);
+
+void* serializar_contexto_de_ejecucion(t_pcb* pcb, int bytes);
+void recibir_contexto_de_ejecucion_y_actualizar_pcb(t_pcb* pcb, int socket);
+void enviar_contexto_de_ejecucion(t_pcb* pcb, int socket);
 
 // FUNCIONES AUXILIARES PARA MANEJAR LAS LISTAS DE ESTADOS:
 void imprimir_pid_de_pcb(t_pcb* pcb);
 void imprimir_pid_de_lista_de_pcb(t_list* lista_de_pcb);
 void imprimir_pid_de_lista_de_listas_de_pcb(t_list* lista_de_listas_de_pcb);
 
+// tamanios en bytes de estructuras para serializar
+int tamanio_de_pcb(void);
+int tamanio_de_contexto_de_ejecucion(void);
 
 // funciones para pasarle a hilos
 void planificacion_corto_plazo();

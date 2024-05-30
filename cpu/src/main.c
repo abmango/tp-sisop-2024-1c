@@ -25,7 +25,7 @@ int main(int argc, char* argv[]) {
 
 	t_list* lista;
 	while (1) {
-		int cod_op = recibir_operacion(socket_kernel);
+		int cod_op = recibir_codigo(socket_kernel);
 		switch (cod_op) {
 		case MENSAJE:
 			recibir_mensaje(socket_kernel);

@@ -10,7 +10,7 @@
 typedef struct // estructura de parametros. EN DESARROLLO
 {
     t_config* config;
-    // int socket_memoria;
+    int socket_cpu_dispatch;
 
 } t_parametros_planificador;
 
@@ -21,6 +21,9 @@ void* rutina_planificador(t_parametros_planificador* parametros);
 
 ////////////////////////////////////////////
 
-void planificar_con_algoritmo_fifo(void); // EN DESARROLLO
+// ALGORITMOS
+void planificar_con_algoritmo_fifo(int socket_cpu_dispatch); // EN DESARROLLO
+
+void gestionar_proceso_desalojado(int cod_motivo_desalojo, t_pcb* proceso_desalojado); // EN DESARROLLO
 
 #endif
