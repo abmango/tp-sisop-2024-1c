@@ -22,7 +22,8 @@ typedef enum
 	VARIOS_MENSAJES,
     INICIAR_PROCESO,
     FINALIZAR_PROCESO,
-	CONTEXTO_DE_EJECUCION
+	CONTEXTO_DE_EJECUCION,
+	PCB
 } op_code;
 
 typedef enum
@@ -31,7 +32,8 @@ typedef enum
 	ERROR,
 	INTERRUPCION,
     WAIT,
-    SIGNAL
+    SIGNAL,
+	IO
 } motivo_desalojo_code;
 
 typedef struct

@@ -64,6 +64,16 @@ void* serializar_pcb(t_pcb* pcb, int bytes) {
 	return magic;
 }
 
+void enviar_pcb(t_pcb* pcb, int conexion){
+	t_paquete* paquete = crear_paquete(PCB);
+	int tamanio = tamanio_de_pcb;
+	void* buffer = serializar_pcb(pcb, tamanio);
+	agregar_a_paquete(paquete,buffer,tamanio);
+	enviar_paquete(paquete, conexion);
+	eliminar_paquete(paquete);
+	free(buffer);
+}
+
 void* serializar_contexto_de_ejecucion(t_pcb* pcb, int bytes) {
 	void* magic = malloc(bytes);
 	int desplazamiento = 0;
@@ -111,6 +121,58 @@ void recibir_contexto_de_ejecucion_y_actualizar_pcb(t_pcb* pcb, int socket) {
 		exit(3);
 	}
 
+	memcpy(&(pcb->PC), buffer + desplazamiento, sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+	memcpy(&((pcb->reg_cpu_uso_general).AX), buffer + desplazamiento, sizeof(uint8_t));
+	desplazamiento += sizeof(uint8_t);
+	memcpy(&((pcb->reg_cpu_uso_general).BX), buffer + desplazamiento, sizeof(uint8_t));
+	desplazamiento += sizeof(uint8_t);
+	memcpy(&((pcb->reg_cpu_uso_general).CX), buffer + desplazamiento, sizeof(uint8_t));
+	desplazamiento += sizeof(uint8_t);
+	memcpy(&((pcb->reg_cpu_uso_general).DX), buffer + desplazamiento, sizeof(uint8_t));
+	desplazamiento += sizeof(uint8_t);
+	memcpy(&((pcb->reg_cpu_uso_general).EAX), buffer + desplazamiento, sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+	memcpy(&((pcb->reg_cpu_uso_general).EBX), buffer + desplazamiento, sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+	memcpy(&((pcb->reg_cpu_uso_general).ECX), buffer + desplazamiento, sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+	memcpy(&((pcb->reg_cpu_uso_general).EDX), buffer + desplazamiento, sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+	memcpy(&((pcb->reg_cpu_uso_general).SI), buffer + desplazamiento, sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+	memcpy(&((pcb->reg_cpu_uso_general).DI), buffer + desplazamiento, sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+
+	if(desplazamiento != size) { // una vez comprobado que la funcion anda bien, quitar este control. 
+		imprimir_mensaje("error: desplazamiento no coincide con tamanio de buffer");
+		exit(3);
+	}
+
+	free(buffer);
+}
+
+void recibir_pcb(t_pcb* pcb, int conexion)
+{
+	int size;
+	int desplazamiento = 0;
+	void* buffer;
+	int tamanio;
+
+	buffer = recibir_buffer(&size, socket);
+
+	memcpy(&tamanio, buffer + desplazamiento, sizeof(int)); // redundante, pero necesario, por las funciones que reutilizamos.
+	desplazamiento += sizeof(int);
+
+	if(tamanio != tamanio_de_pcb()) { // una vez comprobado que la funcion anda bien, quitar este control. 
+		imprimir_mensaje("error: tamanio de contexto de ejecucion no coincide");
+		exit(3);
+	}
+
+	memcpy(&(pcb->pid), buffer + desplazamiento, sizeof(uint32_t));
+	desplazamiento += sizeof(int);
+	memcpy(&(pcb->quantum), buffer + desplazamiento, sizeof(uint32_t));
+	desplazamiento += sizeof(int);
 	memcpy(&(pcb->PC), buffer + desplazamiento, sizeof(uint32_t));
 	desplazamiento += sizeof(uint32_t);
 	memcpy(&((pcb->reg_cpu_uso_general).AX), buffer + desplazamiento, sizeof(uint8_t));

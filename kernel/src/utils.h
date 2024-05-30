@@ -17,6 +17,8 @@
 #include <commons/collections/dictionary.h>
 #include <utils/general.h>
 #include <utils/conexiones.h>
+#include <pthread.h>
+#include <semaphore.h>
 
 //////////////////////////////
 
@@ -55,6 +57,8 @@ t_pcb* crear_pcb();
 void destruir_pcb(t_pcb* pcb);
 
 void* serializar_pcb(t_pcb* pcb, int bytes);
+void enviar_pcb(t_pcb* pcb, int conexion);
+void recibir_pcb(t_pcb* pcb, int conexion);
 
 void* serializar_contexto_de_ejecucion(t_pcb* pcb, int bytes);
 void recibir_contexto_de_ejecucion_y_actualizar_pcb(t_pcb* pcb, int socket);

@@ -5,11 +5,16 @@
 /////////////////////////////////////////////////////
 extern t_list* cola_new;
 extern t_list* cola_ready;
-extern t_list* proceso_exec;
+extern t_pcb* proceso_exec;
 extern t_list* lista_colas_blocked_io;
 extern t_list* lista_colas_blocked_recursos;
 extern t_list* procesos_exit;
 /////////////////////////////////////////////////////
+extern pthread_mutex_t sem_plan_c;
+extern pthread_mutex_t sem_colas;
+extern sem_t sem_plan_l;
+extern procesos_activos;
+extern grado_multiprogramacion;
 
 void* rutina_planificador(t_parametros_planificador* parametros) {
 
@@ -59,8 +64,97 @@ void planificar_con_algoritmo_fifo(int socket_cpu_dispatch) {
     // EN DESARROLLO
 }
 
+void planific_corto_fifo(int conexion)
+{
+    while(1){
+		sig_proceso(conexion);
+		t_desalojo desalojo = recibir_desalojo(conexion);
+        pthread_mutex_lock(&sem_colas);
+		*proceso_exec = desalojo.pcb;
+		switch (desalojo.motiv){
+			case EXIT:
+			list_add(procesos_exit,proceso_exec);
+			proceso_exec = NULL;
+            pthread_mutex_unlock(&sem_colas);
+			/* solucion con hilo
+            pthread_t hilo_planif;
+            t_planif_larg arg;
+            arg.op_code = 
+            pthread_create(&hilo_planif, NULL, (void*) planificador_largo, )
+            pthread_detach(hilo_planif); 
+            */
+            sem_post(&sem_plan_l); //senializo al planificador de largo plazo que tiene que actuar
+			break;
+			//faltan casos
+		}
+
+
+		
+
+		
+	}
+}
+
+void sig_proceso(int conexion){ //pone el siguiente proceso a ejecutar, si no hay procesos listos espera a senial de semaforo, asume que no hay proceso en ejecucion
+    if(cola_ready->head==NULL){
+        pthread_mutex_lock(&sem_plan_c); //espera senializacion
+        pthread_mutex_lock(&sem_colas);
+        proceso_exec=list_remove(cola_ready,0);
+        enviar_pcb(proceso_exec,conexion);
+        pthread_mutex_unlock(&sem_colas);
+    }else{
+        pthread_mutex_lock(&sem_colas); 
+        proceso_exec=list_remove(cola_ready,0);
+        enviar_pcb(proceso_exec,conexion);
+        pthread_mutex_unlock(&sem_colas);
+    }
+}
+
+t_desalojo recibir_desalojo(int conexion){ //funcion para recibir desalojo de cpu, faltaria desarrollar protocolo de comunicacion pero podria ser: codigo;pcb;argumentos de io
+    t_desalojo desalojo;
+	desalojo.motiv = recibir_codigo(conexion); 
+	recibir_pcb(&(desalojo.pcb),conexion);
+	switch(desalojo.motiv){
+		case (EXIT):
+		return desalojo;
+		break;
+		case (IO):
+		//hay que recibir informacion del pedido
+		break;
+        //faltan casos
+	}
+}
+
 /////////////////////////////////////////////////////
 
 void gestionar_proceso_desalojado(int cod_motivo_desalojo, t_pcb* proceso_desalojado) {
     // EN DESARROLLO
+}
+
+void* planific_l (void) //planificador de largo plazo que funciona en hilo aparte, espera a senial de semaforo para actuar(solicitud de crear proceso de consola, solicitud de eliminar de planif_corto o de la misma consola)
+{
+    while(1)
+    {
+        sem_wait(&sem_plan_l);
+        pcb_t* pcb;
+        while(proceso_exit->head!=NULL)
+        {
+            pcb = list_remove(proceso_exec,0);
+            //eliminar_proceso(pcb); //se comunica con memoria para solicitar remover el proceso
+            destruir_pcb(pcb);
+        }
+        while((procesos_activos < grado_multiprogramacion) && (cola_new->head!=NULL))
+        {
+            pcb = list_remove(cola_new,0);
+            list_add(cola_ready,pcb);
+        }
+
+
+    }
+}
+
+void* planificador_largo(t_planif_largo arg){ //solucion para crear un hilo se planificador segun requiera cualquier modulo
+    switch (arg.op_code){
+
+    }
 }

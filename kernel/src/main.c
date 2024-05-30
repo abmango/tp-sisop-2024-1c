@@ -1,10 +1,3 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <commons/collections/list.h>
-#include <utils/general.h>
-#include <utils/conexiones.h>
-#include "hilos.h"
-
 #include "main.h"
 
 int grado_multiprogramacion;
@@ -12,10 +5,14 @@ int procesos_activos = 0;
 int contador_pid = 0;
 t_list* cola_new = NULL;
 t_list* cola_ready = NULL;
-t_list* proceso_exec = NULL;
+t_pcb* proceso_exec = NULL; //cambio a puntero a pcb por unico proceso en ejecucion
 t_list* lista_colas_blocked_io = NULL;
 t_list* lista_colas_blocked_recursos = NULL;
 t_list* procesos_exit = NULL;
+
+pthread_mutex_t sem_plan_c;
+pthread_mutex_t sem_colas;
+sem_t sem_plan_l;
 
 int main(int argc, char* argv[]) {
 	
@@ -30,6 +27,11 @@ int main(int argc, char* argv[]) {
 	t_config* config = iniciar_config("default");
 	grado_multiprogramacion = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");
 
+	pthread_mutex_init(&sem_plan_c,NULL);
+	pthread_mutex_lock(&sem_plan_c);
+	pthread_mutex_init(&sem_colas,NULL);
+	pthread_mutex_unlock(&sem_colas);
+	sem_init(&sem_plan_l,0,0);
 
     decir_hola("Kernel");
 
