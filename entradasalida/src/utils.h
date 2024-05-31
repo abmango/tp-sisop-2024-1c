@@ -14,4 +14,6 @@
 
 //////////////////////////////////
 
+presentarse_con_nombre_y_tipo(conexion_kernel); // EN DESARROLLO
+
 #endif /* UTILS_H_ */
