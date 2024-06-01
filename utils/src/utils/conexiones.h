@@ -18,23 +18,12 @@
 
 typedef enum
 {
-	MENSAJE,
-	VARIOS_MENSAJES,
-    INICIAR_PROCESO,
+    MENSAJE,
+	INICIAR_PROCESO,
     FINALIZAR_PROCESO,
-	CONTEXTO_DE_EJECUCION,
-	PCB
-} op_code;
-
-typedef enum
-{
-	EXIT,
-	ERROR,
-	INTERRUPCION,
-    WAIT,
-    SIGNAL,
-	IO
-} motivo_desalojo_code;
+	PCB,
+	DESALOJO
+} op_code; //op code para paquetes
 
 typedef struct
 {

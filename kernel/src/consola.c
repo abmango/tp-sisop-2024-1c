@@ -1,15 +1,4 @@
-
-
 #include "consola.h"
-
-/////////////////////////////////////////////////////
-extern t_list* cola_new;
-extern t_list* cola_ready;
-extern t_list* proceso_exec;
-extern t_list* lista_colas_blocked_io;
-extern t_list* lista_colas_blocked_recursos;
-extern t_list* procesos_exit;
-/////////////////////////////////////////////////////
 
 void* rutina_consola(t_parametros_consola* parametros) {
 
@@ -17,7 +6,6 @@ void* rutina_consola(t_parametros_consola* parametros) {
     char* puerto = NULL;
 
     t_config* config = parametros->config;
-    int socket_memoria = parametros->socket_memoria;
 
     while (1) {
         char* comando_ingresado = readline("> ");
@@ -28,7 +16,7 @@ void* rutina_consola(t_parametros_consola* parametros) {
 
         }
         else if (strcmp(palabras_comando_ingresado[0], "INICIAR_PROCESO") == 0) {
-            op_iniciar_proceso(socket_memoria, palabras_comando_ingresado[1]);
+            op_iniciar_proceso(palabras_comando_ingresado[1]);
         }
         else if (strcmp(palabras_comando_ingresado[0], "DETENER_PLANIFICACION") == 0) {
                 
@@ -74,7 +62,7 @@ void op_proceso_estado() {
     imprimir_pid_de_lista_de_pcb(procesos_exit);
 }
 
-void op_iniciar_proceso(int socket_memoria, char* path) {
+void op_iniciar_proceso(char* path) {
 
     t_pcb* nuevo_pcb = crear_pcb();
     list_add(cola_new, nuevo_pcb);
@@ -83,10 +71,8 @@ void op_iniciar_proceso(int socket_memoria, char* path) {
     int tamanio_path = strlen(path) + 1;
     agregar_a_paquete(paquete, path, tamanio_path);
     int tamanio_pcb = tamanio_de_pcb();
-    void* pcb_serializado = serializar_pcb(nuevo_pcb, tamanio_pcb);
-    agregar_a_paquete(paquete, pcb_serializado, tamanio_pcb);
+    agregar_a_paquete(paquete, nuevo_pcb, tamanio_pcb);
     enviar_paquete(paquete, socket_memoria);
 
-    free(pcb_serializado);
     eliminar_paquete(paquete);
 }

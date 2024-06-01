@@ -41,4 +41,6 @@ t_pcb* recibir_pcb();
 void planificacion_corto_plazo();
 void esperar_interrupcion();
 
+void desalojar(int motiv, t_pcb pcb, int conexion);
+
 #endif /* UTILS_H_ */

@@ -10,8 +10,6 @@
 typedef struct // estructura de parametros. EN PROCESO
 {
     t_config* config;
-    int socket_memoria;
-
 } t_parametros_consola;
 
 ///////////////////////////////////
@@ -24,7 +22,7 @@ void* rutina_consola(t_parametros_consola* parametros);
 ////////////////////////////////////////////////////
 
 void op_ejecutar_script();
-void op_iniciar_proceso(int socket_memoria, char* path);
+void op_iniciar_proceso(char* path);
 
 void op_finalizar_proceso();
 void op_detener_planificacion();

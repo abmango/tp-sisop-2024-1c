@@ -3,9 +3,48 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <commons/string.h>
 #include <commons/config.h>
+
+typedef struct
+{
+    uint8_t AX;
+    uint8_t BX;
+    uint8_t CX;
+    uint8_t DX;
+    uint32_t EAX;
+    uint32_t EBX;
+    uint32_t ECX;
+    uint32_t EDX;
+    uint32_t SI;
+    uint32_t DI;
+} t_reg_cpu_uso_general;
+
+typedef struct
+{
+    int pid;
+    int quantum;
+    uint32_t PC;
+    t_reg_cpu_uso_general reg_cpu_uso_general;
+} t_pcb;
+
+typedef enum
+{
+	EXIT,
+	ERROR,
+	INTERRUPCION,
+    WAIT,
+    SIGNAL,
+	IO
+} motivo_desalojo_code;
+
+typedef struct {
+    t_pcb pcb;
+    motivo_desalojo_code motiv; 
+    //faltarian argumentos de io en caso de que el proceso lo requiera
+} t_desalojo;
 
 /**
 * @fn    decir_hola
@@ -38,5 +77,7 @@ void imprimir_mensaje(char* mensaje);
 void imprimir_entero(int num);
 ///////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
+
+int tamanio_de_pcb(void);
 
 #endif

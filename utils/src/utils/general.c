@@ -34,3 +34,7 @@ void imprimir_mensaje(char* mensaje) {
 void imprimir_entero(int num) {
     printf("%d\n", num);
 }
+
+int tamanio_de_pcb(void) {
+    return 2*sizeof(int) + 4*sizeof(uint8_t) + 7*sizeof(uint32_t);
+}

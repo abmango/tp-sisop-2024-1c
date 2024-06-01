@@ -14,16 +14,14 @@ typedef struct // estructura de parametros. EN DESARROLLO
 
 } t_parametros_planificador;
 
-typedef struct {
-    t_pcb pcb;
-    motivo_desalojo_code motiv; 
-    //faltarian argumentos de io en caso de que el proceso lo requiera
-} t_desalojo;
-
-typedef struct { //estructura para hilo de planificador a largo plazo
-    int op_code;
+typedef enum {
+    CREATE,
+    DELETE
+} op_code_planif_largo;
+typedef struct { //estructura para hilo de planificador a largo plazon, op_code para determinar operacion a realizar.
+    op_code_planif_largo op_code;
     char** arg;
-} t_planif_largo
+} t_parametros_planif_largo;
 
 ////////////////////////////////////////////
 
@@ -33,11 +31,9 @@ void* rutina_planificador(t_parametros_planificador* parametros);
 ////////////////////////////////////////////
 
 // ALGORITMOS
-void planificar_con_algoritmo_fifo(int socket_cpu_dispatch); // EN DESARROLLO
-void planific_corto_fifo(int conexion);
-void sig_proceso(int conexion); //pone el siguiente proceso a ejecutar, si no hay procesos listos espera a senial de semaforo, asume que no hay proceso en ejecucion
-t_desalojo recibir_desalojo(int conexion);
-
-void gestionar_proceso_desalojado(int cod_motivo_desalojo, t_pcb* proceso_desalojado); // EN DESARROLLO
+void planific_corto_fifo(void);
+void sig_proceso(void); //pone el siguiente proceso a ejecutar, si no hay procesos listos espera a senial de semaforo, asume que no hay proceso en ejecucion
+t_desalojo recibir_desalojo(void); //recibe desalojo de cpu, si no hay desalojo se queda esperando a que llegue
+void* planificador_largo(t_parametros_planif_largo arg); //funcion para pasar a hilo, cuando se necesita al planificador de largo plazo se crea el hilo y se le da un opcode dependiendo del requisito
 
 #endif
