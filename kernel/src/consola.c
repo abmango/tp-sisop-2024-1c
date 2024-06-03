@@ -28,7 +28,10 @@ void* rutina_consola(t_parametros_consola* parametros) {
 
         }
         else if (strcmp(palabras_comando_ingresado[0], "INICIAR_PROCESO") == 0) {
-            op_iniciar_proceso(socket_memoria, palabras_comando_ingresado[1]);
+            op_iniciar_proceso(palabras_comando_ingresado[1]);
+        }
+        else if (strcmp(palabras_comando_ingresado[0], "FINALIZAR_PROCESO") == 0) {
+            op_finalizar_proceso(palabras_comando_ingresado[1]);
         }
         else if (strcmp(palabras_comando_ingresado[0], "DETENER_PLANIFICACION") == 0) {
                 
@@ -66,7 +69,11 @@ void op_proceso_estado() {
     imprimir_mensaje("PROCESOS EN READY:");
     imprimir_pid_de_lista_de_pcb(cola_ready);
     imprimir_mensaje("PROCESO EN EXEC:");
-    imprimir_pid_de_lista_de_pcb(proceso_exec);
+    if(proceso_exec != NULL) {
+        imprimir_pid_de_pcb(proceso_exec);
+    } else {
+        imprimir_mensaje("Ninguno.");
+    }
     imprimir_mensaje("PROCESOS EN BLOCKED:");
     imprimir_pid_de_lista_de_listas_de_pcb(lista_colas_blocked_io);
     imprimir_pid_de_lista_de_listas_de_pcb(lista_colas_blocked_recursos);
@@ -74,8 +81,27 @@ void op_proceso_estado() {
     imprimir_pid_de_lista_de_pcb(procesos_exit);
 }
 
-void op_iniciar_proceso(int socket_memoria, char* path) {
+void op_iniciar_proceso(char* path) {
 
+    t_pcb* nuevo_pcb = crear_pcb();
+    list_add(cola_new, nuevo_pcb);
+
+    t_paquete* paquete = crear_paquete(INICIAR_PROCESO);
+    int tamanio_path = strlen(path) + 1;
+    agregar_a_paquete(paquete, path, tamanio_path);
+    int tamanio_pcb = tamanio_de_pcb();
+    void* pcb_serializado = serializar_pcb(nuevo_pcb, tamanio_pcb);
+    agregar_a_paquete(paquete, pcb_serializado, tamanio_pcb);
+    enviar_paquete(paquete, socket_memoria);
+
+    free(pcb_serializado);
+    eliminar_paquete(paquete);
+}
+
+void op_finalizar_proceso(int pid) {
+
+    bool pcb_en_ejec = proceso_esta_en_ejecucion(int pid);
+    //////////////////////////////
     t_pcb* nuevo_pcb = crear_pcb();
     list_add(cola_new, nuevo_pcb);
 
