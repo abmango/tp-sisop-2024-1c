@@ -17,60 +17,35 @@
 #include <commons/collections/dictionary.h>
 #include <utils/general.h>
 #include <utils/conexiones.h>
+#include <pthread.h>
+#include <semaphore.h>
 
-//////////////////////////////
+//paso variables globales a .h
+extern int grado_multiprogramacion;
+extern int procesos_activos;
+extern int contador_pid;
+extern t_list* cola_new;
+extern t_list* cola_ready;
+extern t_pcb* proceso_exec; //cambio a puntero a pcb por unico proceso en ejecucion
+extern t_list* lista_colas_blocked_io;
+extern t_list* lista_colas_blocked_recursos;
+extern t_list* procesos_exit;
 
+extern pthread_mutex_t sem_plan_c;
+extern pthread_mutex_t sem_colas;
 
-// extern t_log* logger;
-
-///////////////////////////
-
-typedef struct
-{
-    uint8_t AX;
-    uint8_t BX;
-    uint8_t CX;
-    uint8_t DX;
-    uint32_t EAX;
-    uint32_t EBX;
-    uint32_t ECX;
-    uint32_t EDX;
-    uint32_t SI;
-    uint32_t DI;
-} t_reg_cpu_uso_general;
-
-typedef struct
-{
-    int pid;
-    int quantum;
-    uint32_t PC;
-    t_reg_cpu_uso_general reg_cpu_uso_general;
-} t_pcb;
-
-////////////////////////////////////
+extern int socket_memoria;
+extern int socket_cpu_dispatch;
+extern int socket_cpu_interrupt;
 
 // Crea e inicializa un PCB
 t_pcb* crear_pcb();
 // Destruye un PCB
 void destruir_pcb(t_pcb* pcb);
-
-void* serializar_pcb(t_pcb* pcb, int bytes);
-
-void* serializar_contexto_de_ejecucion(t_pcb* pcb, int bytes);
-void recibir_contexto_de_ejecucion_y_actualizar_pcb(t_pcb* pcb, int socket);
-void enviar_contexto_de_ejecucion(t_pcb* pcb, int socket);
-
+void enviar_pcb(t_pcb* pcb, int conexion);
 // FUNCIONES AUXILIARES PARA MANEJAR LAS LISTAS DE ESTADOS:
 void imprimir_pid_de_pcb(t_pcb* pcb);
 void imprimir_pid_de_lista_de_pcb(t_list* lista_de_pcb);
 void imprimir_pid_de_lista_de_listas_de_pcb(t_list* lista_de_listas_de_pcb);
-
-// tamanios en bytes de estructuras para serializar
-int tamanio_de_pcb(void);
-int tamanio_de_contexto_de_ejecucion(void);
-
-// funciones para pasarle a hilos
-void planificacion_corto_plazo();
-void quantum();
 
 #endif /* UTILS_H_ */

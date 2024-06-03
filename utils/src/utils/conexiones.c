@@ -250,3 +250,4 @@ void eliminar_paquete(t_paquete* paquete)
 	free(paquete->buffer);
 	free(paquete);
 }
+

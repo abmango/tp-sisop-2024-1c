@@ -1,25 +1,11 @@
-
-
 #include "planificador.h"
 
-/////////////////////////////////////////////////////
-extern t_list* cola_new;
-extern t_list* cola_ready;
-extern t_list* proceso_exec;
-extern t_list* lista_colas_blocked_io;
-extern t_list* lista_colas_blocked_recursos;
-extern t_list* procesos_exit;
-/////////////////////////////////////////////////////
-
-void* rutina_planificador(t_parametros_planificador* parametros) {
-
-    t_config* config = parametros->config;
-    int socket_cpu_dispatch = parametros->socket_cpu_dispatch;
+void* rutina_planificador(t_config* config) {
 
     char* algoritmo_planificacion = config_get_string_value(config, "ALGORITMO_PLANIFICACION");
 
     if (strcmp(algoritmo_planificacion, "FIFO") == 0) {
-        planificar_con_algoritmo_fifo(socket_cpu_dispatch);
+        planific_corto_fifo();
     }
     else if (strcmp(algoritmo_planificacion, "RR") == 0) {
 
@@ -33,34 +19,88 @@ void* rutina_planificador(t_parametros_planificador* parametros) {
 
 /////////////////////////////////////////////////////
 
-void planificar_con_algoritmo_fifo(int socket_cpu_dispatch) {
-    
-    t_pcb* proceso = NULL;
+void planific_corto_fifo(void)
+{
+    while(1){
+		sig_proceso();
+		t_desalojo desalojo = recibir_desalojo();
+        pthread_mutex_lock(&sem_colas);
+		*proceso_exec = desalojo.pcb;
+		switch (desalojo.motiv){
+			case EXIT:
+			list_add(procesos_exit, proceso_exec);
+            proceso_exec = NULL;
+            list_remove_and_destroy_element(procesos_exit, 0, (void*)destruir_pcb);
+            break;
+            case ERROR:
+            list_add(procesos_exit, proceso_exec);
+            proceso_exec = NULL;
+            list_remove_and_destroy_element(procesos_exit, 0, (void*)destruir_pcb);
+            break;
+            case WAIT:
+            break;
+            case SIGNAL:
+            break;
 
-    while (1) {
-    // Tendría que empezar con al menos 1 proceso en la cola ready.
-    // Eso creo que se puede arreglar con semáforos.
-    // Así como también hay que usar semáforos para cada vez que un proceso
-    // se mueve de un estado a otro.
-        proceso = list_remove(cola_ready, 0);
-        list_add(proceso_exec, proceso);
-        enviar_contexto_de_ejecucion(proceso, socket_cpu_dispatch);
+            
+            
+            
+			//faltan casos
+		}
 
-        int cod_op = recibir_codigo(socket_cpu_dispatch); // redundante, pero necesario, por las funciones que reutilizamos.
-        if(cod_op != CONTEXTO_DE_EJECUCION) {
-            imprimir_mensaje("error: operacion desconocida.");
-            exit(3);
+
+		
+
+		
+	}
+}
+
+void sig_proceso(void){ //pone el siguiente proceso a ejecutar, si no hay procesos listos espera a senial de semaforo, asume que no hay proceso en ejecucion
+    if(cola_ready->head==NULL){
+        pthread_mutex_lock(&sem_plan_c); //espera senial
+        pthread_mutex_lock(&sem_colas);
+        if(cola_ready->head!=NULL){
+            proceso_exec=list_remove(cola_ready,0);
+            enviar_pcb(proceso_exec,socket_cpu_dispatch);
         }
-        int cod_motivo_desalojo = recibir_codigo(socket_cpu_dispatch);
-        recibir_contexto_de_ejecucion_y_actualizar_pcb(proceso, socket_cpu_dispatch);
-        gestionar_proceso_desalojado(cod_motivo_desalojo, proceso); // posible forma. Esta funcion recibiría el contexto de ejec.
+        pthread_mutex_unlock(&sem_colas);
+    }else{
+        pthread_mutex_lock(&sem_colas); 
+        if(cola_ready->head!=NULL){
+            proceso_exec=list_remove(cola_ready,0);
+            enviar_pcb(proceso_exec,socket_cpu_dispatch);
+        }
+        pthread_mutex_unlock(&sem_colas);
     }
+}
 
-    // EN DESARROLLO
+t_desalojo recibir_desalojo(void){ //recibe desalojo de cpu, si no hay desalojo se queda esperando a que llegue
+    t_desalojo desalojo;
+	if(recibir_codigo(socket_cpu_dispatch) != DESALOJO) 
+    {
+        imprimir_mensaje("error: operacion desconocida.");
+        exit(3);
+    }
+    int size = 0;
+    void* buffer = recibir_buffer(&size, socket_cpu_dispatch); //Hay que cambiar en vez de paquete deserializar
+    memcpy(&desalojo, buffer + sizeof(int), sizeof(t_desalojo));
+	
+	switch(desalojo.motiv){
+		case (EXIT):
+		return desalojo;
+		break;
+		case (IO):
+		//hay que recibir informacion del pedido(interfaz, operacion, etc), estaria en el buffer
+		break;
+        //faltan casos
+	}
 }
 
 /////////////////////////////////////////////////////
 
-void gestionar_proceso_desalojado(int cod_motivo_desalojo, t_pcb* proceso_desalojado) {
-    // EN DESARROLLO
+void destruir_proceso(void)
+{
+    list_add(procesos_exit,proceso_exec);
+	proceso_exec = NULL;
+    list_remove_and_destroy_element(procesos_exit, 0, (void*)destruir_pcb);
 }
