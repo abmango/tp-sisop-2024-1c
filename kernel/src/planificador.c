@@ -1,9 +1,6 @@
 #include "planificador.h"
 
-void* rutina_planificador(t_parametros_planificador* parametros) {
-
-    t_config* config = parametros->config;
-    int socket_cpu_dispatch = parametros->socket_cpu_dispatch;
+void* rutina_planificador(t_config* config) {
 
     char* algoritmo_planificacion = config_get_string_value(config, "ALGORITMO_PLANIFICACION");
 
@@ -31,16 +28,23 @@ void planific_corto_fifo(void)
 		*proceso_exec = desalojo.pcb;
 		switch (desalojo.motiv){
 			case EXIT:
-			list_add(procesos_exit,proceso_exec);
-			proceso_exec = NULL;
-            pthread_t hilo_planif;
-            t_parametros_planif_largo arg;
-            arg.op_code = EXIT;
-            pthread_create(&hilo_planif, NULL, (void*) planificador_largo, &arg); //puede ser que se pise el arg
-            pthread_detach(hilo_planif); 
+			list_add(procesos_exit, proceso_exec);
+            proceso_exec = NULL;
+            list_remove_and_destroy_element(procesos_exit, 0, (void*)destruir_pcb);
+            break;
+            case ERROR:
+            list_add(procesos_exit, proceso_exec);
+            proceso_exec = NULL;
+            list_remove_and_destroy_element(procesos_exit, 0, (void*)destruir_pcb);
+            break;
+            case WAIT:
+            break;
+            case SIGNAL:
+            break;
+
             
             
-			break;
+            
 			//faltan casos
 		}
 
@@ -62,8 +66,10 @@ void sig_proceso(void){ //pone el siguiente proceso a ejecutar, si no hay proces
         pthread_mutex_unlock(&sem_colas);
     }else{
         pthread_mutex_lock(&sem_colas); 
-        proceso_exec=list_remove(cola_ready,0);
-        enviar_pcb(proceso_exec,socket_cpu_dispatch);
+        if(cola_ready->head!=NULL){
+            proceso_exec=list_remove(cola_ready,0);
+            enviar_pcb(proceso_exec,socket_cpu_dispatch);
+        }
         pthread_mutex_unlock(&sem_colas);
     }
 }
@@ -76,7 +82,7 @@ t_desalojo recibir_desalojo(void){ //recibe desalojo de cpu, si no hay desalojo 
         exit(3);
     }
     int size = 0;
-    void* buffer = recibir_buffer(&size, socket_cpu_dispatch);
+    void* buffer = recibir_buffer(&size, socket_cpu_dispatch); //Hay que cambiar en vez de paquete deserializar
     memcpy(&desalojo, buffer + sizeof(int), sizeof(t_desalojo));
 	
 	switch(desalojo.motiv){
@@ -92,9 +98,9 @@ t_desalojo recibir_desalojo(void){ //recibe desalojo de cpu, si no hay desalojo 
 
 /////////////////////////////////////////////////////
 
-
-void* planificador_largo(t_parametros_planif_largo arg){ //solucion para crear un hilo se planificador segun requiera cualquier modulo
-    switch (arg.op_code){
-
-    }
+void destruir_proceso(void)
+{
+    list_add(procesos_exit,proceso_exec);
+	proceso_exec = NULL;
+    list_remove_and_destroy_element(procesos_exit, 0, (void*)destruir_pcb);
 }

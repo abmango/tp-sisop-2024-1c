@@ -43,7 +43,7 @@ void destruir_pcb(t_pcb* pcb) {
 	pcb = NULL;
 }
 
-void enviar_pcb(t_pcb* pcb, int conexion){
+void enviar_pcb(t_pcb* pcb, int conexion){  // hay que cambiar, en vez de paquete, serializar
 	t_paquete* paquete = crear_paquete(PCB);
 	int tamanio = tamanio_de_pcb;
 	agregar_a_paquete(paquete,pcb,tamanio);
@@ -68,4 +68,21 @@ void imprimir_pid_de_lista_de_listas_de_pcb(t_list* lista_de_listas_de_pcb) {
     t_list* lista_aplastada = list_flatten(lista_de_listas_de_pcb);
     imprimir_pid_de_lista_de_pcb(lista_aplastada);
     list_destroy(lista_aplastada);
+}
+
+void destruir_proceso(int pid)
+{
+    t_list* lista = NULL;
+    int posicion;
+    buscar_pid(pid, &lista, &posicion);
+    list_add(procesos_exit,proceso_exec);
+	proceso_exec = NULL;
+    list_remove_and_destroy_by_condition(cola_ready, ,(void*)destruir_pcb);
+    list_remove_and_destroy_by_condition(, ,(void*)destruir_pcb);
+    list_remove_and_destroy_by_condition(cola_ready, ,(void*)destruir_pcb);
+}
+
+void buscar_pid(int pid, t_list** lista, int* posicion)
+{
+    list_find(cola_ready, )
 }
