@@ -43,13 +43,51 @@ void destruir_pcb(t_pcb* pcb) {
 	pcb = NULL;
 }
 
-void enviar_pcb(t_pcb* pcb, int conexion){  // hay que cambiar, en vez de paquete, serializar
+void enviar_pcb(t_pcb* pcb, int conexion) {
 	t_paquete* paquete = crear_paquete(PCB);
-	int tamanio = tamanio_de_pcb;
-	agregar_a_paquete(paquete,pcb,tamanio);
+	int tamanio = tamanio_de_pcb();
+	void* buffer = serializar_pcb(pcb, tamanio);
+	agregar_a_paquete(paquete, buffer, tamanio);
 	enviar_paquete(paquete, conexion);
+    free(buffer);
 	eliminar_paquete(paquete);
 }
+
+void* serializar_pcb(t_pcb* pcb, int bytes) {
+	void* magic = malloc(bytes);
+	int desplazamiento = 0;
+
+	memcpy(magic + desplazamiento, &(pcb->pid), sizeof(int));
+	desplazamiento += sizeof(int);
+	memcpy(magic + desplazamiento, &(pcb->quantum), sizeof(int));
+	desplazamiento += sizeof(int);
+	memcpy(magic + desplazamiento, &(pcb->PC), sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+	memcpy(magic + desplazamiento, &(pcb->reg_cpu_uso_general.AX), sizeof(uint8_t));
+	desplazamiento += sizeof(uint8_t);
+	memcpy(magic + desplazamiento, &(pcb->reg_cpu_uso_general.BX), sizeof(uint8_t));
+	desplazamiento += sizeof(uint8_t);
+	memcpy(magic + desplazamiento, &(pcb->reg_cpu_uso_general.CX), sizeof(uint8_t));
+	desplazamiento += sizeof(uint8_t);
+	memcpy(magic + desplazamiento, &(pcb->reg_cpu_uso_general.DX), sizeof(uint8_t));
+	desplazamiento += sizeof(uint8_t);
+	memcpy(magic + desplazamiento, &(pcb->reg_cpu_uso_general.EAX), sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+	memcpy(magic + desplazamiento, &(pcb->reg_cpu_uso_general.EBX), sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+	memcpy(magic + desplazamiento, &(pcb->reg_cpu_uso_general.ECX), sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+	memcpy(magic + desplazamiento, &(pcb->reg_cpu_uso_general.EDX), sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+	memcpy(magic + desplazamiento, &(pcb->reg_cpu_uso_general.SI), sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+    memcpy(magic + desplazamiento, &(pcb->reg_cpu_uso_general.DI), sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+
+	return magic;
+}
+
+/////////////////////////////
 
 void imprimir_pid_de_pcb(t_pcb* pcb) {
     imprimir_entero(pcb->pid);
@@ -70,7 +108,7 @@ void imprimir_pid_de_lista_de_listas_de_pcb(t_list* lista_de_listas_de_pcb) {
     list_destroy(lista_aplastada);
 }
 
-void destruir_proceso(int pid)
+void destruir_proceso(int pid) // EN DESARROLLO
 {
     t_list* lista = NULL;
     int posicion;
@@ -80,6 +118,10 @@ void destruir_proceso(int pid)
     list_remove_and_destroy_by_condition(cola_ready, ,(void*)destruir_pcb);
     list_remove_and_destroy_by_condition(, ,(void*)destruir_pcb);
     list_remove_and_destroy_by_condition(cola_ready, ,(void*)destruir_pcb);
+}
+
+bool proceso_esta_en_ejecucion(int pid) {
+    return proceso_exec->pid == pid;
 }
 
 void buscar_pid(int pid, t_list** lista, int* posicion)

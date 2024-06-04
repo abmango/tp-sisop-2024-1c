@@ -26,7 +26,7 @@ extern int procesos_activos;
 extern int contador_pid;
 extern t_list* cola_new;
 extern t_list* cola_ready;
-extern t_pcb* proceso_exec; //cambio a puntero a pcb por unico proceso en ejecucion
+extern t_pcb* proceso_exec;
 extern t_list* lista_colas_blocked_io;
 extern t_list* lista_colas_blocked_recursos;
 extern t_list* procesos_exit;
@@ -38,11 +38,15 @@ extern int socket_memoria;
 extern int socket_cpu_dispatch;
 extern int socket_cpu_interrupt;
 
-// Crea e inicializa un PCB
+// FUNCIONES PARA PCB/PROCESOS:
 t_pcb* crear_pcb();
-// Destruye un PCB
 void destruir_pcb(t_pcb* pcb);
 void enviar_pcb(t_pcb* pcb, int conexion);
+void destruir_proceso(int pid); // EN DESARROLLO
+bool proceso_esta_en_ejecucion(int pid);
+
+void* serializar_pcb(t_pcb* pcb, int bytes);
+
 // FUNCIONES AUXILIARES PARA MANEJAR LAS LISTAS DE ESTADOS:
 void imprimir_pid_de_pcb(t_pcb* pcb);
 void imprimir_pid_de_lista_de_pcb(t_list* lista_de_pcb);
