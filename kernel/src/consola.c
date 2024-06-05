@@ -63,10 +63,9 @@ void op_proceso_estado() {
         imprimir_mensaje("Ninguno.");
     }
     imprimir_mensaje("PROCESOS EN BLOCKED:");
-    imprimir_pid_de_lista_de_listas_de_pcb(lista_colas_blocked_io);
-    imprimir_pid_de_lista_de_listas_de_pcb(lista_colas_blocked_recursos);
+    imprimir_pid_de_estado_blocked();
     imprimir_mensaje("PROCESOS EN EXIT:");
-    imprimir_pid_de_lista_de_pcb(procesos_exit);
+    imprimir_pid_de_lista_de_pcb(cola_exit);
 }
 
 void op_iniciar_proceso(char* path) {
@@ -86,31 +85,23 @@ void op_iniciar_proceso(char* path) {
 
 void op_finalizar_proceso(int pid) {
 
+    // Faltan los mutex, para que mientras busque en las colas, éstas no se alteren.
     bool proceso_en_ejecucion = proceso_esta_en_ejecucion(pid);
-    if(proceso_en_ejecucion) {
-
-    } else {
-
+    if (pid >= contador_pid) {
+        // un log de que el proceso no existe.
     }
-    //liberar_recursos()
-    //liberar_archivos()
+    else if (proceso_en_ejecucion) {
+        enviar_orden_de_interrupcion(pid, FINALIZAR_PROCESO); // y luego lo maneja desde el hilo que escucha al cpu.
+    }
+    else {
+        buscar_y_finalizar_proceso(pid);
+    }
+    //liberar_recursos() - ¿acá o en buscar_y_finalizar()?
+    //liberar_archivos() - ¿acá o en buscar_y_finalizar()?
 
 
 
     
-    //liberar_memoria()
+    //liberar_memoria() - esto tiene que ir en el hilo que maneja la cola_exit
     //////////////////////////////
-    t_pcb* nuevo_pcb = crear_pcb();
-    list_add(cola_new, nuevo_pcb);
-
-    t_paquete* paquete = crear_paquete(INICIAR_PROCESO);
-    int tamanio_path = strlen(path) + 1;
-    agregar_a_paquete(paquete, path, tamanio_path);
-    int tamanio_pcb = tamanio_de_pcb();
-    void* pcb_serializado = serializar_pcb(nuevo_pcb, tamanio_pcb);
-    agregar_a_paquete(paquete, pcb_serializado, tamanio_pcb);
-    enviar_paquete(paquete, socket_memoria);
-
-    free(pcb_serializado);
-    eliminar_paquete(paquete);
 }
