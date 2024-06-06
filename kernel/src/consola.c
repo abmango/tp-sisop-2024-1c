@@ -102,6 +102,6 @@ void op_finalizar_proceso(int pid) {
 
 
     
-    //liberar_memoria() - esto tiene que ir en el hilo que maneja la cola_exit
+    //liberar_memoria() - esto tiene que ir en el hilo que maneja la cola_exit.
     //////////////////////////////
 }

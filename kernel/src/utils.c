@@ -121,7 +121,7 @@ bool proceso_esta_en_ejecucion(int pid) {
 }
 
 void enviar_orden_de_interrupcion(int pid, int cod_op) {
-	t_paquete paquete = crear_paquete(cod_op);
+	t_paquete* paquete = crear_paquete(cod_op);
 	agregar_estatico_a_paquete(paquete, &pid, sizeof(int));
 	enviar_paquete(paquete, socket_cpu_interrupt);
 	eliminar_paquete(paquete);
