@@ -28,14 +28,14 @@ void planific_corto_fifo(void)
 		*proceso_exec = desalojo.pcb;
 		switch (desalojo.motiv){
 			case EXIT:
-			list_add(procesos_exit, proceso_exec);
+			list_add(cola_exit, proceso_exec);
             proceso_exec = NULL;
-            list_remove_and_destroy_element(procesos_exit, 0, (void*)destruir_pcb);
+            // list_remove_and_destroy_element(cola_exit, 0, (void*)destruir_pcb); // esto tiene que ir en el hilo que maneja la cola_exit.
             break;
             case ERROR:
-            list_add(procesos_exit, proceso_exec);
+            list_add(cola_exit, proceso_exec);
             proceso_exec = NULL;
-            list_remove_and_destroy_element(procesos_exit, 0, (void*)destruir_pcb);
+            // list_remove_and_destroy_element(cola_exit, 0, (void*)destruir_pcb); // esto tiene que ir en el hilo que maneja la cola_exit.
             break;
             case WAIT:
             break;
@@ -97,10 +97,3 @@ t_desalojo recibir_desalojo(void){ //recibe desalojo de cpu, si no hay desalojo 
 }
 
 /////////////////////////////////////////////////////
-
-void destruir_proceso(void)
-{
-    list_add(procesos_exit,proceso_exec);
-	proceso_exec = NULL;
-    list_remove_and_destroy_element(procesos_exit, 0, (void*)destruir_pcb);
-}

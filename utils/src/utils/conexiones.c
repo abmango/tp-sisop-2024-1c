@@ -234,6 +234,15 @@ void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio)
 	paquete->buffer->size += tamanio + sizeof(int);
 }
 
+void agregar_estatico_a_paquete(t_paquete* paquete, void* valor, int tamanio)
+{
+	paquete->buffer->stream = realloc(paquete->buffer->stream, paquete->buffer->size + tamanio);
+
+	memcpy(paquete->buffer->stream + paquete->buffer->size, valor, tamanio);
+
+	paquete->buffer->size += tamanio;
+}
+
 void enviar_paquete(t_paquete* paquete, int socket)
 {
 	int bytes = paquete->buffer->size + 2*sizeof(int);

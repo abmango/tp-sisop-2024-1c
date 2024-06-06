@@ -5,9 +5,9 @@ int main(int argc, char* argv[]) {
 	cola_new = list_create();
 	cola_ready = list_create();
 	proceso_exec = malloc(sizeof(t_pcb));
-	lista_colas_blocked_io = list_create();
-	lista_colas_blocked_recursos = list_create();
-	procesos_exit = list_create();
+	lista_io_blocked = list_create();
+	lista_recurso_blocked = list_create();
+	cola_exit = list_create();
 
 	t_config* config = iniciar_config("default");
 	grado_multiprogramacion = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");

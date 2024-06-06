@@ -55,6 +55,9 @@ void enviar_mensaje(char* mensaje, int socket_cliente);
 void crear_buffer(t_paquete* paquete);
 t_paquete* crear_paquete(int cod_op);
 void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
+// Igual que agregar_a_paquete(), pero para datos estáticos (cuyo tamanio es fijo).
+// Por lo que no agrega el tamanio del mismo al stream.
+void agregar_estatico_a_paquete(t_paquete* paquete, void* valor, int tamanio);
 void enviar_paquete(t_paquete* paquete, int socket);
 void eliminar_paquete(t_paquete* paquete);
 
