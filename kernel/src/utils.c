@@ -104,20 +104,6 @@ void buscar_y_finalizar_proceso(int pid) {
 
 }
 
-void destruir_proceso(int pid) // EN DESARROLLO
-{
-	/*
-    t_list* lista = NULL;
-    int posicion;
-    buscar_pid(pid, &lista, &posicion);
-    list_add(procesos_exit,proceso_exec);
-	proceso_exec = NULL;
-    list_remove_and_destroy_by_condition(cola_ready, ,(void*)destruir_pcb);
-    list_remove_and_destroy_by_condition(, ,(void*)destruir_pcb);
-    list_remove_and_destroy_by_condition(cola_ready, ,(void*)destruir_pcb);
-	*/
-}
-
 bool proceso_esta_en_ejecucion(int pid) {
     return proceso_exec->pid == pid;
 }

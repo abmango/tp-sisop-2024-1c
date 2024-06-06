@@ -59,7 +59,6 @@ t_pcb* crear_pcb();
 void destruir_pcb(t_pcb* pcb);
 void enviar_pcb(t_pcb* pcb, int conexion);
 void buscar_y_finalizar_proceso(int pid);
-void destruir_proceso(int pid); // EN DESARROLLO
 bool proceso_esta_en_ejecucion(int pid);
 void enviar_orden_de_interrupcion(int pid, int cod_op);
 
