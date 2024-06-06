@@ -96,12 +96,8 @@ void op_finalizar_proceso(int pid) {
     else {
         buscar_y_finalizar_proceso(pid);
     }
+    
     //liberar_recursos() - ¿acá o en buscar_y_finalizar()?
     //liberar_archivos() - ¿acá o en buscar_y_finalizar()?
 
-
-
-    
-    //liberar_memoria() - esto tiene que ir en el hilo que maneja la cola_exit.
-    //////////////////////////////
 }

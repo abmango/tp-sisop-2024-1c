@@ -23,26 +23,27 @@
 typedef struct
 {
     char* nombre;
-    t_list* cola_blocked;
+    t_list* cola_blocked; // Es una lista de t_pcb*
 } t_io_blocked;
-// Son iguales por ahora. Las separé por si despues vemos que alguna necesita
-// un campo extra, para no tener que cambiar todo.
+// Ambas structs son iguales por ahora. Las separé por si despues vemos que
+// alguna necesita un campo extra, para no tener que cambiar todo.
 typedef struct
 {
     char* nombre;
-    t_list* cola_blocked;
+    t_list* cola_blocked; // Es una lista de t_pcb*
 } t_recurso_blocked;
 
-//paso variables globales a .h
-extern int grado_multiprogramacion;
-extern int procesos_activos;
-extern int contador_pid;
-extern t_list* cola_new;
-extern t_list* cola_ready;
-extern t_pcb* proceso_exec;
-extern t_list* lista_io_blocked;
-extern t_list* lista_recurso_blocked;
-extern t_list* cola_exit;
+// ====  Variables globales:  ===============================================
+// ==========================================================================
+extern int grado_multiprogramacion; // Viene del archivo config
+extern int procesos_activos; // Cantidad de procesos en READY, BLOCKED, o EXEC
+extern int contador_pid; // Contador. Para asignar diferente pid a cada nuevo proceso.
+extern t_list* cola_new; // Estado NEW. Es una lista de t_pcb*
+extern t_list* cola_ready; // Estado READY. Es una lista de t_pcb*
+extern t_pcb* proceso_exec; // Estado EXEC. Es un t_pcb*
+extern t_list* lista_io_blocked; // Estado BLOCKED. Los bloqueados por esperar a una IO. Es una lista de t_io_blocked*
+extern t_list* lista_recurso_blocked; // Estado BLOCKED. Los bloqueados por esperar la liberacion de un recurso. Es una lista de t_recurso_blocked*
+extern t_list* cola_exit; // Estado EXIT. Es una lista de t_pcb*
 
 extern pthread_mutex_t sem_plan_c;
 extern pthread_mutex_t sem_colas;
@@ -50,6 +51,8 @@ extern pthread_mutex_t sem_colas;
 extern int socket_memoria;
 extern int socket_cpu_dispatch;
 extern int socket_cpu_interrupt;
+// ==========================================================================
+
 
 // FUNCIONES PARA PCB/PROCESOS:
 t_pcb* crear_pcb();

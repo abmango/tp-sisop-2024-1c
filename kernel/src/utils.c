@@ -7,10 +7,11 @@ int procesos_activos = 0;
 int contador_pid = 0;
 t_list* cola_new = NULL;
 t_list* cola_ready = NULL;
-t_pcb* proceso_exec = NULL; //cambio a puntero a pcb por unico proceso en ejecucion
+t_pcb* proceso_exec = NULL; //Es un puntero a pcb por ser unico proceso en ejecucion
 t_list* lista_io_blocked = NULL;
 t_list* lista_recurso_blocked = NULL;
 t_list* cola_exit = NULL;
+t_list* lista_de_recursos = NULL;
 
 pthread_mutex_t sem_plan_c;
 pthread_mutex_t sem_colas;
@@ -40,7 +41,8 @@ t_pcb* crear_pcb() {
 
 void destruir_pcb(t_pcb* pcb) {
 	free(pcb);
-	pcb = NULL;
+	// saqué el = NULL ya que no tenia efecto. Habria que pasarlo por referencia.
+	// Mejor que el = NULL lo haga quien llama a esta función.
 }
 
 void enviar_pcb(t_pcb* pcb, int conexion) {
