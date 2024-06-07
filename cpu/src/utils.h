@@ -16,22 +16,35 @@
 #include <commons/collections/list.h>
 #include <utils/general.h>
 #include <utils/conexiones.h>
+#include <pthread.h>
 
-typedef struct
-{
-    uint32_t PC;
-    uint8_t AX;
-    uint8_t BX;
-    uint8_t CX;
-    uint8_t DX;
-    uint32_t EAX;
-    uint32_t EBX;
-    uint32_t ECX;
-    uint32_t EDX;
-    uint32_t SI;
-    uint32_t DI;
-    
-} t_reg_cpu;
+extern int socket_kernel_dispatch;
+extern int socket_memoria;
+extern int socket_kernel_interrupt;
+extern interrupt_code interrupcion;
+extern pthread_mutex_t sem_interrupt;
+
+typedef enum {
+    SET,
+    MOV_IN,
+    MOV_OUT,
+    SUM,
+    SUB,
+    JNZ,
+    RESIZE,
+    COPY_STRING,
+    WAIT,
+    SIGNAL,
+    IO_GEN_SLEEP,
+    IO_STDIN_READ,
+    IO_STDOUT_WRITE,
+    IO_FS_CREATE,
+    IO_FS_DELETE,
+    IO_FS_TRUNCATE,
+    IO_FS_WRITE,
+    IO_FS_READ,
+    EXIT
+} execute_op_code;
 
 ////////////////////////////////////
 
@@ -41,6 +54,15 @@ t_pcb* recibir_pcb();
 void planificacion_corto_plazo();
 void esperar_interrupcion();
 
-void desalojar(int motiv, t_pcb pcb, int conexion);
+void desalojar(motivo_desalojo_code motiv, t_contexto_ejecucion ce);
+t_contexto_ejecucion recibir_contexto_ejecucion(void);
+t_contexto_ejecucion deserializar_contexto_ejecucion(void* buffer);
+void* serializar_desalojo(t_desalojo desalojo);
+char* fetch(uint32_t PC);
+void check_interrupt(t_contexto_ejecucion reg);
+
+void* interrupt(void);
+
+execute_op_code decode(char* instruc);
 
 #endif /* UTILS_H_ */

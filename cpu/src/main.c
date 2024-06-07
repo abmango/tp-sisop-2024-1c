@@ -13,37 +13,75 @@ int main(int argc, char* argv[]) {
 	
 	char* ip = config_get_string_value(config, "IP_MEMORIA");
 	char* puerto = config_get_string_value(config, "PUERTO_MEMORIA");
-    int socket_memoria = crear_conexion(ip, puerto);
+    socket_memoria = crear_conexion(ip, puerto);
     enviar_mensaje("Hola Memoria, como va. Soy CPU.", socket_memoria);
 
 	puerto = config_get_string_value(config, "PUERTO_ESCUCHA_DISPATCH");
-	int socket_escucha_dispatch = iniciar_servidor(puerto);
+	int socket_escucha = iniciar_servidor(puerto);
 
-    int socket_kernel = esperar_cliente(socket_escucha_dispatch);
-	bool kernel_conectado = true;
-	recibir_mensaje(socket_kernel); // el Kernel se presenta
-
-	t_list* lista;
-	while (1) {
-		int cod_op = recibir_codigo(socket_kernel);
-		switch (cod_op) {
-		case MENSAJE:
-			recibir_mensaje(socket_kernel);
+    int socket_kernel_dispatch = esperar_cliente(socket_escucha);
+	int socket_kernel_interrupt = esperar_cliente(socket_escucha);
+	close(socket_escucha);
+	recibir_mensaje(socket_kernel_dispatch); // el Kernel se presenta
+	pthread_mutex_init(&sem_interrupt);
+	pthread_t interrupciones;
+	pthread_create(&interrupciones, NULL, (void*) interrupt, NULL); //hilo pendiente de escuchar las interrupciones
+	pthread_detach(interrupciones);
+	
+	t_contexto_ejecucion reg;
+	char* instruccion;
+	while(1)
+	{
+		reg = recibir_contexto_ejecucion();
+		instruccion = fetch(reg.PC);
+		char** arg = string_split(instruccion, " ");
+		execute_op_code op_code = decode(arg[0]);
+		switch (op_code){
+			case SET:
 			break;
-		case VARIOS_MENSAJES:
-			lista = recibir_paquete(socket_kernel);
-			imprimir_mensaje("Me llegaron los siguientes valores:");
-			list_iterate(lista, (void*)iterator);
+			case MOV_IN:
 			break;
-		case -1:
-			imprimir_mensaje("el cliente se desconecto. Terminando servidor");
-			terminar_programa(socket_memoria, config);
-			return EXIT_FAILURE;
-		default:
-			imprimir_mensaje("Operacion desconocida. No quieras meter la pata");
+			case MOV_OUT:
+			break;
+			case SUM:
+			break;
+			case SUB:
+			break;
+			case JNZ:
+			break;
+			case RESIZE:
+			break;
+			case COPY_STRING:
+			break;
+			case WAIT:
+			break;
+			case SIGNAL:
+			break;
+			case IO_GEN_SLEEP:
+			break;
+			case IO_STDIN_READ:
+			break;
+			case IO_STDOUT_WRITE:
+			break;
+			case IO_FS_CREATE:
+			break;
+			case IO_FS_DELETE:
+			break;
+			case IO_FS_TRUNCATE:
+			break;
+			case IO_FS_WRITE:
+			break;
+			case IO_FS_READ:
+			break;
+			case EXIT:
+			break;
+			default:
 			break;
 		}
+		check_interrupt(reg);
 	}
+
+	
 	
 	return EXIT_SUCCESS;
 
