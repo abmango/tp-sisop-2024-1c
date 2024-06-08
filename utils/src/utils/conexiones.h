@@ -20,9 +20,11 @@ typedef enum
 {
     MENSAJE,
 	INICIAR_PROCESO,
-    FINALIZAR_PROCESO,
+    // FINALIZAR_PROCESO,
 	PCB,
-	DESALOJO
+	INTERRUPCION,
+	//DESALOJO,
+	CONTEXTO
 } op_code; //op code para paquetes
 
 typedef struct

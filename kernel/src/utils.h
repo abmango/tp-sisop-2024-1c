@@ -38,6 +38,7 @@ typedef struct
 extern int grado_multiprogramacion; // Viene del archivo config
 extern int procesos_activos; // Cantidad de procesos en READY, BLOCKED, o EXEC
 extern int contador_pid; // Contador. Para asignar diferente pid a cada nuevo proceso.
+
 extern t_list* cola_new; // Estado NEW. Es una lista de t_pcb*
 extern t_list* cola_ready; // Estado READY. Es una lista de t_pcb*
 extern t_pcb* proceso_exec; // Estado EXEC. Es un t_pcb*
@@ -45,14 +46,19 @@ extern t_list* lista_io_blocked; // Estado BLOCKED. Los bloqueados por esperar a
 extern t_list* lista_recurso_blocked; // Estado BLOCKED. Los bloqueados por esperar la liberacion de un recurso. Es una lista de t_recurso_blocked*
 extern t_list* cola_exit; // Estado EXIT. Es una lista de t_pcb*
 
+extern t_list* recursos_del_sistema; // Recursos, con sus instancias disponibles actualmente. Es una lista de t_recurso*
+
 extern pthread_mutex_t sem_plan_c;
 extern pthread_mutex_t sem_colas;
+extern pthread_mutex_t sem_cola_new;
+extern pthread_mutex_t sem_cola_ready;
+extern pthread_mutex_t sem_proceso_exec;
+extern pthread_mutex_t sem_cola_exit;
 
 extern int socket_memoria;
 extern int socket_cpu_dispatch;
 extern int socket_cpu_interrupt;
 // ==========================================================================
-
 
 // FUNCIONES PARA PCB/PROCESOS:
 t_pcb* crear_pcb();
@@ -60,9 +66,17 @@ void destruir_pcb(t_pcb* pcb);
 void enviar_pcb(t_pcb* pcb, int conexion);
 void buscar_y_finalizar_proceso(int pid);
 bool proceso_esta_en_ejecucion(int pid);
-void enviar_orden_de_interrupcion(int pid, int cod_op);
+
+t_contexto_de_ejecucion contexto_de_ejecucion_de_pcb(t_pcb* pcb);
+void actualizar_contexto_de_ejecucion_de_pcb(t_contexto_de_ejecucion nuevo_contexto_de_ejecucion, t_pcb* pcb);
+
+t_desalojo recibir_desalojo(int socket); // DESARROLLANDO
+void enviar_contexto_de_ejecucion(t_contexto_de_ejecucion contexto_de_ejecucion, int socket);
+
+void enviar_orden_de_interrupcion(t_interrupt_code interrupt_code);
 
 void* serializar_pcb(t_pcb* pcb, int bytes);
+void* serializar_lista_de_recursos(t_list* lista_de_recursos, int bytes);
 
 // FUNCIONES AUXILIARES PARA MANEJAR LAS LISTAS DE ESTADOS:
 void imprimir_pid_de_pcb(t_pcb* pcb);

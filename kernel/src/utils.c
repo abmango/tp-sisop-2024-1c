@@ -5,16 +5,22 @@
 int grado_multiprogramacion;
 int procesos_activos = 0;
 int contador_pid = 0;
+
 t_list* cola_new = NULL;
 t_list* cola_ready = NULL;
 t_pcb* proceso_exec = NULL; //Es un puntero a pcb por ser unico proceso en ejecucion
 t_list* lista_io_blocked = NULL;
 t_list* lista_recurso_blocked = NULL;
 t_list* cola_exit = NULL;
-t_list* lista_de_recursos = NULL;
+
+t_list* recursos_del_sistema = NULL;
 
 pthread_mutex_t sem_plan_c;
 pthread_mutex_t sem_colas;
+pthread_mutex_t sem_cola_new;
+pthread_mutex_t sem_cola_ready;
+pthread_mutex_t sem_proceso_exec;
+pthread_mutex_t sem_cola_exit;
 
 int socket_memoria = 1;
 int socket_cpu_dispatch = 1;
@@ -25,6 +31,7 @@ t_pcb* crear_pcb() {
 	pcb->pid = contador_pid;
     contador_pid++;
     pcb->quantum = 0;
+	pcb->recursos_ocupados = list_create();
     pcb->PC = 0;
     pcb->reg_cpu_uso_general.AX = 0;
     pcb->reg_cpu_uso_general.BX = 0;
@@ -37,9 +44,11 @@ t_pcb* crear_pcb() {
     pcb->reg_cpu_uso_general.SI = 0;
     pcb->reg_cpu_uso_general.DI = 0;
 	return pcb;
-}    
+}
 
+// antes de usar esta, hay que liberar los recursos
 void destruir_pcb(t_pcb* pcb) {
+	list_destroy(pcb->recursos_ocupados);
 	free(pcb);
 	// saqué el = NULL ya que no tenia efecto. Habria que pasarlo por referencia.
 	// Mejor que el = NULL lo haga quien llama a esta función.
@@ -47,7 +56,7 @@ void destruir_pcb(t_pcb* pcb) {
 
 void enviar_pcb(t_pcb* pcb, int conexion) {
 	t_paquete* paquete = crear_paquete(PCB);
-	int tamanio = tamanio_de_pcb();
+	int tamanio = tamanio_de_pcb(pcb);
 	void* buffer = serializar_pcb(pcb, tamanio);
 	agregar_a_paquete(paquete, buffer, tamanio);
 	enviar_paquete(paquete, conexion);
@@ -108,9 +117,35 @@ bool proceso_esta_en_ejecucion(int pid) {
     return proceso_exec->pid == pid;
 }
 
-void enviar_orden_de_interrupcion(int pid, int cod_op) {
-	t_paquete* paquete = crear_paquete(cod_op);
-	agregar_estatico_a_paquete(paquete, &pid, sizeof(int));
+t_contexto_de_ejecucion contexto_de_ejecucion_de_pcb(t_pcb* pcb) {
+	t_contexto_de_ejecucion contexto_de_ejecucion;
+	contexto_de_ejecucion.PC = pcb->PC;
+	contexto_de_ejecucion.reg_cpu_uso_general = pcb->reg_cpu_uso_general;
+	return contexto_de_ejecucion;
+}
+
+void actualizar_contexto_de_ejecucion_de_pcb(t_contexto_de_ejecucion nuevo_contexto_de_ejecucion, t_pcb* pcb) {
+	pcb->PC = nuevo_contexto_de_ejecucion.PC;
+	pcb->reg_cpu_uso_general = nuevo_contexto_de_ejecucion.reg_cpu_uso_general;
+}
+
+t_desalojo recibir_desalojo(int socket) {
+	// DESARROLLANDO
+}
+
+void enviar_contexto_de_ejecucion(t_contexto_de_ejecucion contexto_de_ejecucion, int socket) {
+	t_paquete* paquete = crear_paquete(CONTEXTO);
+	int tamanio = tamanio_de_contexto_de_ejecucion();
+	void* buffer = serializar_contexto_de_ejecucion(contexto_de_ejecucion, tamanio);
+	agregar_a_paquete(paquete, buffer, tamanio);
+	enviar_paquete(paquete, socket);
+    free(buffer);
+	eliminar_paquete(paquete);
+}
+
+void enviar_orden_de_interrupcion(t_interrupt_code interrupt_code) {
+	t_paquete* paquete = crear_paquete(INTERRUPCION);
+	agregar_estatico_a_paquete(paquete, &interrupt_code, sizeof(t_interrupt_code));
 	enviar_paquete(paquete, socket_cpu_interrupt);
 	eliminar_paquete(paquete);
 }
@@ -145,6 +180,33 @@ void* serializar_pcb(t_pcb* pcb, int bytes) {
 	desplazamiento += sizeof(uint32_t);
     memcpy(magic + desplazamiento, &(pcb->reg_cpu_uso_general.DI), sizeof(uint32_t));
 	desplazamiento += sizeof(uint32_t);
+	int tamanio_recursos_ocupados = tamanio_de_lista_de_recursos(pcb->recursos_ocupados);
+	void* recursos_ocupados_serializados = serializar_lista_de_recursos(pcb->recursos_ocupados, tamanio_recursos_ocupados);
+	memcpy(magic + desplazamiento, recursos_ocupados_serializados, tamanio_recursos_ocupados);
+	free(recursos_ocupados_serializados);
+	desplazamiento += tamanio_recursos_ocupados;
+
+	return magic;
+}
+
+void* serializar_lista_de_recursos(t_list* lista_de_recursos, int bytes) {
+	void* magic = malloc(bytes);
+	int desplazamiento = 0;
+
+	int cant_recursos = list_size(lista_de_recursos);
+	memcpy(magic + desplazamiento, &cant_recursos, sizeof(int));
+	desplazamiento += sizeof(int);
+
+	for(int index_recurso = 0; index_recurso <= cant_recursos-1; index_recurso++) {
+		t_recurso* recurso = list_get(lista_de_recursos, index_recurso);
+		int tamanio_nombre_recurso = strlen(recurso->nombre) + 1;
+		memcpy(magic + desplazamiento, &tamanio_nombre_recurso, sizeof(int));
+		desplazamiento += sizeof(int);
+		memcpy(magic + desplazamiento, recurso->nombre, tamanio_nombre_recurso);
+		desplazamiento += tamanio_nombre_recurso;
+		memcpy(magic + desplazamiento, &(recurso->instancias), sizeof(int));
+		desplazamiento += sizeof(int);
+	}
 
 	return magic;
 }

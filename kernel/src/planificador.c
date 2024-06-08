@@ -60,7 +60,7 @@ void sig_proceso(void){ //pone el siguiente proceso a ejecutar, si no hay proces
         pthread_mutex_lock(&sem_plan_c); //espera senial
         pthread_mutex_lock(&sem_colas);
         if(cola_ready->head!=NULL){
-            proceso_exec=list_remove(cola_ready,0);
+            proceso_exec=list_remove(cola_ready, 0);
             enviar_pcb(proceso_exec,socket_cpu_dispatch);
         }
         pthread_mutex_unlock(&sem_colas);

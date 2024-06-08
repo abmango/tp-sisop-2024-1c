@@ -6,7 +6,7 @@ void* rutina_exit(void* puntero_null) {
 
     while(1) {
         // .
-        // wait() del semáforo de la cola ready
+        // wait() del semáforo de la cola exit
         // .
         proceso_a_destruir = list_remove(cola_exit, 0);
         // .

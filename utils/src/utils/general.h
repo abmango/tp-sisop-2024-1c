@@ -4,9 +4,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 #include <unistd.h>
 #include <commons/string.h>
 #include <commons/config.h>
+#include <commons/collections/list.h>
 
 typedef struct
 {
@@ -24,28 +26,50 @@ typedef struct
 
 typedef struct
 {
+    char* nombre;
+    int instancias;
+} t_recurso;
+
+typedef struct
+{
     int pid;
     int quantum;
+    t_list* recursos_ocupados // Es una lista de t_recurso*
     uint32_t PC;
     t_reg_cpu_uso_general reg_cpu_uso_general;
 } t_pcb;
 
+typedef struct
+{
+    uint32_t PC;
+    t_reg_cpu_uso_general reg_cpu_uso_general;
+} t_contexto_de_ejecucion;
+
 typedef enum
 {
-	EXIT,
-	ERROR,
-	INTERRUPCION,
-    INTERRUPCION_POR_FINALIZACION,
+	SUCCESS,
+	INVALID_RESOURCE,
+    INVALID_INTERFACE,
+    OUT_OF_MEMORY,
+    INTERRUPTED_BY_USER,
+    INTERRUPTED_BY_QUANTUM,
     WAIT,
     SIGNAL,
 	IO
 } motivo_desalojo_code;
 
 typedef struct {
-    t_pcb pcb;
-    motivo_desalojo_code motiv; 
-    //faltarian argumentos de io en caso de que el proceso lo requiera
+    t_contexto_de_ejecucion contexto;
+    motivo_desalojo_code motiv;
+    char** arg;
 } t_desalojo;
+
+typedef enum
+{
+    NADA,
+    FINALIZAR,
+    DESALOJAR
+} t_interrupt_code;
 
 /**
 * @fn    decir_hola
@@ -79,6 +103,10 @@ void imprimir_entero(int num);
 ///////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
 
-int tamanio_de_pcb(void);
+int tamanio_de_pcb(t_pcb* pcb);
+int tamanio_de_contexto_de_ejecucion(void);
+int tamanio_de_lista_de_recursos(t_list* lista_de_recursos);
+
+void* serializar_contexto_de_ejecucion(t_contexto_de_ejecucion contexto_de_ejecucion, int bytes);
 
 #endif
