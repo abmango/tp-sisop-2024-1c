@@ -18,4 +18,4 @@ void iterator(char* value);
 void paquete(int);
 void terminar_programa(int socket_memoria, t_config* config);
 
-#endif /* CLIENT_H_ */
+#endif 
