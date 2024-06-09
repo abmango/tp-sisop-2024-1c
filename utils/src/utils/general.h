@@ -61,7 +61,7 @@ typedef enum
 typedef struct {
     t_contexto_de_ejecucion contexto;
     motivo_desalojo_code motiv;
-    char** arg;
+    t_list* arg;
 } t_desalojo;
 
 typedef enum

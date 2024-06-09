@@ -95,6 +95,7 @@ void op_finalizar_proceso(int pid) {
     }
     else {
         buscar_y_finalizar_proceso(pid);
+        //
     }
     
     //liberar_recursos() - ¿acá o en buscar_y_finalizar()?

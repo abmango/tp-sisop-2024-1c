@@ -106,6 +106,7 @@ void buscar_y_finalizar_proceso(int pid) {
 
 	if (proceso != NULL) {
 		list_add(cola_exit, proceso);
+		
 	}
 	else {
 		// un log de que ese proceso ya no existe más.
