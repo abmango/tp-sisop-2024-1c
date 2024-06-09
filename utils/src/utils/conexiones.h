@@ -24,7 +24,9 @@ typedef enum
 	PCB,
 	CONTEXTO_EJECUCION,
 	INTERRUPCION,
-	DESALOJO
+	DESALOJO,
+	IO_NUEVA,
+	IO_RESPUESTA
 } op_code; //op code para paquetes
 
 typedef struct

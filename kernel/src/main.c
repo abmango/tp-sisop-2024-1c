@@ -44,6 +44,7 @@ int main(int argc, char* argv[]) {
 		recibir_mensaje(socket_io); // el I/O se presenta
 		t_io_blocked* io_blocked = recibir_nueva_io(socket_io);
 		list_add(lista_io_blocked, io_blocked);
+		
 	}
 
 	return EXIT_SUCCESS;
