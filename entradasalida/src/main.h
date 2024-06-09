@@ -11,6 +11,11 @@
 #include "utils.h"
 
 void paquete(int);
-void terminar_programa(int, int, t_config*);
+void terminar_programa(int, t_config*);
 
-#endif /* CLIENT_H_ */
+void interfaz_generica(t_config*, int);
+void interfaz_stdin(t_config*, int);
+void interfaz_stdout(t_config*, int);
+void interfaz_dialFS(t_config*, int);
+
+#endif
