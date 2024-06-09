@@ -134,7 +134,7 @@ t_desalojo recibir_desalojo(int socket) {
 }
 
 void enviar_contexto_de_ejecucion(t_contexto_de_ejecucion contexto_de_ejecucion, int socket) {
-	t_paquete* paquete = crear_paquete(CONTEXTO);
+	t_paquete* paquete = crear_paquete(CONTEXTO_EJECUCION);
 	int tamanio = tamanio_de_contexto_de_ejecucion();
 	void* buffer = serializar_contexto_de_ejecucion(contexto_de_ejecucion, tamanio);
 	agregar_a_paquete(paquete, buffer, tamanio);
@@ -211,7 +211,13 @@ void* serializar_lista_de_recursos(t_list* lista_de_recursos, int bytes) {
 	return magic;
 }
 
-/////////////////////////////
+t_io_blocked* recibir_nueva_io(int socket) {
+	t_io_blocked* io_blocked = malloc(sizeof(t_io_blocked));
+	// .
+	// desarrollar según como lo serialize el módulo entradasalida.
+	// .
+	return io_blocked;
+}
 
 void imprimir_pid_de_pcb(t_pcb* pcb) {
     imprimir_entero(pcb->pid);

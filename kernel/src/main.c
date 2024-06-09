@@ -31,16 +31,20 @@ int main(int argc, char* argv[]) {
 	puerto = config_get_string_value(config, "PUERTO_CPU_DISPATCH");
     socket_cpu_dispatch = crear_conexion(ip, puerto);
     enviar_mensaje("Hola CPU puerto Dispatch, como va. Soy KERNEL.", socket_cpu_dispatch);
-	socket_cpu_interrupt = crear_conexion(ip, puerto); //creo conexion interrupt
+
+	puerto = config_get_string_value(config, "PUERTO_CPU_INTERRUPT");
+	socket_cpu_interrupt = crear_conexion(ip, puerto);
+	enviar_mensaje("Hola CPU puerto Interrupt, como va. Soy KERNEL.", socket_cpu_interrupt);
 
 	puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
 	int socket_escucha = iniciar_servidor(puerto);
 
-    int socket_io = esperar_cliente(socket_escucha);
-	bool io_conectado = true;
-	recibir_mensaje(socket_io); // el I/O se presenta
-
-
+	while(1) {
+		int socket_io = esperar_cliente(socket_escucha);
+		recibir_mensaje(socket_io); // el I/O se presenta
+		t_io_blocked* io_blocked = recibir_nueva_io(socket_io);
+		list_add(lista_io_blocked, io_blocked);
+	}
 
 	return EXIT_SUCCESS;
 }

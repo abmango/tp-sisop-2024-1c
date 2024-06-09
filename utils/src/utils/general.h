@@ -71,6 +71,14 @@ typedef enum
     DESALOJAR
 } t_interrupt_code;
 
+typedef enum
+{
+    GENERICA,
+    STDIN,
+    STDOUT,
+    DIALFS
+} t_io_type_code;
+
 /**
 * @fn    decir_hola
 * @brief Imprime un saludo al nombre que se pase por parámetro por consola.

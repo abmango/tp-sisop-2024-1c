@@ -23,10 +23,11 @@
 typedef struct
 {
     char* nombre;
+    t_io_type_code tipo;
+    int socket;
     t_list* cola_blocked; // Es una lista de t_pcb*
 } t_io_blocked;
-// Ambas structs son iguales por ahora. Las separé por si despues vemos que
-// alguna necesita un campo extra, para no tener que cambiar todo.
+
 typedef struct
 {
     char* nombre;
@@ -77,6 +78,9 @@ void enviar_orden_de_interrupcion(t_interrupt_code interrupt_code);
 
 void* serializar_pcb(t_pcb* pcb, int bytes);
 void* serializar_lista_de_recursos(t_list* lista_de_recursos, int bytes);
+
+// FUNCIONES PARA IOs:
+t_io_blocked* recibir_nueva_io(int socket); // Falta desarrollar
 
 // FUNCIONES AUXILIARES PARA MANEJAR LAS LISTAS DE ESTADOS:
 void imprimir_pid_de_pcb(t_pcb* pcb);

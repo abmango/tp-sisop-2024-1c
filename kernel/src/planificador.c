@@ -21,8 +21,9 @@ void* rutina_planificador(t_config* config) {
 
 void planific_corto_fifo(void)
 {
+
     while(1){
-		sig_proceso();
+		ejecutar_sig_proceso();
 		t_desalojo desalojo = recibir_desalojo();
         pthread_mutex_lock(&sem_colas);
 		*proceso_exec = desalojo.pcb;
@@ -55,7 +56,15 @@ void planific_corto_fifo(void)
 	}
 }
 
-void sig_proceso(void){ //pone el siguiente proceso a ejecutar, si no hay procesos listos espera a senial de semaforo, asume que no hay proceso en ejecucion
+void ejecutar_sig_proceso(void){ //pone el siguiente proceso a ejecutar, si no hay procesos listos espera a senial de semaforo, asume que no hay proceso en ejecucion
+
+    proceso_exec = list_remove(cola_ready, 0);
+    t_contexto_de_ejecucion contexto_de_ejecucion = contexto_de_ejecucion_de_pcb(proceso_exec);
+    enviar_contexto_de_ejecucion(contexto_de_ejecucion, socket_cpu_dispatch);
+
+/////////////////////////////
+ // REVISANDO /// ----  - /-/
+/////////////////////////////
     if(cola_ready->head==NULL){
         pthread_mutex_lock(&sem_plan_c); //espera senial
         pthread_mutex_lock(&sem_colas);
@@ -65,7 +74,7 @@ void sig_proceso(void){ //pone el siguiente proceso a ejecutar, si no hay proces
         }
         pthread_mutex_unlock(&sem_colas);
     }else{
-        pthread_mutex_lock(&sem_colas); 
+        pthread_mutex_lock(&sem_colas);
         if(cola_ready->head!=NULL){
             proceso_exec=list_remove(cola_ready,0);
             enviar_pcb(proceso_exec,socket_cpu_dispatch);
