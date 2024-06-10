@@ -70,32 +70,78 @@ resultado_operacion crear_proceso (t_list *solicitud, t_proceso *proceso)
     proceso->pid = *(int*) data;
     data = list_get(solicitud, 1);
     proceso->instrucciones = cargar_instrucciones(data);
-    proceso->num_paginas = 0;
-    proceso->paginas = NULL;
+    proceso->paginas = list_create();
     
     if (list_size(proceso->instrucciones) == 0){
         printf("Script no cargo");
+        limpiar_estructura_proceso(proceso);
         return ERROR;
     } else return CORRECTA;
 }
 
-resultado_operacion finalizar_proceso (t_proceso *proceso, MemoriaPaginada *memoria)
+resultado_operacion finalizar_proceso (MemoriaPaginada *memoria, t_proceso *proceso)
 {   
-    pagina aux;
+    int indice_frame;
     int bitFramesIni = bitarray_get_max_bit(memoria->bitmap);
-    for (int i=0; i<proceso->num_paginas; i++){
-        // obtener posicion bitmap de frame para marcarlo como libre
-        aux = *(proceso->paginas + i); // desplaza dentro de paginas 
-        bitarray_clean_bit(memoria->bitmap, aux.desplazamiento);
+    // pensar si requiere zona critica (utilizar mutex de memoria)
+    for (int i=0; i < list_size(proceso->paginas); i++){
+        indice_frame = obtener_indice_frame(memoria, list_get(proceso->paginas,i));
+        bitarray_clean_bit(memoria->bitmap, indice_frame);
     }
-    free(proceso->paginas);
-    list_clean(proceso->instrucciones);
-    free(proceso);
+    limpiar_estructura_proceso(proceso);
     
-    if (bitarray_get_max_bit(memoria->bitmap) < bitFramesIni)
-        return CORRECTA;
-    else
+    return CORRECTA;
+}
+
+// ind_pagina_cosulta tendra el indice relativo a la tabla de paginas del proceso
+// revisar xq capaz esta funcion deberia devolver una direccion... x ahora solo esta preparada para el log
+resultado_operacion acceso_tabla_paginas(MemoriaPaginada *memoria , t_proceso *proceso, int ind_pagina_consulta)
+{
+    if (ind_pagina_consulta >= list_size(proceso->paginas)) {
+        printf("Tabla de Paginas del proceso [%i] no tiene asignada una pagina asignada en la posicion: %i",proceso->pid,ind_pagina_consulta);
         return ERROR;
+    }
+    int frame = obtener_indice_frame(memoria, list_get(proceso->paginas,ind_pagina_consulta));
+    printf("PID: <%i> - Pagina: <%i> - Marco: <%i>",proceso->pid,ind_pagina_consulta,frame);
+    return CORRECTA;
+}
+
+resultado_operacion ajustar_tamano_proceso(MemoriaPaginada *memoria, t_proceso *proceso, int nuevo_size)
+{
+    // calcula tamaño actula, util para logs
+    void *aux;
+    int indice_aux;
+    int tamano_a_ampliar = nuevo_size - (list_size(proceso->paginas) * memoria->tamano_pagina);
+    int paginas_a_modificar = 0;
+    if (tamano_a_ampliar % memoria->tamano_pagina !=0 && tamano_a_ampliar > 0)
+        paginas_a_modificar = (tamano_a_ampliar / memoria->tamano_pagina) + 1;
+    else if (tamano_a_ampliar % memoria->tamano_pagina !=0 && tamano_a_ampliar < 0)
+        paginas_a_modificar = -1 * (tamano_a_ampliar / memoria->tamano_pagina); // se redondea para abajo
+    else 
+        paginas_a_modificar = tamano_a_ampliar / memoria->tamano_pagina;
+
+    if (tamano_a_ampliar > 0){
+        for (int i=0; i<paginas_a_modificar; i++){
+            indice_aux = 0;
+            aux = obtener_frame_libre(memoria);
+
+            if (aux == NULL) // si no hay + frames libres
+                return INSUFICIENTE;
+
+            indice_aux = obtener_indice_frame(memoria,aux);
+            list_add(proceso->paginas, aux);
+            bitarray_set_bit(memoria, indice_aux);
+        }
+        printf("PID: <%i> - Tamaño Actual: <%i> - Tamaño a Ampliar: <%i>",proceso->pid,(list_size(proceso->paginas) * memoria->tamano_pagina), nuevo_size);
+    } else if (tamano_a_ampliar < 0) {
+        for (int i=0; i<paginas_a_modificar; i++){
+            aux = list_get(proceso->paginas, list_size(proceso->paginas) - 1);
+            list_remove(proceso->paginas, list_size(proceso->paginas) - 1); // -1 para entrar en rango
+            indice_aux = obtener_indice_frame(memoria, aux);
+            bitarray_clean_bit(memoria, indice_aux);
+        }
+        printf("PID: <%i> - Tamaño Actual: <%i> - Tamaño a Reducir: <%i>",proceso->pid,(list_size(proceso->paginas) * memoria->tamano_pagina), nuevo_size);
+    } else return CORRECTA; // si se quizo poner el mismo tamaño se considera q se ajusto bien
 }
 
 // Función para liberar la memoria ocupada por la estructura de memoria paginada
@@ -109,9 +155,47 @@ void liberar_memoria(MemoriaPaginada *memoria) {
     free(memoria);
 }
 
+void limpiar_estructura_proceso (t_proceso * proc)
+{
+    list_clean(proc->paginas);
+    list_clean(proc->instrucciones);
+    free(proc->instrucciones);
+    free(proc->paginas);
+    free(proc);
+}
+
 t_list * cargar_instrucciones (char *directorio)
 {
     /*
         Lo que sea necesario para cargar un script
     */
+}
+
+int obtener_indice_frame(MemoriaPaginada *memoria, void *ref_frame)
+{
+    // como EU es continuo, va a devolver Delta bytes (Bfinal - Binicial)
+    int Delta_bytes = ref_frame - memoria->espacio_usuario;
+    if (Delta_bytes % memoria->tamano_pagina == 0)
+        return Delta_bytes / memoria->tamano_pagina;
+    else // no se si es correcto o necesario...
+        return (Delta_bytes / memoria->tamano_pagina) + 1;
+}
+
+void * obtener_frame_libre(MemoriaPaginada *memoria)
+{   
+    void *aux = NULL;
+    aux = memoria->espacio_usuario;
+    for (int i=0; i < memoria->cantidad_marcos; i++){
+        memoria->ultimo_frame_verificado++; // pasa al siguiente frame
+        if (memoria->ultimo_frame_verificado >= memoria->cantidad_marcos){
+            memoria->ultimo_frame_verificado = 0; // si dio vuelta completa lo reinicia
+        }
+        // verifica frame
+        if ((bitarray_test_bit(memoria->bitmap,memoria->ultimo_frame_verificado)) == false )
+            aux += (memoria->ultimo_frame_verificado * memoria->tamano_pagina);
+    }
+    if (aux == memoria->espacio_usuario) 
+        return NULL;
+    else 
+        return (aux);
 }
