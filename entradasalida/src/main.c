@@ -15,7 +15,8 @@ int main(int argc, char* argv[]) {
     char* ip;
 	char* puerto;
 	char* valor;
-	char *interfaz;
+	char* interfaz;
+	char* nombre;
 
     t_config* config;
 	
@@ -36,6 +37,8 @@ int main(int argc, char* argv[]) {
     }
     
 	
+	nombre = argv[1];
+
 	ip = config_get_string_value(config, "IP_KERNEL");
 	puerto = config_get_string_value(config, "PUERTO_KERNEL");
 	interfaz = config_get_string_value(config, "TIPO_INTERFAZ");
@@ -44,16 +47,16 @@ int main(int argc, char* argv[]) {
 
 	// averiguar si son los nombres q se van a recibir
 	if (strcmp(interfaz, "GENERICA") == 0) {
-        interfaz_generica(config, conexion_kernel);
+        interfaz_generica(nombre, config, conexion_kernel);
     }
 	else if (strcmp(interfaz, "STDIN") == 0) {
-        interfaz_stdin(config, conexion_kernel);
+        interfaz_stdin(nombre, config, conexion_kernel);
     }
 	else if (strcmp(interfaz, "STDOUT") == 0) {
-        interfaz_stdout(config, conexion_kernel);
+        interfaz_stdout(nombre, config, conexion_kernel);
     }
 	else if (strcmp(interfaz, "DIALFS") == 0) {
-        interfaz_dialFS(config, conexion_kernel);
+        interfaz_dialFS(nombre, config, conexion_kernel);
     }
 	else printf("Interfaz desconocida");
 
@@ -63,7 +66,7 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-void interfaz_generica(t_config* config, int conexion_kernel)
+void interfaz_generica(char* nombre, t_config* config, int conexion_kernel)
 {
 	t_paquete *paquete;
 	t_list *recibido;
@@ -73,26 +76,18 @@ void interfaz_generica(t_config* config, int conexion_kernel)
 	int tiempo;
 	op_code operacion;
 
+	// un saludo amistoso
 	enviar_mensaje("Hola Kernel, como va. Soy IO interfaz Generica.", conexion_kernel);
 
 	// se identifica ante kernel
-	paquete = crear_paquete(NUEVA_IO);
-
-    char* nombre;
-    t_io_type_code tipo;
-    int socket;
-///////////////////////////////////////////////////////////////////////////
-	// temporal para testear paquete eliminar luego
-	agregar_a_paquete(paquete, &unidadTrabajo, sizeof(int));
-	enviar_paquete(paquete, conexion_kernel);
-	eliminar_paquete(paquete);
+	identificarse(nombre, GENERICA, conexion_kernel);
 	
 	// Kernel Asigna id a interfaz (para futuros intercambios)
 	// se espera un paquete q solo tiene el id 
 	operacion = recibir_codigo(conexion_kernel);
 	recibido = recibir_paquete(conexion_kernel);
 	data = list_get(recibido, 0);
-	id_interfaz = *(int*)data; // interpreta data como int*
+	id_interfaz = data; // interpreta data como int*
 
 	// Bucle hasta que kernel notifique cierre
 	operacion = recibir_codigo(conexion_kernel);
@@ -118,7 +113,7 @@ void interfaz_generica(t_config* config, int conexion_kernel)
 	}
 }
 
-void interfaz_stdin(t_config* config, int conexion_kernel)
+void interfaz_stdin(char* nombre, t_config* config, int conexion_kernel)
 {
 	t_paquete *paquete;
 	t_list *recibido;
@@ -208,7 +203,7 @@ void interfaz_stdin(t_config* config, int conexion_kernel)
 	}
 }
 
-void interfaz_stdout(t_config* config, int conexion_kernel)
+void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 {
 	t_paquete *paquete;
 	t_list *recibido;
@@ -304,7 +299,7 @@ void interfaz_stdout(t_config* config, int conexion_kernel)
 	}
 }
 
-void interfaz_dialFS(t_config* config, int conexion_kernel)
+void interfaz_dialFS(char* nombre, t_config* config, int conexion_kernel)
 {
 	char* ip;
 	char* puerto;

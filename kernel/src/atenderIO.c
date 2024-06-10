@@ -1,3 +1,8 @@
 #include "atenderIO.h"
 
-// Por desarrollar
+void* rutina_atender_io(t_io_blocked* io) {
+
+    // DESARROLLANDO
+
+    return NULL;
+}

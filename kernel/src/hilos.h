@@ -8,5 +8,6 @@
 #include "planificador.h"
 #include "exit.h"
 #include "atenderMemoria.h"
+#include "atenderIO.h"
 
 #endif

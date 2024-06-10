@@ -42,9 +42,12 @@ int main(int argc, char* argv[]) {
 	while(1) {
 		int socket_io = esperar_cliente(socket_escucha);
 		recibir_mensaje(socket_io); // el I/O se presenta
-		t_io_blocked* io_blocked = recibir_nueva_io(socket_io);
-		list_add(lista_io_blocked, io_blocked);
-		
+		t_io_blocked* io = recibir_nueva_io(socket_io);
+		list_add(lista_io_blocked, io);
+
+		pthread_t hilo_io;
+		pthread_create(&hilo_io, NULL, rutina_atender_io, io);
+		pthread_detach(hilo_io);
 	}
 
 	return EXIT_SUCCESS;

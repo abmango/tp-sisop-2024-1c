@@ -13,9 +13,9 @@
 void paquete(int);
 void terminar_programa(int, t_config*);
 
-void interfaz_generica(t_config*, int);
-void interfaz_stdin(t_config*, int);
-void interfaz_stdout(t_config*, int);
-void interfaz_dialFS(t_config*, int);
+void interfaz_generica(char*, t_config*, int);
+void interfaz_stdin(char*, t_config*, int);
+void interfaz_stdout(char*, t_config*, int);
+void interfaz_dialFS(char*, t_config*, int);
 
 #endif

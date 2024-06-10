@@ -17,6 +17,6 @@
 
 //////////////////////////////////
 
-void identificarse(int conexion_kernel); // EN DESARROLLO
+void identificarse(char* nombre, t_io_type_code tipo_interfaz_code, int conexion_kernel); // EN DESARROLLO
 
 #endif /* UTILS_H_ */

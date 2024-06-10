@@ -56,6 +56,7 @@ extern pthread_mutex_t sem_cola_ready;
 extern pthread_mutex_t sem_proceso_exec;
 extern pthread_mutex_t sem_cola_exit;
 
+extern t_list* lista_sockets_io;
 extern int socket_memoria;
 extern int socket_cpu_dispatch;
 extern int socket_cpu_interrupt;

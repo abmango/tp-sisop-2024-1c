@@ -54,6 +54,7 @@ void liberar_conexion(int socket_cliente);
 void* recibir_buffer(int*, int);
 int recibir_codigo(int);
 void recibir_mensaje(int);
+// Recibe un paquete con valores cuyo tamanio va obteniendo uno a uno, y retorna una t_list* de los mismos.
 t_list* recibir_paquete(int);
 void* serializar_paquete(t_paquete* paquete, int bytes);
 void enviar_mensaje(char* mensaje, int socket_cliente);

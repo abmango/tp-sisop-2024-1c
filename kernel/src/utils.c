@@ -22,6 +22,7 @@ pthread_mutex_t sem_cola_ready;
 pthread_mutex_t sem_proceso_exec;
 pthread_mutex_t sem_cola_exit;
 
+t_list* lista_sockets_io = NULL;
 int socket_memoria = 1;
 int socket_cpu_dispatch = 1;
 int socket_cpu_interrupt = 1;
