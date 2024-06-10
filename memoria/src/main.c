@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
 		case MENSAJE:
 			recibir_mensaje(socket_cpu);
 			break;
-		case VARIOS_MENSAJES:
+		case PAQUETE_TEMPORAL:
 			lista = recibir_paquete(socket_cpu);
 			imprimir_mensaje("Me llegaron los siguientes valores:");
 			list_iterate(lista, (void*)iterator);
@@ -82,7 +82,7 @@ int main(int argc, char* argv[]) {
 		case MENSAJE:
 			recibir_mensaje(socket_io);
 			break;
-		case VARIOS_MENSAJES:
+		case PAQUETE_TEMPORAL:
 			lista = recibir_paquete(socket_io);
 			imprimir_mensaje("Me llegaron los siguientes valores:");
 			list_iterate(lista, (void*)iterator);

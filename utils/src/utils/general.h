@@ -34,7 +34,7 @@ typedef struct
 {
     int pid;
     int quantum;
-    t_list* recursos_ocupados // Es una lista de t_recurso*
+    t_list* recursos_ocupados; // Es una lista de t_recurso*
     uint32_t PC;
     t_reg_cpu_uso_general reg_cpu_uso_general;
 } t_pcb;

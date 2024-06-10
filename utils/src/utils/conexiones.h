@@ -26,7 +26,8 @@ typedef enum
 	INTERRUPCION,
 	DESALOJO,
 	IO_NUEVA,
-	IO_RESPUESTA
+	IO_RESPUESTA,
+	PAQUETE_TEMPORAL // temporal xq faltaba un op_code en memoria
 } op_code; //op code para paquetes
 
 typedef struct
