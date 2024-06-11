@@ -15,6 +15,8 @@
 #include <utils/general.h>
 #include <pthread.h>
 #include <commons/bitarray.h>
+#include <utils/conexiones.h>
+#include <utils/general.h>
 //#define PUERTO "51689"
 
 typedef enum {
@@ -29,6 +31,12 @@ typedef enum {
     CLEAN,
     MAX 
 } pedidos_bitmap;
+
+typedef enum {
+    LECTURA,
+    ESCRITURA
+} t_acceso_esp_usu;
+
 // typedef struct { 
 //     void *frame; // apunta a un frame de espacio usuario
 // } pagina;
@@ -60,15 +68,26 @@ typedef struct {
     t_list *instrucciones;
 } t_proceso; // inicia sin paginas asignadas
 
+typedef struct {
+    int cant_bytes;
+    int desplazamiento;
+} t_solicitud;
+
 MemoriaPaginada* inicializar_memoria(int tamano_memoria, int tamano_pagina);
 resultado_operacion crear_proceso (t_list *solicitud, t_proceso *proceso);
 resultado_operacion finalizar_proceso (MemoriaPaginada *memoria, t_proceso *proceso);
 // posiblemente se deberia modificar para q cada vez q se acceda a un frame imprima... cambia q devuelve...
 resultado_operacion acceso_tabla_paginas(MemoriaPaginada *memoria, t_proceso *proceso, int ind_pagina_consulta);
 resultado_operacion ajustar_tamano_proceso(MemoriaPaginada *memoria, t_proceso *proceso, int nuevo_size);
+resultado_operacion acceso_espacio_usuario(MemoriaPaginada *memoria, t_buffer *data, t_list *solicitudes,t_acceso_esp_usu acceso);
 void liberar_memoria(MemoriaPaginada *memoria);
 void limpiar_estructura_proceso (t_proceso * proc);
 t_list * cargar_instrucciones (char *directorio);
 int obtener_indice_frame(MemoriaPaginada *memoria, void *ref_frame); // recibe ref frame y calcula numero marco
 void * obtener_frame_libre(MemoriaPaginada *memoria);
+t_proceso * obtener_proceso(t_list *lista, int pid); // busca proceso x pid
+void crear_buffer_mem(t_buffer *new);
+void agregar_a_buffer_mem(t_buffer *ref, void *data, int tamanio);
+resultado_operacion agregar_a_memoria(void *direccion, void *data, int cant_bytes);
+int offset_pagina (int desplazamiento, int tamanio_pagina);
 #endif /* UTILS_H_ */

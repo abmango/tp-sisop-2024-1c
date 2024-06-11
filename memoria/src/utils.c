@@ -144,6 +144,53 @@ resultado_operacion ajustar_tamano_proceso(MemoriaPaginada *memoria, t_proceso *
     } else return CORRECTA; // si se quizo poner el mismo tamaño se considera q se ajusto bien
 }
 
+// t_list solicitudes contiene t_solicitudes (direccion + cant_bytes) es decir, un frame y cuanto de ese frame [verificar al cagar]
+// memoria asume "permite" que si cant_bytes sobrepasa la pagina se efectue, xq no le interesa... es tarea de MMU eso
+resultado_operacion acceso_espacio_usuario(MemoriaPaginada *memoria, t_buffer *data, t_list *solicitudes, t_acceso_esp_usu acceso)
+{
+    t_solicitud *pedido;
+    void *aux;
+    aux = memoria->espacio_usuario;
+    switch (acceso){
+    case LECTURA: // data vacia, copiar de memoria a buffer data (informacion pura sin verificar, no es tarea memoria)
+        crear_buffer_mem(data);
+        for (int i=0; i<list_size(solicitudes); i++){
+            pedido = list_get(solicitudes, i);
+            aux = (aux + pedido->desplazamiento);
+
+            pthread_mutex_lock(&memoria->semaforo);
+            agregar_a_buffer_mem(data, aux, pedido->cant_bytes);
+            pthread_mutex_unlock(&memoria->semaforo);
+        }
+        if (data->size == 0)
+            return ERROR;
+        else
+            return CORRECTA;
+    break;
+
+    case ESCRITURA:
+        void *stream = data->stream;
+        for (int i=0; i<list_size(solicitudes); i++){
+            pedido = list_get(solicitudes, i);
+            aux = (aux + pedido->desplazamiento);
+
+            pthread_mutex_lock(&memoria->semaforo);
+            agregar_a_memoria(aux, stream, pedido->cant_bytes);
+            pthread_mutex_unlock(&memoria->semaforo);
+
+            stream = stream + pedido->cant_bytes;
+        }
+        if (stream == (data->stream + data->size))
+            return CORRECTA;
+        else
+            return ERROR;
+    break;
+
+    default: return ERROR;
+    }
+
+}
+
 // Función para liberar la memoria ocupada por la estructura de memoria paginada
 void liberar_memoria(MemoriaPaginada *memoria) {
     free(memoria->espacio_usuario);
@@ -164,6 +211,7 @@ void limpiar_estructura_proceso (t_proceso * proc)
     free(proc);
 }
 
+// PENDIENTE
 t_list * cargar_instrucciones (char *directorio)
 {
     /*
@@ -198,4 +246,40 @@ void * obtener_frame_libre(MemoriaPaginada *memoria)
         return NULL;
     else 
         return (aux);
+}
+
+t_proceso * obtener_proceso(t_list *lista, int pid)
+{
+    t_proceso *temp;
+    for (int i=0; i< list_size(lista); i++){
+        temp = list_get(lista, i);
+        if (temp->pid == pid)
+            return temp;
+    }
+    return NULL;
+}
+
+void crear_buffer_mem(t_buffer *new)
+{
+    new = malloc(sizeof(t_buffer));
+    new->stream = NULL;
+    new->size = 0;
+}
+
+void agregar_a_buffer_mem(t_buffer *ref, void *data, int tamanio)
+{
+    ref->stream = realloc (ref->stream, ref->size + tamanio);
+
+    memcpy(ref->stream + ref->size, data, tamanio);
+    ref->size += tamanio;
+}
+
+resultado_operacion agregar_a_memoria(void *direccion, void *data, int cant_bytes)
+{
+    memcpy(direccion, data, cant_bytes);
+}
+
+int offset_pagina (int desplazamiento, int tamanio_pagina)
+{
+    int sobrante = desplazamiento % tamanio_pagina;
 }
