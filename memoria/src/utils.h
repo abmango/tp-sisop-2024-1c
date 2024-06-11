@@ -20,7 +20,8 @@
 //#define PUERTO "51689"
 
 extern t_config *config;
-
+extern t_log *log_memoria;
+extern pthread_mutex_t sem_memoria;
 typedef enum {
     ERROR,
     CORRECTA,
@@ -53,7 +54,6 @@ typedef struct {
     void *espacio_usuario; // Espacio de memoria de usuario (contiguo)
     int tamano_pagina; // Tamaño de página
     int tamano_memoria; // Tamaño total de la memoria
-    pthread_mutex_t semaforo;
     t_bitarray *bitmap;
     int cantidad_marcos;
     int ultimo_frame_verificado;
@@ -66,7 +66,7 @@ extern void *espacio_bitmap_no_tocar; // solo se usa al crear/destruir el bitmap
 typedef struct {
     int pid;
     // int num_paginas; // Número de páginas en la tabla // no requerido, x list_size()
-    t_list *paginas; // Arreglo de páginas
+    t_list *tabla_paginas; // Arreglo de páginas
     t_list *instrucciones;
 } t_proceso; // inicia sin paginas asignadas
 
@@ -76,12 +76,14 @@ typedef struct {
 } t_solicitud;
 
 MemoriaPaginada* inicializar_memoria(int tamano_memoria, int tamano_pagina);
+
 resultado_operacion crear_proceso (t_list *solicitud, t_proceso *proceso);
 resultado_operacion finalizar_proceso (MemoriaPaginada *memoria, t_proceso *proceso);
 // posiblemente se deberia modificar para q cada vez q se acceda a un frame imprima... cambia q devuelve...
 resultado_operacion acceso_tabla_paginas(MemoriaPaginada *memoria, t_proceso *proceso, int ind_pagina_consulta);
 resultado_operacion ajustar_tamano_proceso(MemoriaPaginada *memoria, t_proceso *proceso, int nuevo_size);
 resultado_operacion acceso_espacio_usuario(MemoriaPaginada *memoria, t_buffer *data, t_list *solicitudes,t_acceso_esp_usu acceso);
+
 void liberar_memoria(MemoriaPaginada *memoria);
 void limpiar_estructura_proceso (t_proceso * proc);
 t_list * cargar_instrucciones (char *directorio);

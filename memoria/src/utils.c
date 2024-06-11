@@ -3,6 +3,8 @@
 void *espacio_bitmap_no_tocar = NULL;
 const int LONGITUD_LINEA_ARCHIVOS = 60;
 t_config *config;
+t_log *log_memoria;
+pthread_mutex_t sem_memoria;
 
 MemoriaPaginada* inicializar_memoria(int tamano_memoria, int tamano_pagina) {
     // Verificar que el tamaño de la memoria sea un múltiplo del tamaño de página
@@ -47,7 +49,7 @@ MemoriaPaginada* inicializar_memoria(int tamano_memoria, int tamano_pagina) {
     memoria->tamano_pagina = tamano_pagina;
     memoria->tamano_memoria = tamano_memoria;
     memoria->cantidad_marcos = tamano_memoria / tamano_pagina;
-    pthread_mutex_init(&memoria->semaforo, NULL);
+    pthread_mutex_init(&sem_memoria, NULL);
 
     // Crear el bitarray de la memoria
     int aux_marcos = memoria->cantidad_marcos / 8;
@@ -72,7 +74,7 @@ resultado_operacion crear_proceso (t_list *solicitud, t_proceso *proceso)
     proceso->pid = *(int*) data;
     data = list_get(solicitud, 1);
     proceso->instrucciones = cargar_instrucciones(data);
-    proceso->paginas = list_create();
+    proceso->tabla_paginas = list_create();
     
     if (proceso->instrucciones == NULL){
         printf("Script no cargo");
@@ -87,8 +89,8 @@ resultado_operacion finalizar_proceso (MemoriaPaginada *memoria, t_proceso *proc
     int indice_frame;
     int bitFramesIni = bitarray_get_max_bit(memoria->bitmap);
     // pensar si requiere zona critica (utilizar mutex de memoria)
-    for (int i=0; i < list_size(proceso->paginas); i++){
-        indice_frame = obtener_indice_frame(memoria, list_get(proceso->paginas,i));
+    for (int i=0; i < list_size(proceso->tabla_paginas); i++){
+        indice_frame = obtener_indice_frame(memoria, list_get(proceso->tabla_paginas,i));
         bitarray_clean_bit(memoria->bitmap, indice_frame);
     }
     limpiar_estructura_proceso(proceso);
@@ -100,11 +102,11 @@ resultado_operacion finalizar_proceso (MemoriaPaginada *memoria, t_proceso *proc
 // revisar xq capaz esta funcion deberia devolver una direccion... x ahora solo esta preparada para el log
 resultado_operacion acceso_tabla_paginas(MemoriaPaginada *memoria , t_proceso *proceso, int ind_pagina_consulta)
 {
-    if (ind_pagina_consulta >= list_size(proceso->paginas)) {
+    if (ind_pagina_consulta >= list_size(proceso->tabla_paginas)) {
         printf("Tabla de Paginas del proceso [%i] no tiene asignada una pagina asignada en la posicion: %i",proceso->pid,ind_pagina_consulta);
         return ERROR;
     }
-    int frame = obtener_indice_frame(memoria, list_get(proceso->paginas,ind_pagina_consulta));
+    int frame = obtener_indice_frame(memoria, list_get(proceso->tabla_paginas,ind_pagina_consulta));
     printf("PID: <%i> - Pagina: <%i> - Marco: <%i>",proceso->pid,ind_pagina_consulta,frame);
     return CORRECTA;
 }
@@ -114,7 +116,7 @@ resultado_operacion ajustar_tamano_proceso(MemoriaPaginada *memoria, t_proceso *
     // calcula tamaño actula, util para logs
     void *aux;
     int indice_aux;
-    int tamano_a_ampliar = nuevo_size - (list_size(proceso->paginas) * memoria->tamano_pagina);
+    int tamano_a_ampliar = nuevo_size - (list_size(proceso->tabla_paginas) * memoria->tamano_pagina);
     int paginas_a_modificar = 0;
     if (tamano_a_ampliar % memoria->tamano_pagina !=0 && tamano_a_ampliar > 0)
         paginas_a_modificar = (tamano_a_ampliar / memoria->tamano_pagina) + 1;
@@ -132,18 +134,18 @@ resultado_operacion ajustar_tamano_proceso(MemoriaPaginada *memoria, t_proceso *
                 return INSUFICIENTE;
 
             indice_aux = obtener_indice_frame(memoria,aux);
-            list_add(proceso->paginas, aux);
+            list_add(proceso->tabla_paginas, aux);
             bitarray_set_bit(memoria, indice_aux);
         }
-        printf("PID: <%i> - Tamaño Actual: <%i> - Tamaño a Ampliar: <%i>",proceso->pid,(list_size(proceso->paginas) * memoria->tamano_pagina), nuevo_size);
+        printf("PID: <%i> - Tamaño Actual: <%i> - Tamaño a Ampliar: <%i>",proceso->pid,(list_size(proceso->tabla_paginas) * memoria->tamano_pagina), nuevo_size);
     } else if (tamano_a_ampliar < 0) {
         for (int i=0; i<paginas_a_modificar; i++){
-            aux = list_get(proceso->paginas, list_size(proceso->paginas) - 1);
-            list_remove(proceso->paginas, list_size(proceso->paginas) - 1); // -1 para entrar en rango
+            aux = list_get(proceso->tabla_paginas, list_size(proceso->tabla_paginas) - 1);
+            list_remove(proceso->tabla_paginas, list_size(proceso->tabla_paginas) - 1); // -1 para entrar en rango
             indice_aux = obtener_indice_frame(memoria, aux);
             bitarray_clean_bit(memoria, indice_aux);
         }
-        printf("PID: <%i> - Tamaño Actual: <%i> - Tamaño a Reducir: <%i>",proceso->pid,(list_size(proceso->paginas) * memoria->tamano_pagina), nuevo_size);
+        printf("PID: <%i> - Tamaño Actual: <%i> - Tamaño a Reducir: <%i>",proceso->pid,(list_size(proceso->tabla_paginas) * memoria->tamano_pagina), nuevo_size);
     } else return CORRECTA; // si se quizo poner el mismo tamaño se considera q se ajusto bien
 }
 
@@ -161,9 +163,9 @@ resultado_operacion acceso_espacio_usuario(MemoriaPaginada *memoria, t_buffer *d
             pedido = list_get(solicitudes, i);
             aux = (aux + pedido->desplazamiento);
 
-            pthread_mutex_lock(&memoria->semaforo);
+            pthread_mutex_lock(&sem_memoria);
             agregar_a_buffer_mem(data, aux, pedido->cant_bytes);
-            pthread_mutex_unlock(&memoria->semaforo);
+            pthread_mutex_unlock(&sem_memoria);
         }
         if (data->size == 0)
             return ERROR;
@@ -177,9 +179,9 @@ resultado_operacion acceso_espacio_usuario(MemoriaPaginada *memoria, t_buffer *d
             pedido = list_get(solicitudes, i);
             aux = (aux + pedido->desplazamiento);
 
-            pthread_mutex_lock(&memoria->semaforo);
+            pthread_mutex_lock(&sem_memoria);
             agregar_a_memoria(aux, stream, pedido->cant_bytes);
-            pthread_mutex_unlock(&memoria->semaforo);
+            pthread_mutex_unlock(&sem_memoria);
 
             stream = stream + pedido->cant_bytes;
         }
@@ -199,7 +201,7 @@ void liberar_memoria(MemoriaPaginada *memoria) {
     free(memoria->espacio_usuario);
     // free(memoria->tablas_paginas->paginas);
     // free(memoria->tablas_paginas);
-    pthread_mutex_destroy(&memoria->semaforo);
+    pthread_mutex_destroy(&sem_memoria);
     bitarray_destroy(memoria->bitmap);
     free(espacio_bitmap_no_tocar); // puede general double free, pero no deberia
     free(memoria);
@@ -207,10 +209,10 @@ void liberar_memoria(MemoriaPaginada *memoria) {
 
 void limpiar_estructura_proceso (t_proceso * proc)
 {
-    list_clean(proc->paginas);
+    list_clean(proc->tabla_paginas);
     list_clean(proc->instrucciones);
     free(proc->instrucciones);
-    free(proc->paginas);
+    free(proc->tabla_paginas);
     free(proc);
 }
 
@@ -297,6 +299,7 @@ void agregar_a_buffer_mem(t_buffer *ref, void *data, int tamanio)
 resultado_operacion agregar_a_memoria(void *direccion, void *data, int cant_bytes)
 {
     memcpy(direccion, data, cant_bytes);
+    return CORRECTA;
 }
 
 int offset_pagina (int desplazamiento, int tamanio_pagina)
