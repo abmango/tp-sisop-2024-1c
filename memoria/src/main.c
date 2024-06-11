@@ -9,7 +9,7 @@ int main(int argc, char* argv[]) {
 	
     decir_hola("Memoria");
 
-	t_config* config = iniciar_config("default");
+	config = iniciar_config("default");
 
 	char* puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
     int socket_escucha = iniciar_servidor(puerto);

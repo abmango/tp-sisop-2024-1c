@@ -19,6 +19,8 @@
 #include <utils/general.h>
 //#define PUERTO "51689"
 
+extern t_config *config;
+
 typedef enum {
     ERROR,
     CORRECTA,

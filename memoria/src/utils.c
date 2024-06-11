@@ -1,6 +1,8 @@
 #include "utils.h"
 
 void *espacio_bitmap_no_tocar = NULL;
+const int LONGITUD_LINEA_ARCHIVOS = 60;
+t_config *config;
 
 MemoriaPaginada* inicializar_memoria(int tamano_memoria, int tamano_pagina) {
     // Verificar que el tamaño de la memoria sea un múltiplo del tamaño de página
@@ -72,9 +74,10 @@ resultado_operacion crear_proceso (t_list *solicitud, t_proceso *proceso)
     proceso->instrucciones = cargar_instrucciones(data);
     proceso->paginas = list_create();
     
-    if (list_size(proceso->instrucciones) == 0){
+    if (proceso->instrucciones == NULL){
         printf("Script no cargo");
         limpiar_estructura_proceso(proceso);
+        proceso = NULL;
         return ERROR;
     } else return CORRECTA;
 }
@@ -214,9 +217,26 @@ void limpiar_estructura_proceso (t_proceso * proc)
 // PENDIENTE
 t_list * cargar_instrucciones (char *directorio)
 {
-    /*
-        Lo que sea necesario para cargar un script
-    */
+    FILE *archivo;
+    char *lineaInstruccion; 
+    char *dir_completa = config_get_string_value(config,"PATH_INSTRUCCIONES");
+    strcat(dir_completa, directorio);
+    strcat(dir_completa, ".txt"); // si no encuentra archivo eliminar
+
+    archivo = fopen(dir_completa, "r");
+    free(dir_completa);
+    if (archivo == NULL){
+        return NULL;
+    }
+    lineaInstruccion = malloc (LONGITUD_LINEA_ARCHIVOS); // nose si fgets hace malloc o no?
+    t_list *lista;
+
+    while (fgets(lineaInstruccion, LONGITUD_LINEA_ARCHIVOS, archivo) != NULL){
+        list_add(lista, lineaInstruccion);
+    }
+    fclose(archivo);
+    free(lineaInstruccion);
+    return lista;
 }
 
 int obtener_indice_frame(MemoriaPaginada *memoria, void *ref_frame)
