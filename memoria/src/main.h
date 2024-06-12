@@ -9,5 +9,7 @@
 #include "utils.h"
 
 void iterator(char* value);
+void terminar_programa();
+void iniciar_logger();
 
 #endif /* SERVER_H_ */

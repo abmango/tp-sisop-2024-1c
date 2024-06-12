@@ -10,6 +10,8 @@
 #include <commons/config.h>
 #include <commons/collections/list.h>
 
+#define MILISEG_A_SEG 1000
+
 typedef struct
 {
     uint8_t AX;

@@ -75,14 +75,48 @@ typedef struct {
     int desplazamiento;
 } t_solicitud;
 
+/// @brief Inicia el espacio memoria, bitmap y el mutex
+/// @param tamano_memoria : recibido de config
+/// @param tamano_pagina  : recibido de config
+/// @return               : retorna la puntero estructura memoria (exito) o NULL (fallo)
 MemoriaPaginada* inicializar_memoria(int tamano_memoria, int tamano_pagina);
 
+/// @brief Genera estructura proceso, cargando instruccion y tabla de paginas
+/// @param solicitud      : lista recibida de recibir_paquete() por conexion
+/// @param proceso        : puntero a estructura proceso, recibido en NULL
+/// @return               : retorna valor de resultado_operacion
 resultado_operacion crear_proceso (t_list *solicitud, t_proceso *proceso);
+
+/// @brief Marca como libres las paginas del proceso (bitmap) y libera estructura proceso
+/// @param memoria        : de la estructura memoria se accede al bitmap
+/// @param proceso        : puntero a estructura proceso
+/// @return               : retorna valor de resultado_operacion
 resultado_operacion finalizar_proceso (MemoriaPaginada *memoria, t_proceso *proceso);
-// posiblemente se deberia modificar para q cada vez q se acceda a un frame imprima... cambia q devuelve...
+
+/// @brief "Simula" acceso a tabla de paginas (y su retraso), verificacion de pagina redundante
+/// @param memoria        : requerida para obtener el frame
+/// @param proceso        : puntero a estructura proceso, para obtener la tabla de paginas
+/// @param ind_pagina_consulta : indice de pagina objetivo
+/// @return retorna si se encontro la pagina y se logueo (CORRECTA), ERROR si la pagina no estaba en tabla paginas (no tiene frame asignado)
 resultado_operacion acceso_tabla_paginas(MemoriaPaginada *memoria, t_proceso *proceso, int ind_pagina_consulta);
+/* "simula" xq basicamente es obtener_indice_frame() glorificado, podria devolver el frame de ser necesario */
+
+/// @brief Modifica tabla paginas del proceso, asignadole frames libres (gracias a bitmap) o liberando frames que tenia asignados... tambien loguea
+/// @param memoria        : requerida para buscar frame libre, chequeos bitmap
+/// @param proceso        : puntero a estructura proceso, para obtener la tabla de paginas
+/// @param nuevo_size     : tamaño objetivo en bytes
+/// @return retorna CORRECTA si se modifico la tabla de paginas de forma correcta, si al asignar paginas no hay + frams retorna INSUFICIENTE
 resultado_operacion ajustar_tamano_proceso(MemoriaPaginada *memoria, t_proceso *proceso, int nuevo_size);
+/* Actualmente el proceso no libera las paginas asinadas al ampliar si memoria es INSUFICIENTE , en foros dicen q no esta "mal" xq las pruebas no son tan "finas" */
+
+/// @brief Segun el tipo de acceso obtiene/imprime una cantidad de bytes de cada direccion del espacio usuario
+/// @param memoria        : para obtener una referencia al espacio usuario (posicion 0)
+/// @param data           : buffer, Si acceso=LECTURA la referencia no estara iniciada, sino estara cargada con stream y size del stream
+/// @param solicitudes    : lista de solicitudes(desplazamiento + bytes), no revisamos que bytes respeten paginados
+/// @param acceso         : enum para distinguir tipo de acceso
+/// @return retorna CORRECTA si el acceso fue satisfactorio, ERROR si no leyo/escribio
 resultado_operacion acceso_espacio_usuario(MemoriaPaginada *memoria, t_buffer *data, t_list *solicitudes,t_acceso_esp_usu acceso);
+/* APARENTEMENTE RECIBE UN PID DEL PROCESO QUE PIDIO EL ACCESO MODIFICAR => PENDIENTE */
 
 void liberar_memoria(MemoriaPaginada *memoria);
 void limpiar_estructura_proceso (t_proceso * proc);
@@ -93,5 +127,6 @@ t_proceso * obtener_proceso(t_list *lista, int pid); // busca proceso x pid
 void crear_buffer_mem(t_buffer *new);
 void agregar_a_buffer_mem(t_buffer *ref, void *data, int tamanio);
 resultado_operacion agregar_a_memoria(void *direccion, void *data, int cant_bytes);
-int offset_pagina (int desplazamiento, int tamanio_pagina);
+int offset_pagina(int desplazamiento, int tamanio_pagina);
+void retardo_operacion(); // incluye redondeo a segundos
 #endif /* UTILS_H_ */

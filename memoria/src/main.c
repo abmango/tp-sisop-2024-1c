@@ -10,6 +10,7 @@ int main(int argc, char* argv[]) {
     decir_hola("Memoria");
 
 	config = iniciar_config("default");
+	iniciar_logger();
 
 	char* puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
     int socket_escucha = iniciar_servidor(puerto);
@@ -106,9 +107,17 @@ void iterator(char* value) {
 	printf("%s", value);
 }
 
-void terminar_programa(t_config* config)
+void terminar_programa()
 {
 	// Y por ultimo, hay que liberar lo que utilizamos (conexion, log y config) 
 	 // con las funciones de las commons y del TP mencionadas en el enunciado /
 	config_destroy(config);
+}
+
+void iniciar_logger()
+{
+	log_memoria = log_create("memoria.log", "Memoria", true, LOG_LEVEL_INFO);
+	if(log_memoria == NULL){
+		printf("No se pudo crear un log");
+	}
 }

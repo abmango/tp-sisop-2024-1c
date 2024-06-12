@@ -76,25 +76,30 @@ resultado_operacion crear_proceso (t_list *solicitud, t_proceso *proceso)
     proceso->instrucciones = cargar_instrucciones(data);
     proceso->tabla_paginas = list_create();
     
+    retardo_operacion();
     if (proceso->instrucciones == NULL){
         printf("Script no cargo");
         limpiar_estructura_proceso(proceso);
         proceso = NULL;
         return ERROR;
-    } else return CORRECTA;
+    }
+    log_info(log_memoria, "PID: <%i> - Tamaño: <0>",proceso->pid);
+    return CORRECTA;
 }
 
 resultado_operacion finalizar_proceso (MemoriaPaginada *memoria, t_proceso *proceso)
 {   
     int indice_frame;
-    int bitFramesIni = bitarray_get_max_bit(memoria->bitmap);
+    int pid_temp = proceso->pid;
     // pensar si requiere zona critica (utilizar mutex de memoria)
     for (int i=0; i < list_size(proceso->tabla_paginas); i++){
         indice_frame = obtener_indice_frame(memoria, list_get(proceso->tabla_paginas,i));
         bitarray_clean_bit(memoria->bitmap, indice_frame);
     }
     limpiar_estructura_proceso(proceso);
-    
+
+    retardo_operacion();
+    log_info(log_memoria, "PID: <%i> - Tamaño: <0>",pid_temp);
     return CORRECTA;
 }
 
@@ -103,10 +108,12 @@ resultado_operacion finalizar_proceso (MemoriaPaginada *memoria, t_proceso *proc
 resultado_operacion acceso_tabla_paginas(MemoriaPaginada *memoria , t_proceso *proceso, int ind_pagina_consulta)
 {
     if (ind_pagina_consulta >= list_size(proceso->tabla_paginas)) {
+        retardo_operacion();
         printf("Tabla de Paginas del proceso [%i] no tiene asignada una pagina asignada en la posicion: %i",proceso->pid,ind_pagina_consulta);
         return ERROR;
     }
     int frame = obtener_indice_frame(memoria, list_get(proceso->tabla_paginas,ind_pagina_consulta));
+    retardo_operacion();
     printf("PID: <%i> - Pagina: <%i> - Marco: <%i>",proceso->pid,ind_pagina_consulta,frame);
     return CORRECTA;
 }
@@ -125,6 +132,7 @@ resultado_operacion ajustar_tamano_proceso(MemoriaPaginada *memoria, t_proceso *
     else 
         paginas_a_modificar = tamano_a_ampliar / memoria->tamano_pagina;
 
+    retardo_operacion();
     if (tamano_a_ampliar > 0){
         for (int i=0; i<paginas_a_modificar; i++){
             indice_aux = 0;
@@ -135,7 +143,7 @@ resultado_operacion ajustar_tamano_proceso(MemoriaPaginada *memoria, t_proceso *
 
             indice_aux = obtener_indice_frame(memoria,aux);
             list_add(proceso->tabla_paginas, aux);
-            bitarray_set_bit(memoria, indice_aux);
+            bitarray_set_bit(memoria->bitmap, indice_aux);
         }
         printf("PID: <%i> - Tamaño Actual: <%i> - Tamaño a Ampliar: <%i>",proceso->pid,(list_size(proceso->tabla_paginas) * memoria->tamano_pagina), nuevo_size);
     } else if (tamano_a_ampliar < 0) {
@@ -143,10 +151,11 @@ resultado_operacion ajustar_tamano_proceso(MemoriaPaginada *memoria, t_proceso *
             aux = list_get(proceso->tabla_paginas, list_size(proceso->tabla_paginas) - 1);
             list_remove(proceso->tabla_paginas, list_size(proceso->tabla_paginas) - 1); // -1 para entrar en rango
             indice_aux = obtener_indice_frame(memoria, aux);
-            bitarray_clean_bit(memoria, indice_aux);
+            bitarray_clean_bit(memoria->bitmap, indice_aux);
         }
         printf("PID: <%i> - Tamaño Actual: <%i> - Tamaño a Reducir: <%i>",proceso->pid,(list_size(proceso->tabla_paginas) * memoria->tamano_pagina), nuevo_size);
-    } else return CORRECTA; // si se quizo poner el mismo tamaño se considera q se ajusto bien
+    }
+    return CORRECTA; // si se quizo poner el mismo tamaño se considera q se ajusto bien
 }
 
 // t_list solicitudes contiene t_solicitudes (direccion + cant_bytes) es decir, un frame y cuanto de ese frame [verificar al cagar]
@@ -163,9 +172,13 @@ resultado_operacion acceso_espacio_usuario(MemoriaPaginada *memoria, t_buffer *d
             pedido = list_get(solicitudes, i);
             aux = (aux + pedido->desplazamiento);
 
+            log_info(log_memoria, "PID: <PENDIENTE> - Accion: <LEER> - Direccion fisica: <%i> - Tamaño <%i>",pedido->desplazamiento,pedido->cant_bytes);
+
             pthread_mutex_lock(&sem_memoria);
             agregar_a_buffer_mem(data, aux, pedido->cant_bytes);
             pthread_mutex_unlock(&sem_memoria);
+
+            retardo_operacion();
         }
         if (data->size == 0)
             return ERROR;
@@ -179,11 +192,14 @@ resultado_operacion acceso_espacio_usuario(MemoriaPaginada *memoria, t_buffer *d
             pedido = list_get(solicitudes, i);
             aux = (aux + pedido->desplazamiento);
 
+            log_info(log_memoria, "PID: <PENDIENTE> - Accion: <ESCRIBIR> - Direccion fisica: <%i> - Tamaño <%i>",pedido->desplazamiento,pedido->cant_bytes);
+
             pthread_mutex_lock(&sem_memoria);
             agregar_a_memoria(aux, stream, pedido->cant_bytes);
             pthread_mutex_unlock(&sem_memoria);
 
             stream = stream + pedido->cant_bytes;
+            retardo_operacion();
         }
         if (stream == (data->stream + data->size))
             return CORRECTA;
@@ -216,7 +232,6 @@ void limpiar_estructura_proceso (t_proceso * proc)
     free(proc);
 }
 
-// PENDIENTE
 t_list * cargar_instrucciones (char *directorio)
 {
     FILE *archivo;
@@ -231,7 +246,9 @@ t_list * cargar_instrucciones (char *directorio)
         return NULL;
     }
     lineaInstruccion = malloc (LONGITUD_LINEA_ARCHIVOS); // nose si fgets hace malloc o no?
+    
     t_list *lista;
+    lista = list_create();
 
     while (fgets(lineaInstruccion, LONGITUD_LINEA_ARCHIVOS, archivo) != NULL){
         list_add(lista, lineaInstruccion);
@@ -304,5 +321,14 @@ resultado_operacion agregar_a_memoria(void *direccion, void *data, int cant_byte
 
 int offset_pagina (int desplazamiento, int tamanio_pagina)
 {
-    int sobrante = desplazamiento % tamanio_pagina;
+    return desplazamiento % tamanio_pagina;   
+}
+
+void retardo_operacion()
+{
+    div_t tiempo = div(config_get_int_value(config,"RETARDO_RESPUESTA"), MILISEG_A_SEG );
+    if (tiempo.rem < 5)
+        sleep(tiempo.quot);
+    else
+        sleep(tiempo.quot + 1);
 }
