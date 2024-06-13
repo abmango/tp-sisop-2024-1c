@@ -80,6 +80,7 @@ void* serializar_pcb(t_pcb* pcb, int bytes);
 void* serializar_lista_de_recursos(t_list* lista_de_recursos, int bytes);
 
 // FUNCIONES PARA IOs:
+// Crea la estructura t_io_blocked con los datos identificatorios que recibe de la IO.
 t_io_blocked* recibir_nueva_io(int socket);
 void destruir_io(t_io_blocked* io); // DESARROLLANDO
 
