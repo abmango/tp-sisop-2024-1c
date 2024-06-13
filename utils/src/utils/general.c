@@ -85,3 +85,8 @@ void* serializar_contexto_de_ejecucion(t_contexto_de_ejecucion contexto_de_ejecu
 
 	return magic;
 }
+
+void avisar_y_cerrar_programa_por_error(void) {
+	imprimir_mensaje("CERRANDO PROGRAMA POR ERROR...");
+	exit(3);
+}

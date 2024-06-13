@@ -59,6 +59,8 @@ extern pthread_mutex_t sem_cola_exit;
 extern int socket_memoria;
 extern int socket_cpu_dispatch;
 extern int socket_cpu_interrupt;
+
+extern t_log* logger; // Logger para todo (por ahora) del kernel
 // ==========================================================================
 
 // FUNCIONES PARA PCB/PROCESOS:

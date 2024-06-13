@@ -1,7 +1,8 @@
 #include "utils.h"
 
 
-//defino aca las variables globales para dejar mas limpio el main
+// ====  Variables globales:  ===============================================
+
 int grado_multiprogramacion;
 int procesos_activos = 0;
 int contador_pid = 0;
@@ -25,6 +26,9 @@ pthread_mutex_t sem_cola_exit;
 int socket_memoria = 1;
 int socket_cpu_dispatch = 1;
 int socket_cpu_interrupt = 1;
+
+t_log* logger = NULL;
+// ==========================================================================
 
 t_pcb* crear_pcb() {
 	t_pcb* pcb = malloc(sizeof(t_pcb));
@@ -213,29 +217,22 @@ void* serializar_lista_de_recursos(t_list* lista_de_recursos, int bytes) {
 }
 
 t_io_blocked* recibir_nueva_io(int socket) {
-	t_io_blocked* io_blocked = malloc(sizeof(t_io_blocked));
-	int size;
-	void* buffer;
-	buffer = recibir_buffer(&size, socket);
 
-	int desplazamiento = 0;
-
-	int tamanio_nombre;
-	memcpy(&tamanio_nombre, buffer + desplazamiento, sizeof(int));
-	desplazamiento += sizeof(int);
-	io_blocked->nombre = malloc(tamanio_nombre);
-	memcpy(io_blocked->nombre, buffer + desplazamiento, tamanio_nombre);
-	desplazamiento += tamanio_nombre;
-	memcpy(&(io_blocked->tipo), buffer + desplazamiento, sizeof(t_io_type_code));
-	desplazamiento += sizeof(t_io_type_code);
-
-	if(desplazamiento != size ) {
-		imprimir_mensaje("error al recibir_identificacion_nueva_io(). Bytes de desplazamiento no coinciden con bytes de buffer");
+	if(recibir_codigo(socket) != IO_IDENTIFICACION) {
+		log_error(logger, "Error: codigo incorrecto para identificacion de IO");
+		aviso_cierre_programa();
 		exit(3);
 	}
 
+	t_list* datos_identificatorios_io = recibir_paquete(socket);
+
+	t_io_blocked* io_blocked = malloc(sizeof(t_io_blocked));
+	io_blocked->nombre = string_duplicate(list_get(datos_identificatorios_io, 0));
+	io_blocked->tipo = *(list_get(datos_identificatorios_io, 1));
 	io_blocked->socket = socket;
 	io_blocked->cola_blocked = list_create();
+
+	list_destroy_and_destroy_elements(datos_identificatorios_io, (void*)free);
 
 	return io_blocked;
 }

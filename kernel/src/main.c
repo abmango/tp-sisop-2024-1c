@@ -17,6 +17,8 @@ int main(int argc, char* argv[]) {
 	pthread_mutex_init(&sem_colas,NULL);
 	pthread_mutex_unlock(&sem_colas);
 
+	logger = log_create("log.log", "Kernel", TRUE, LOG_LEVEL_DEBUG);
+
     decir_hola("Kernel");
 
     char* ip;
@@ -45,9 +47,9 @@ int main(int argc, char* argv[]) {
 		t_io_blocked* io = recibir_nueva_io(socket_io);
 		list_add(lista_io_blocked, io);
 
-		pthread_t hilo_io; // acá no habría memory leak, pues al terminar el hilo detacheado, lo liberaría
-		pthread_create(&hilo_io, NULL, rutina_atender_io, io);
-		pthread_detach(hilo_io);
+		pthread_t* hilo_io = malloc(sizeof(pthread_t)); // acá no habría memory leak, pues al terminar el hilo detacheado, lo liberaría
+		pthread_create(hilo_io, NULL, rutina_atender_io, io);
+		pthread_detach(*hilo_io);
 	}
 
 	return EXIT_SUCCESS;

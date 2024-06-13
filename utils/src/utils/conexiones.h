@@ -28,21 +28,22 @@ typedef enum
 	CONTEXTO_EJECUCION,
 	INTERRUPCION,
 	DESALOJO,
-	IO_NUEVA, // borrar
-	IO_RESPUESTA, // borrar
 	PAQUETE_TEMPORAL, // temporal xq faltaba un op_code en memoria
 
 	// IO-KERNEL
-	INTERF_GEN,
-	INTERF_STDIN,
-	INTERF_STDOUT,
+	IO_IDENTIFICACION,
+	IO_OPERACION,
+	// saqué estos 3, y cambié el protocolo de comunicacion
+	// INTERF_GEN,
+	// INTERF_STDIN,
+	// INTERF_STDOUT,
 	INTERF_DIALFS,
 	FIN_INTERFAZ,
 
 	// IO-MEMORIA
 	ACCESO_LECTURA,
 	ACCESO_ESCRITURA
-} op_code; //op code para paquetes, requiere limpieza
+} op_code; //op code para: PAQUETES o COMUNICACIONES CON SOLO UN CODIGO. Requiere limpieza
 
 typedef struct
 {

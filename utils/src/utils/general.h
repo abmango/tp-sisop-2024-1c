@@ -81,6 +81,15 @@ typedef enum
     DIALFS
 } t_io_type_code;
 
+typedef enum
+{
+    GEN_SLEEP,
+    STDIN_READ,
+    STDOUT_WRITE
+    // cuando desarrollemos el FS, aca iran el resto (las de DIALFS)
+    // ...
+} t_io_op_code;
+
 /**
 * @fn    decir_hola
 * @brief Imprime un saludo al nombre que se pase por parámetro por consola.
@@ -118,5 +127,7 @@ int tamanio_de_contexto_de_ejecucion(void);
 int tamanio_de_lista_de_recursos(t_list* lista_de_recursos);
 
 void* serializar_contexto_de_ejecucion(t_contexto_de_ejecucion contexto_de_ejecucion, int bytes);
+
+void avisar_y_cerrar_programa_por_error(void);
 
 #endif
