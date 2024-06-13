@@ -6,6 +6,7 @@
 
 #include "consola.h"
 #include "planificador.h"
+#include "quantum.h"
 #include "exit.h"
 #include "atenderMemoria.h"
 #include "atenderIO.h"
