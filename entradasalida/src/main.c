@@ -79,7 +79,7 @@ void interfaz_generica(char* nombre, t_config* config, int conexion_kernel)
 	// un saludo amistoso
 	enviar_mensaje("Hola Kernel, como va. Soy IO interfaz Generica.", conexion_kernel);
 
-	// se identifica ante kernel
+	// se identifica ante kernel, dándole nombre y tipo de interfaz
 	identificarse(nombre, GENERICA, conexion_kernel);
 	
 	// Kernel Asigna id a interfaz (para futuros intercambios)

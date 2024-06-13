@@ -22,7 +22,6 @@ pthread_mutex_t sem_cola_ready;
 pthread_mutex_t sem_proceso_exec;
 pthread_mutex_t sem_cola_exit;
 
-t_list* lista_sockets_io = NULL;
 int socket_memoria = 1;
 int socket_cpu_dispatch = 1;
 int socket_cpu_interrupt = 1;
@@ -215,10 +214,34 @@ void* serializar_lista_de_recursos(t_list* lista_de_recursos, int bytes) {
 
 t_io_blocked* recibir_nueva_io(int socket) {
 	t_io_blocked* io_blocked = malloc(sizeof(t_io_blocked));
-	// .
-	// desarrollar según como lo serialize el módulo entradasalida.
-	// .
+	int size;
+	void* buffer;
+	buffer = recibir_buffer(&size, socket);
+
+	int desplazamiento = 0;
+
+	int tamanio_nombre;
+	memcpy(&tamanio_nombre, buffer + desplazamiento, sizeof(int));
+	desplazamiento += sizeof(int);
+	io_blocked->nombre = malloc(tamanio_nombre);
+	memcpy(io_blocked->nombre, buffer + desplazamiento, tamanio_nombre);
+	desplazamiento += tamanio_nombre;
+	memcpy(&(io_blocked->tipo), buffer + desplazamiento, sizeof(t_io_type_code));
+	desplazamiento += sizeof(t_io_type_code);
+
+	if(desplazamiento != size ) {
+		imprimir_mensaje("error al recibir_identificacion_nueva_io(). Bytes de desplazamiento no coinciden con bytes de buffer");
+		exit(3);
+	}
+
+	io_blocked->socket = socket;
+	io_blocked->cola_blocked = list_create();
+
 	return io_blocked;
+}
+
+void destruir_io(t_io_blocked* io) {
+
 }
 
 void imprimir_pid_de_pcb(t_pcb* pcb) {

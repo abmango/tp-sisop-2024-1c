@@ -63,6 +63,7 @@ t_paquete* crear_paquete(int cod_op);
 void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
 // Igual que agregar_a_paquete(), pero para datos estáticos (cuyo tamanio es fijo).
 // Por lo que no agrega el tamanio del mismo al stream.
+// Si se usa esta función al armar el paquete, no se puede usar recibir_paquete() para recibirla.
 void agregar_estatico_a_paquete(t_paquete* paquete, void* valor, int tamanio);
 void enviar_paquete(t_paquete* paquete, int socket);
 void eliminar_paquete(t_paquete* paquete);

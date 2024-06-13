@@ -56,7 +56,6 @@ extern pthread_mutex_t sem_cola_ready;
 extern pthread_mutex_t sem_proceso_exec;
 extern pthread_mutex_t sem_cola_exit;
 
-extern t_list* lista_sockets_io;
 extern int socket_memoria;
 extern int socket_cpu_dispatch;
 extern int socket_cpu_interrupt;
@@ -81,7 +80,8 @@ void* serializar_pcb(t_pcb* pcb, int bytes);
 void* serializar_lista_de_recursos(t_list* lista_de_recursos, int bytes);
 
 // FUNCIONES PARA IOs:
-t_io_blocked* recibir_nueva_io(int socket); // Falta desarrollar
+t_io_blocked* recibir_nueva_io(int socket);
+void destruir_io(t_io_blocked* io); // DESARROLLANDO
 
 // FUNCIONES AUXILIARES PARA MANEJAR LAS LISTAS DE ESTADOS:
 void imprimir_pid_de_pcb(t_pcb* pcb);
