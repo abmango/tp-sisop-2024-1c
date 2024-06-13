@@ -5,6 +5,9 @@ const int LONGITUD_LINEA_ARCHIVOS = 60;
 t_config *config;
 t_log *log_memoria;
 pthread_mutex_t sem_memoria;
+MemoriaPaginada *memoria;
+int socket_escucha; // socket servidor
+bool fin_programa;
 
 MemoriaPaginada* inicializar_memoria(int tamano_memoria, int tamano_pagina) {
     // Verificar que el tamaño de la memoria sea un múltiplo del tamaño de página
@@ -35,33 +38,33 @@ MemoriaPaginada* inicializar_memoria(int tamano_memoria, int tamano_pagina) {
     }
 
     // Crear la estructura de memoria paginada y devolverla
-    MemoriaPaginada *memoria = (MemoriaPaginada*)malloc(sizeof(MemoriaPaginada));
-    if (memoria == NULL) {
+    MemoriaPaginada *new_memoria = (MemoriaPaginada*)malloc(sizeof(MemoriaPaginada));
+    if (new_memoria == NULL) {
         free(espacio_usuario);
         // free(tablas_paginas->paginas);
         // free(tablas_paginas);
         return NULL; // Error al asignar memoria para la estructura de memoria paginada
     }
 
-    memoria->espacio_usuario = espacio_usuario;
+    new_memoria->espacio_usuario = espacio_usuario;
     // memoria->tablas_paginas = tablas_paginas;
     // memoria->num_tablas = 1; // Por ahora solo una tabla
-    memoria->tamano_pagina = tamano_pagina;
-    memoria->tamano_memoria = tamano_memoria;
-    memoria->cantidad_marcos = tamano_memoria / tamano_pagina;
+    new_memoria->tamano_pagina = tamano_pagina;
+    new_memoria->tamano_memoria = tamano_memoria;
+    new_memoria->cantidad_marcos = tamano_memoria / tamano_pagina;
     pthread_mutex_init(&sem_memoria, NULL);
 
     // Crear el bitarray de la memoria
-    int aux_marcos = memoria->cantidad_marcos / 8;
-    if (memoria->cantidad_marcos % 8 == 0){
+    int aux_marcos = new_memoria->cantidad_marcos / 8;
+    if (new_memoria->cantidad_marcos % 8 == 0){
         espacio_bitmap_no_tocar = malloc(aux_marcos);
     } else { // Bitmap no puede ser menor q cantidadMarcos x eso + 1 (redondeo para abajo)
         aux_marcos++;
         espacio_bitmap_no_tocar = malloc(aux_marcos);
     }
-    memoria->bitmap = bitarray_create_with_mode(espacio_bitmap_no_tocar, aux_marcos, LSB_FIRST);
+    new_memoria->bitmap = bitarray_create_with_mode(espacio_bitmap_no_tocar, aux_marcos, LSB_FIRST);
 
-    return memoria;
+    return new_memoria;
 }
 
 // recibe la lista asi como se descarga x conexion (se podria verificar que tenga
@@ -87,13 +90,13 @@ resultado_operacion crear_proceso (t_list *solicitud, t_proceso *proceso)
     return CORRECTA;
 }
 
-resultado_operacion finalizar_proceso (MemoriaPaginada *memoria, t_proceso *proceso)
+resultado_operacion finalizar_proceso (t_proceso *proceso)
 {   
     int indice_frame;
     int pid_temp = proceso->pid;
     // pensar si requiere zona critica (utilizar mutex de memoria)
     for (int i=0; i < list_size(proceso->tabla_paginas); i++){
-        indice_frame = obtener_indice_frame(memoria, list_get(proceso->tabla_paginas,i));
+        indice_frame = obtener_indice_frame(list_get(proceso->tabla_paginas,i));
         bitarray_clean_bit(memoria->bitmap, indice_frame);
     }
     limpiar_estructura_proceso(proceso);
@@ -105,20 +108,20 @@ resultado_operacion finalizar_proceso (MemoriaPaginada *memoria, t_proceso *proc
 
 // ind_pagina_cosulta tendra el indice relativo a la tabla de paginas del proceso
 // revisar xq capaz esta funcion deberia devolver una direccion... x ahora solo esta preparada para el log
-resultado_operacion acceso_tabla_paginas(MemoriaPaginada *memoria , t_proceso *proceso, int ind_pagina_consulta)
+resultado_operacion acceso_tabla_paginas(t_proceso *proceso, int ind_pagina_consulta)
 {
     if (ind_pagina_consulta >= list_size(proceso->tabla_paginas)) {
         retardo_operacion();
-        printf("Tabla de Paginas del proceso [%i] no tiene asignada una pagina asignada en la posicion: %i",proceso->pid,ind_pagina_consulta);
+        log_info(log_memoria, "Tabla de Paginas del proceso <%i> no tiene asignada una pagina asignada en la posicion: %i",proceso->pid,ind_pagina_consulta);
         return ERROR;
     }
-    int frame = obtener_indice_frame(memoria, list_get(proceso->tabla_paginas,ind_pagina_consulta));
+    int frame = obtener_indice_frame(list_get(proceso->tabla_paginas,ind_pagina_consulta));
     retardo_operacion();
-    printf("PID: <%i> - Pagina: <%i> - Marco: <%i>",proceso->pid,ind_pagina_consulta,frame);
+    log_info(log_memoria, "PID: <%i> - Pagina: <%i> - Marco: <%i>",proceso->pid,ind_pagina_consulta,frame);
     return CORRECTA;
 }
 
-resultado_operacion ajustar_tamano_proceso(MemoriaPaginada *memoria, t_proceso *proceso, int nuevo_size)
+resultado_operacion ajustar_tamano_proceso(t_proceso *proceso, int nuevo_size)
 {
     // calcula tamaño actula, util para logs
     void *aux;
@@ -136,12 +139,12 @@ resultado_operacion ajustar_tamano_proceso(MemoriaPaginada *memoria, t_proceso *
     if (tamano_a_ampliar > 0){
         for (int i=0; i<paginas_a_modificar; i++){
             indice_aux = 0;
-            aux = obtener_frame_libre(memoria);
+            aux = obtener_frame_libre();
 
             if (aux == NULL) // si no hay + frames libres
                 return INSUFICIENTE;
 
-            indice_aux = obtener_indice_frame(memoria,aux);
+            indice_aux = obtener_indice_frame(aux);
             list_add(proceso->tabla_paginas, aux);
             bitarray_set_bit(memoria->bitmap, indice_aux);
         }
@@ -150,7 +153,7 @@ resultado_operacion ajustar_tamano_proceso(MemoriaPaginada *memoria, t_proceso *
         for (int i=0; i<paginas_a_modificar; i++){
             aux = list_get(proceso->tabla_paginas, list_size(proceso->tabla_paginas) - 1);
             list_remove(proceso->tabla_paginas, list_size(proceso->tabla_paginas) - 1); // -1 para entrar en rango
-            indice_aux = obtener_indice_frame(memoria, aux);
+            indice_aux = obtener_indice_frame(aux);
             bitarray_clean_bit(memoria->bitmap, indice_aux);
         }
         printf("PID: <%i> - Tamaño Actual: <%i> - Tamaño a Reducir: <%i>",proceso->pid,(list_size(proceso->tabla_paginas) * memoria->tamano_pagina), nuevo_size);
@@ -160,19 +163,22 @@ resultado_operacion ajustar_tamano_proceso(MemoriaPaginada *memoria, t_proceso *
 
 // t_list solicitudes contiene t_solicitudes (direccion + cant_bytes) es decir, un frame y cuanto de ese frame [verificar al cagar]
 // memoria asume "permite" que si cant_bytes sobrepasa la pagina se efectue, xq no le interesa... es tarea de MMU eso
-resultado_operacion acceso_espacio_usuario(MemoriaPaginada *memoria, t_buffer *data, t_list *solicitudes, t_acceso_esp_usu acceso)
+resultado_operacion acceso_espacio_usuario(t_buffer *data, t_list *solicitudes, t_acceso_esp_usu acceso)
 {
     t_solicitud *pedido;
     void *aux;
     aux = memoria->espacio_usuario;
+    aux = list_get(solicitudes, 0);
+    int pid;
+    pid = *(int*) aux;
     switch (acceso){
     case LECTURA: // data vacia, copiar de memoria a buffer data (informacion pura sin verificar, no es tarea memoria)
         crear_buffer_mem(data);
-        for (int i=0; i<list_size(solicitudes); i++){
+        for (int i=1; i<list_size(solicitudes); i++){
             pedido = list_get(solicitudes, i);
             aux = (aux + pedido->desplazamiento);
 
-            log_info(log_memoria, "PID: <PENDIENTE> - Accion: <LEER> - Direccion fisica: <%i> - Tamaño <%i>",pedido->desplazamiento,pedido->cant_bytes);
+            log_info(log_memoria, "PID: <%i> - Accion: <LEER> - Direccion fisica: <%i> - Tamaño <%i>", pid, pedido->desplazamiento, pedido->cant_bytes);
 
             pthread_mutex_lock(&sem_memoria);
             agregar_a_buffer_mem(data, aux, pedido->cant_bytes);
@@ -188,11 +194,11 @@ resultado_operacion acceso_espacio_usuario(MemoriaPaginada *memoria, t_buffer *d
 
     case ESCRITURA:
         void *stream = data->stream;
-        for (int i=0; i<list_size(solicitudes); i++){
+        for (int i=1; i<list_size(solicitudes); i++){
             pedido = list_get(solicitudes, i);
             aux = (aux + pedido->desplazamiento);
 
-            log_info(log_memoria, "PID: <PENDIENTE> - Accion: <ESCRIBIR> - Direccion fisica: <%i> - Tamaño <%i>",pedido->desplazamiento,pedido->cant_bytes);
+            log_info(log_memoria, "PID: <%i> - Accion: <ESCRIBIR> - Direccion fisica: <%i> - Tamaño <%i>", pid, pedido->desplazamiento, pedido->cant_bytes);
 
             pthread_mutex_lock(&sem_memoria);
             agregar_a_memoria(aux, stream, pedido->cant_bytes);
@@ -201,7 +207,7 @@ resultado_operacion acceso_espacio_usuario(MemoriaPaginada *memoria, t_buffer *d
             stream = stream + pedido->cant_bytes;
             retardo_operacion();
         }
-        if (stream == (data->stream + data->size))
+        if (stream == (data->stream + data->size)) // verifica que apunte a final buffer ?? verificar q sea correcto
             return CORRECTA;
         else
             return ERROR;
@@ -213,7 +219,7 @@ resultado_operacion acceso_espacio_usuario(MemoriaPaginada *memoria, t_buffer *d
 }
 
 // Función para liberar la memoria ocupada por la estructura de memoria paginada
-void liberar_memoria(MemoriaPaginada *memoria) {
+void liberar_memoria() {
     free(memoria->espacio_usuario);
     // free(memoria->tablas_paginas->paginas);
     // free(memoria->tablas_paginas);
@@ -258,7 +264,7 @@ t_list * cargar_instrucciones (char *directorio)
     return lista;
 }
 
-int obtener_indice_frame(MemoriaPaginada *memoria, void *ref_frame)
+int obtener_indice_frame(void *ref_frame)
 {
     // como EU es continuo, va a devolver Delta bytes (Bfinal - Binicial)
     int Delta_bytes = ref_frame - memoria->espacio_usuario;
@@ -268,7 +274,7 @@ int obtener_indice_frame(MemoriaPaginada *memoria, void *ref_frame)
         return (Delta_bytes / memoria->tamano_pagina) + 1;
 }
 
-void * obtener_frame_libre(MemoriaPaginada *memoria)
+void * obtener_frame_libre()
 {   
     void *aux = NULL;
     aux = memoria->espacio_usuario;
@@ -287,15 +293,15 @@ void * obtener_frame_libre(MemoriaPaginada *memoria)
         return (aux);
 }
 
-t_proceso * obtener_proceso(t_list *lista, int pid)
+int obtener_proceso(t_list *lista, int pid)
 {
     t_proceso *temp;
     for (int i=0; i< list_size(lista); i++){
         temp = list_get(lista, i);
         if (temp->pid == pid)
-            return temp;
+            return i;
     }
-    return NULL;
+    return -1;
 }
 
 void crear_buffer_mem(t_buffer *new)

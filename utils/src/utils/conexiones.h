@@ -18,17 +18,31 @@
 
 typedef enum
 {
-    MENSAJE,
+    MENSAJE_ERROR,
+	MENSAJE,
+	// KERNEL-MEMORIA - KERNEL-CPU
 	INICIAR_PROCESO,
     FINALIZAR_PROCESO,
+	// KERNEL-CPU
 	PCB,
 	CONTEXTO_EJECUCION,
 	INTERRUPCION,
 	DESALOJO,
-	IO_NUEVA,
-	IO_RESPUESTA,
-	PAQUETE_TEMPORAL // temporal xq faltaba un op_code en memoria
-} op_code; //op code para paquetes
+	IO_NUEVA, // borrar
+	IO_RESPUESTA, // borrar
+	PAQUETE_TEMPORAL, // temporal xq faltaba un op_code en memoria
+
+	// IO-KERNEL
+	INTERF_GEN,
+	INTERF_STDIN,
+	INTERF_STDOUT,
+	INTERF_DIALFS,
+	FIN_INTERFAZ,
+
+	// IO-MEMORIA
+	ACCESO_LECTURA,
+	ACCESO_ESCRITURA
+} op_code; //op code para paquetes, requiere limpieza
 
 typedef struct
 {

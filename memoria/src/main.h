@@ -8,6 +8,16 @@
 
 #include "utils.h"
 
+/// @brief recibe solo conexiones temporales (IO y KERNEL)
+/// @param nada // no deberia recibir nada, simplemente es * por pthread
+/// @return // no deberia retornar, solo utilizar pthread_exit()
+void* hilo_recepcion(void *nada);
+
+/// @brief Actua sobre un cliente (ya verificado), recibiendo su operacion y ejecutando lo que sea necesario
+/// @param nada // no deberia recibir nada, simplemente es * por pthread
+/// @return // no deberia retornar, solo utilizar pthread_exit()
+void* hilo_ejecutor(void *nada);
+
 void iterator(char* value);
 void terminar_programa();
 void iniciar_logger();
