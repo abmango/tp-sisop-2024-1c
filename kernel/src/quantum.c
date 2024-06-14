@@ -2,9 +2,9 @@
 
 void* rutina_quantum(t_pcb *pcb) {
     
-    // POR DESARROLLAR
-    sleep(pcb->quantum);
-    enviar_orden_de_interrupcion(INTERRUPTED_BY_QUANTUM);
+    unsigned int quantum_en_microsegs = (pcb->quantum)*MILISEG_A_MICROSEG;
+    usleep(quantum_en_microsegs);
+    enviar_orden_de_interrupcion(INTERRUPCION);
     
     return NULL;
 }

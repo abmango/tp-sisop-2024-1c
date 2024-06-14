@@ -10,7 +10,9 @@
 #include <commons/config.h>
 #include <commons/collections/list.h>
 
-#define MILISEG_A_SEG 1000
+// Cambié el uso de sleep(), por el uso de usleep(), que usa MICROSEG en vez de SEG.
+// Esto nos permite ser más exactos en los tiempos de espera, y no tener que usar "div_t".
+#define MILISEG_A_MICROSEG 1000
 
 typedef struct
 {

@@ -332,9 +332,6 @@ int offset_pagina (int desplazamiento, int tamanio_pagina)
 
 void retardo_operacion()
 {
-    div_t tiempo = div(config_get_int_value(config,"RETARDO_RESPUESTA"), MILISEG_A_SEG );
-    if (tiempo.rem < 5)
-        sleep(tiempo.quot);
-    else
-        sleep(tiempo.quot + 1);
+    unsigned int tiempo_en_microsegs = config_get_int_value(config, "RETARDO_RESPUESTA")*MILISEG_A_MICROSEG;
+    usleep(tiempo_en_microsegs);
 }

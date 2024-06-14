@@ -55,7 +55,6 @@ void planific_corto_fifo(void)
 
 void planific_corto_rr(void)
 {
-    // sleep
     while(1) // condicion que tiene que cumplir para no desalojar
     {
         ejecutar_sig_proceso();
@@ -82,7 +81,6 @@ void planific_corto_rr(void)
 
 void planific_corto_vrr(void)
 {
-    // sleep
     while(1) // condicion que tiene que cumplir para no desalojar
     {
         ejecutar_sig_proceso();

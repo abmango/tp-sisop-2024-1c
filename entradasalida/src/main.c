@@ -97,9 +97,12 @@ void interfaz_generica(char* nombre, t_config* config, int conexion_kernel)
 		// para elem 0 de la lista...
 		data = list_get (recibido, 1);
 		tiempo = *(int*)data;
-		tiempo *= unidadTrabajo; // en config es 250 (segundos)
+		tiempo *= unidadTrabajo;
+		unsigned int tiempo_en_microsegs = tiempo*MILISEG_A_MICROSEG;
+
 		// si data recibio valor muy alto se bloque x mucho tiempo
-		sleep(tiempo);
+		usleep(tiempo_en_microsegs);
+		
 		list_clean(recibido);
 		
 		// avisa a kernel que termino
