@@ -42,6 +42,7 @@ extern int contador_pid; // Contador. Para asignar diferente pid a cada nuevo pr
 
 extern t_list* cola_new; // Estado NEW. Es una lista de t_pcb*
 extern t_list* cola_ready; // Estado READY. Es una lista de t_pcb*
+extern t_list* cola_ready_plus; // Estado READY+. Es una lista de t_pcb*
 extern t_pcb* proceso_exec; // Estado EXEC. Es un t_pcb*
 extern t_list* lista_io_blocked; // Estado BLOCKED. Los bloqueados por esperar a una IO. Es una lista de t_io_blocked*
 extern t_list* lista_recurso_blocked; // Estado BLOCKED. Los bloqueados por esperar la liberacion de un recurso. Es una lista de t_recurso_blocked*

@@ -9,6 +9,7 @@ int contador_pid = 0;
 
 t_list* cola_new = NULL;
 t_list* cola_ready = NULL;
+t_list* cola_ready_plus = NULL; //Cola ready+ para VRR
 t_pcb* proceso_exec = NULL; //Es un puntero a pcb por ser unico proceso en ejecucion
 t_list* lista_io_blocked = NULL;
 t_list* lista_recurso_blocked = NULL;

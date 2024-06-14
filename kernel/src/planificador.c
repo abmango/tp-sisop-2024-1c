@@ -1,4 +1,5 @@
 #include "planificador.h"
+#include "quantum.c"
 
 void* rutina_planificador(t_config* config) {
 
@@ -48,12 +49,74 @@ void planific_corto_fifo(void)
             
 			//faltan casos
 		}
-
-
-		
-
 		
 	}
+}
+
+void planific_corto_rr(void)
+{
+    // sleep
+    while(quantum > 0) // condicion que tiene que cumplir para no desalojar
+    {
+        ejecutar_sig_proceso();
+        esperar_cpu_rr(proceso_exec);
+		switch (desalojo.motiv){
+			case EXIT:
+			list_add(cola_exit, proceso_exec);
+            proceso_exec = NULL;
+            // list_remove_and_destroy_element(cola_exit, 0, (void*)destruir_pcb); // esto tiene que ir en el hilo que maneja la cola_exit.
+            break;
+            case ERROR:
+            list_add(cola_exit, proceso_exec);
+            proceso_exec = NULL;
+            // list_remove_and_destroy_element(cola_exit, 0, (void*)destruir_pcb); // esto tiene que ir en el hilo que maneja la cola_exit.
+            break;
+            case WAIT:
+            break;
+            case SIGNAL:
+            break;
+			//faltan casos
+        }
+    }
+}
+
+void planific_corto_vrr(void)
+{
+    // sleep
+    while(quantum > 0) // condicion que tiene que cumplir para no desalojar
+    {
+        ejecutar_sig_proceso();
+        esperar_cpu_vrr(proceso_exec);
+		switch (desalojo.motiv){
+			case EXIT:
+			list_add(cola_exit, proceso_exec);
+            proceso_exec = NULL;
+            // list_remove_and_destroy_element(cola_exit, 0, (void*)destruir_pcb); // esto tiene que ir en el hilo que maneja la cola_exit.
+            break;
+            case ERROR:
+            list_add(cola_exit, proceso_exec);
+            proceso_exec = NULL;
+            // list_remove_and_destroy_element(cola_exit, 0, (void*)destruir_pcb); // esto tiene que ir en el hilo que maneja la cola_exit.
+            break;
+            case WAIT:
+            actualizar_vrr(proceso_exec);
+            break;
+            case SIGNAL:
+
+            break;
+            case INTERRUPTED_BY_QUANTUM:
+            //list_remove(cola_exec, proceso_exec);
+            actualizar_vrr(proceso_exec);
+            break;
+            case IO:
+            //list_remove(cola_exec, proceso_exec);
+            list_add(lista_io_blocked, proceso_exec);
+            pthread_mutex_lock(&sem_io_exec);
+            actualizar_vrr(proceso_exec);
+            break;
+			//faltan casos
+        }
+    }
 }
 
 void ejecutar_sig_proceso(void){ //pone el siguiente proceso a ejecutar, si no hay procesos listos espera a senial de semaforo, asume que no hay proceso en ejecucion
