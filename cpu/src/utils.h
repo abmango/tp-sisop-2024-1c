@@ -46,6 +46,48 @@ typedef enum {
     EXIT
 } execute_op_code;
 
+// Registros e instrucciones
+
+typedef struct{
+    uint32_t PC;            //Program Counter, indica la próxima instrucción a ejecuta
+    uint8_t AX;             //Registro Numérico de propósito general
+    uint8_t BX;             //Registro Numérico de propósito general
+    uint8_t CX;             //Registro Numérico de propósito general
+    uint8_t DX;             //Registro Numérico de propósito general
+    uint32_t EAX;           //Registro Numérico de propósito general
+    uint32_t EBX;           //Registro Numérico de propósito general
+    uint32_t ECX;           //Registro Numérico de propósito general
+    uint32_t EDX;           //Registro Numérico de propósito general
+    uint32_t SI;            //Contiene la dirección lógica de memoria de origen desde donde se va a copiar un string.
+    uint32_t DI;            //Contiene la dirección lógica de memoria de destino a donde se va a copiar un string.
+}registros_CPU;
+
+
+void SET (void* registro, void* elemento);
+// void MOV_IN (Registro Datos, Registro Dirección);
+// void MOV_OUT (Registro Dirección, Registro Datos);
+void SUM (void* registro1, void* registro2);
+void SUB (void* registro1, void* registro2);
+void JNZ (uint32_t PC, uint32_t direccionInstruccion);
+// JNZ [registro] / [literal] JNZ AX 4
+// void RESIZE (Tamaño);
+// void COPY_STRING (Tamaño);
+// void WAIT (Recurso);
+// void SIGNAL (Recurso);
+// void IO_GEN_SLEEP (Interfaz, Unidades de trabajo);
+// void IO_STDIN_READ (Interfaz, Registro Dirección, Registro Tamaño);
+// void IO_STDOUT_WRITE (Interfaz, Registro Dirección, Registro Tamaño);
+// void IO_FS_CREATE (Interfaz, Nombre Archivo);
+// void IO_FS_DELETE (Interfaz, Nombre Archivo);
+// void IO_FS_TRUNCATE (Interfaz, Nombre Archivo, Registro Tamaño);
+// void IO_FS_WRITE (Interfaz, Nombre Archivo, Registro Dirección, Registro Tamaño, Registro Puntero Archivo);
+// void IO_FS_READ (Interfaz, Nombre Archivo, Registro Dirección, Registro Tamaño, Registro Puntero Archivo);
+// void EXIT();
+
+//#endif
+
+
+
 ////////////////////////////////////
 
 t_pcb* recibir_pcb();

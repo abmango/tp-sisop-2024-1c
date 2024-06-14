@@ -91,3 +91,49 @@ void check_interrupt(t_contexto_de_ejecucion reg)
       break;
    }
 }
+
+// INSTRUCCIONES A INTERPRETAR
+
+void funcionJNZ (uint32_t PC, uint32_t direccionInstruccion){
+	PC = direccionInstruccion;
+}
+
+void set_uint8(uint32_t* registro, uint8_t* valor) {
+    *registro = *valor;
+}
+
+void set_uint32(uint32_t* registro, uint32_t* valor) {
+    *registro = *valor;
+}
+
+#define funcionSET(registro, valor) _Generic((*(registro)) + (valor), \
+    void: set_uint8, \
+    void: set_uint32 \
+)(x, y)
+
+void sum_uint8(uint8_t* registro1, uint8_t* registro2) {
+    *registro1 = *registro1 + *registro2;
+}
+
+void sum_uint32(uint32_t* registro1, uint32_t* registro2) {
+    *registro1 = *registro1 + *registro2;
+}
+
+#define funcionSUM(registro1, registro2) _Generic((*(registro1)) + (registro2), \
+    void: sum_uint8, \
+    void: sum_uint32 \
+)(x, y)
+
+
+void sub_uint8(uint8_t* registro1, uint8_t* registro2) {
+    *registro1 = *registro1 - *registro2;
+}
+
+void sub_uint32(uint32_t* registro1, uint32_t* registro2) {
+    *registro1 = *registro1 - *registro2;
+}
+
+#define funcionSUB(registro1, registro2) _Generic((*(registro1)) + (registro2), \
+    void: sum_uint8, \
+    void: sum_uint32 \
+)(x, y)
