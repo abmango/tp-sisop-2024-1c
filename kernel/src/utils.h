@@ -56,7 +56,7 @@ extern pthread_mutex_t sem_cola_ready;
 extern pthread_mutex_t sem_cola_ready_plus;
 extern pthread_mutex_t sem_proceso_exec;
 extern pthread_mutex_t sem_cola_exit;
-// extern pthread_mutex_t sem_plan_c; // este lo cambié por "sem_t sem_procesos_ready" y "sem_t sem_procesos_ready_plus"
+// extern pthread_mutex_t sem_plan_c; // este lo cambié por "sem_t sem_procesos_ready"
 extern sem_t sem_procesos_ready; // Cantidad de procesos en estado READY. incluye procesos tanto en cola_ready como en cola_ready_plus
 
 extern int socket_memoria;
