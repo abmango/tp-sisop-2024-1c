@@ -42,7 +42,7 @@ extern int contador_pid; // Contador. Para asignar diferente pid a cada nuevo pr
 
 extern t_list* cola_new; // Estado NEW. Es una lista de t_pcb*
 extern t_list* cola_ready; // Estado READY. Es una lista de t_pcb*
-extern t_list* cola_ready_plus; // Estado READY+. Es una lista de t_pcb*
+extern t_list* cola_ready_plus; // Estado READY. La cola de mayor prioridad para VRR. Es una lista de t_pcb*
 extern t_pcb* proceso_exec; // Estado EXEC. Es un t_pcb*
 extern t_list* lista_io_blocked; // Estado BLOCKED. Los bloqueados por esperar a una IO. Es una lista de t_io_blocked*
 extern t_list* lista_recurso_blocked; // Estado BLOCKED. Los bloqueados por esperar la liberacion de un recurso. Es una lista de t_recurso_blocked*
@@ -50,12 +50,14 @@ extern t_list* cola_exit; // Estado EXIT. Es una lista de t_pcb*
 
 extern t_list* recursos_del_sistema; // Recursos, con sus instancias disponibles actualmente. Es una lista de t_recurso*
 
-extern pthread_mutex_t sem_plan_c;
 extern pthread_mutex_t sem_colas;
 extern pthread_mutex_t sem_cola_new;
 extern pthread_mutex_t sem_cola_ready;
+extern pthread_mutex_t sem_cola_ready_plus;
 extern pthread_mutex_t sem_proceso_exec;
 extern pthread_mutex_t sem_cola_exit;
+// extern pthread_mutex_t sem_plan_c; // este lo cambié por "sem_t sem_procesos_ready" y "sem_t sem_procesos_ready_plus"
+extern sem_t sem_procesos_ready; // Cantidad de procesos en estado READY. incluye procesos tanto en cola_ready como en cola_ready_plus
 
 extern int socket_memoria;
 extern int socket_cpu_dispatch;
@@ -74,6 +76,7 @@ bool proceso_esta_en_ejecucion(int pid);
 t_contexto_de_ejecucion contexto_de_ejecucion_de_pcb(t_pcb* pcb);
 void actualizar_contexto_de_ejecucion_de_pcb(t_contexto_de_ejecucion nuevo_contexto_de_ejecucion, t_pcb* pcb);
 
+// Espera a recibir un t_desalojo de cpu.
 t_desalojo recibir_desalojo(int socket); // DESARROLLANDO
 void enviar_contexto_de_ejecucion(t_contexto_de_ejecucion contexto_de_ejecucion, int socket);
 

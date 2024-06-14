@@ -9,13 +9,13 @@ void* rutina_planificador(t_config* config) {
         planific_corto_fifo();
     }
     else if (strcmp(algoritmo_planificacion, "RR") == 0) {
-
+        planific_corto_rr();
     }
     else if (strcmp(algoritmo_planificacion, "VRR") == 0) {
-
+        planific_corto_vrr();
     }
 
-    return NULL; // acá no sé que es correcto retornar.
+    return NULL;
 }
 
 /////////////////////////////////////////////////////
@@ -25,7 +25,7 @@ void planific_corto_fifo(void)
 
     while(1){
 		ejecutar_sig_proceso();
-		t_desalojo desalojo = recibir_desalojo();
+		t_desalojo desalojo = recibir_desalojo(socket_cpu_dispatch);
         pthread_mutex_lock(&sem_colas);
 		*proceso_exec = desalojo.pcb;
 		switch (desalojo.motiv){
@@ -119,33 +119,34 @@ void planific_corto_vrr(void)
     }
 }
 
-void ejecutar_sig_proceso(void){ //pone el siguiente proceso a ejecutar, si no hay procesos listos espera a senial de semaforo, asume que no hay proceso en ejecucion
+//////////////////////////////////////////////////////////////////
+
+void ejecutar_sig_proceso(void){
+
+    sem_wait(&sem_procesos_ready);
 
     proceso_exec = list_remove(cola_ready, 0);
+    
     t_contexto_de_ejecucion contexto_de_ejecucion = contexto_de_ejecucion_de_pcb(proceso_exec);
     enviar_contexto_de_ejecucion(contexto_de_ejecucion, socket_cpu_dispatch);
-
-/////////////////////////////
- // REVISANDO /// ----  - /-/
-/////////////////////////////
-    if(cola_ready->head==NULL){
-        pthread_mutex_lock(&sem_plan_c); //espera senial
-        pthread_mutex_lock(&sem_colas);
-        if(cola_ready->head!=NULL){
-            proceso_exec=list_remove(cola_ready, 0);
-            enviar_pcb(proceso_exec,socket_cpu_dispatch);
-        }
-        pthread_mutex_unlock(&sem_colas);
-    }else{
-        pthread_mutex_lock(&sem_colas);
-        if(cola_ready->head!=NULL){
-            proceso_exec=list_remove(cola_ready,0);
-            enviar_pcb(proceso_exec,socket_cpu_dispatch);
-        }
-        pthread_mutex_unlock(&sem_colas);
-    }
 }
 
+void ejecutar_sig_proceso_vrr(void) {
+
+    sem_wait(&sem_procesos_ready);
+
+    if (list_is_empty(cola_ready_plus)) { // En este caso la cola_ready_plus está vacía, entonces toma al proceso de la cola_ready
+        proceso_exec = list_remove(cola_ready, 0);
+    }
+    else { // En este caso la cola_ready_plus NO está vacía, entonces toma al proceso de dicha cola
+        proceso_exec = list_remove(cola_ready_plus, 0);
+    }
+    
+    t_contexto_de_ejecucion contexto_de_ejecucion = contexto_de_ejecucion_de_pcb(proceso_exec);
+    enviar_contexto_de_ejecucion(contexto_de_ejecucion, socket_cpu_dispatch);
+}
+
+/*
 t_desalojo recibir_desalojo(void){ //recibe desalojo de cpu, si no hay desalojo se queda esperando a que llegue
     t_desalojo desalojo;
 	if(recibir_codigo(socket_cpu_dispatch) != DESALOJO) 
@@ -166,6 +167,9 @@ t_desalojo recibir_desalojo(void){ //recibe desalojo de cpu, si no hay desalojo 
 		break;
         //faltan casos
 	}
-}
+    
 
+    return desalojo;
+}
+*/
 /////////////////////////////////////////////////////

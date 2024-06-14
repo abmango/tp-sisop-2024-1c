@@ -12,10 +12,10 @@ int main(int argc, char* argv[]) {
 	t_config* config = iniciar_config("default");
 	grado_multiprogramacion = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");
 
-	pthread_mutex_init(&sem_plan_c,NULL);
-	pthread_mutex_lock(&sem_plan_c);
 	pthread_mutex_init(&sem_colas,NULL);
 	pthread_mutex_unlock(&sem_colas);
+	sem_init(&sem_procesos_ready, 0, 0);
+	sem_init(&sem_procesos_ready_plus, 0, 0);
 
 	logger = log_create("log.log", "Kernel", TRUE, LOG_LEVEL_DEBUG);
 

@@ -6,7 +6,7 @@ void* rutina_quantum(t_pcb *pcb) {
     sleep(pcb->quantum);
     enviar_orden_de_interrupcion(INTERRUPTED_BY_QUANTUM);
     
-    //return NULL; // u otra cosa
+    return NULL;
 }
 
 t_desalojo esperar_cpu_rr(t_pcb *pcb)
@@ -14,7 +14,7 @@ t_desalojo esperar_cpu_rr(t_pcb *pcb)
     pthread_t hilo_quantum;
     pthread_create(&hilo_quantum, NULL, rutina_quantum, pcb);
     pthread_detach(hilo_quantum);
-    t_desalojo desalojo = recibir_desalojo();
+    t_desalojo desalojo = recibir_desalojo(socket_cpu_dispatch);
     pthread_cancel(hilo_quantum);
     return desalojo;
 }
