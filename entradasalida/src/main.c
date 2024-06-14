@@ -81,13 +81,6 @@ void interfaz_generica(char* nombre, t_config* config, int conexion_kernel)
 
 	// se identifica ante kernel, dándole nombre y tipo de interfaz
 	identificarse(nombre, GENERICA, conexion_kernel);
-	
-	// Kernel Asigna id a interfaz (para futuros intercambios)
-	// se espera un paquete q solo tiene el id 
-	operacion = recibir_codigo(conexion_kernel);
-	recibido = recibir_paquete(conexion_kernel);
-	data = list_get(recibido, 0);
-	id_interfaz = data; // interpreta data como int*
 
 	// Bucle hasta que kernel notifique cierre
 	operacion = recibir_codigo(conexion_kernel);
@@ -95,15 +88,15 @@ void interfaz_generica(char* nombre, t_config* config, int conexion_kernel)
 		recibido = recibir_paquete(conexion_kernel);
 		// se asume que kernel no confunde id_interfaz, sino agregar if
 		// para elem 0 de la lista...
-		data = list_get (recibido, 1);
+		data = list_get(recibido, 1);
 		tiempo = *(int*)data;
 		tiempo *= unidadTrabajo;
 		unsigned int tiempo_en_microsegs = tiempo*MILISEG_A_MICROSEG;
 
-		// si data recibio valor muy alto se bloque x mucho tiempo
+		// si data recibio valor muy alto se bloquea x mucho tiempo
 		usleep(tiempo_en_microsegs);
-		
-		list_clean(recibido);
+
+		list_destroy_and_destroy_elements(recibido, free);
 		
 		// avisa a kernel que termino
 		paquete = crear_paquete(INTERFAZ_GENERICA);
