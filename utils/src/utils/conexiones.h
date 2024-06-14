@@ -34,15 +34,18 @@ typedef enum
 	IO_IDENTIFICACION,
 	IO_OPERACION,
 	// saqué estos 3, y cambié el protocolo de comunicacion
-	// INTERF_GEN,
+	// INTERF_GEN, // duda, los codigos solo irian en kernel e IO??
 	// INTERF_STDIN,
 	// INTERF_STDOUT,
 	INTERF_DIALFS,
 	FIN_INTERFAZ,
 
-	// IO-MEMORIA
+	// IO-MEMORIA y CPU-MEMORIA 
 	ACCESO_LECTURA,
-	ACCESO_ESCRITURA
+	ACCESO_ESCRITURA,
+
+	// CPU-MEMORIA
+	AJUSTAR_PROCESO,
 } op_code; //op code para: PAQUETES o COMUNICACIONES CON SOLO UN CODIGO. Requiere limpieza
 
 typedef struct

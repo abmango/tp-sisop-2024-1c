@@ -18,6 +18,8 @@ void* hilo_recepcion(void *nada);
 /// @return // no deberia retornar, solo utilizar pthread_exit()
 void* hilo_ejecutor(void *nada);
 
+void atender_cpu(int socket);
+
 void iterator(char* value);
 void terminar_programa();
 void iniciar_logger();
