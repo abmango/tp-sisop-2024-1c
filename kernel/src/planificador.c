@@ -40,13 +40,23 @@ void planific_corto_fifo(void) {
 
 		switch (desalojo.motiv) {
 			case INTERRUPTED_BY_USER:
+            log_info("PID: %i - fin de programa", proceso_exec->pid);
 			list_add(cola_exit, proceso_exec);
-            proceso_exec = NULL;
+            // proceso_exec = NULL;
             break;
-            case ERROR:
+            
+            case INVALID_RESOURCE:
+            log_error(logger, "PID: %i - Acceso a recurso no valido. Finalizando proceso...", proceso_exec->pid);
             list_add(cola_exit, proceso_exec);
-            proceso_exec = NULL;
+            // proceso_exec = NULL;
             break;
+
+            case INVALID_INTERFACE:
+            log_error(logger, "PID: %i - Acceso a interfaz de I/O invalida. Finalizando proceso...", proceso_exec->pid);
+            list_add(cola_exit, proceso_exec);
+            // proceso_exec = NULL;
+            break;
+
             case GEN_SLEEP:
             memcpy(&size_argument, buffer + desplazamiento, sizeof(int));
 	        desplazamiento += sizeof(int);
@@ -70,14 +80,14 @@ void planific_corto_fifo(void) {
                 list_add(cola_exit, proceso_exec);
             }
             // Por cualquiera de los dos caminos, se libera la cola de ejecucion
-            proceso_exec = NULL;
+            // proceso_exec = NULL;
             break;
             case STDIN_READ:
             break;
             case STDOUT_WRITE:
             break;
             case OUT_OF_MEMORY:
-            log_error(logger, "Memoria insuficiente");
+            log_error(logger, "PID: %i - Memoria insuficiente. Finalizando proceso...", proceso_exec->pid);
             list_add(cola_exit, proceso_exec);
             break;
             case WAIT:
@@ -110,7 +120,7 @@ void planific_corto_fifo(void) {
             
 			//faltan casos
 		}
-		
+        proceso_exec = NULL;		
 	}
 }
 
@@ -133,16 +143,32 @@ void planific_corto_rr(void) {
         actualizar_contexto_de_ejecucion_de_pcb(desalojo.contexto, proceso_exec);
 
 		switch (desalojo.motiv) {
-			case INTERRUPTED_BY_USER:
+			case SUCCESS:
+            log_info(logger, "PID: %i - fin de programa", proceso_exec->pid);
+            list_add(cola_exit, proceso_exec);
+            // proceso_exec = NULL;
+            break;
+            
+            case INTERRUPTED_BY_USER:
+            log_info(logger, "Proceso con PID: %i - finalizado por el usuario", proceso_exec->pid);
 			list_add(cola_exit, proceso_exec);
             // proceso_exec = NULL;
             // list_remove_and_destroy_element(cola_exit, 0, (void*)destruir_pcb); // esto tiene que ir en el hilo que maneja la cola_exit.
             break;
-            case ERROR:
+
+            case INVALID_RESOURCE:
+            log_error(logger, "PID: %i - Recurso no valido. Finalizando proceso...", proceso_exec->pid);
             list_add(cola_exit, proceso_exec);
             // proceso_exec = NULL;
             // list_remove_and_destroy_element(cola_exit, 0, (void*)destruir_pcb); // esto tiene que ir en el hilo que maneja la cola_exit.
             break;
+            
+            case INVALID_INTERFACE:
+            log_error(logger, "PID: %i - interfaz de I/O no valida. Finalizando proceso...", proceso_exec->pid);
+            list_add(cola_exit, proceso_exec);
+            proceso_exec = NULL;
+            break;
+
             case GEN_SLEEP:
             memcpy(&size_argument, buffer + desplazamiento, sizeof(int));
 	        desplazamiento += sizeof(int);
@@ -167,6 +193,20 @@ void planific_corto_rr(void) {
             }
             // Por cualquiera de los dos caminos, se libera la cola de ejecucion
             break;
+
+            case STDIN_READ:
+            // A DESARROLLAR
+            break;
+
+            case STDOUT_WRITE:
+            // A DESARROLLAR
+            break;
+
+            case OUT_OF_MEMORY:
+            log_error(logger, "PID: %i - Memoria insuficiente. Finalizando proceso...", proceso_exec->pid);
+            list_add(cola_exit, proceso_exec);
+            break;
+
             case WAIT:
             memcpy(&size_argument, buffer + desplazamiento, sizeof(int));
 	        desplazamiento += sizeof(int);
@@ -195,12 +235,12 @@ void planific_corto_rr(void) {
             // proceso_exec = NULL;
             break;
 
-            case INTERRUMPED_BY_QUANTUM:
+            case INTERRUPTED_BY_QUANTUM:
             list_add(cola_ready, proceso_exec);
             // proceso_exec = NULL;
             case SIGNAL:
+            // A DESARROLLAR
             break;
-			//faltan casos
         }
         proceso_exec = NULL;
     }
@@ -226,20 +266,28 @@ void planific_corto_vrr(void) {
 
 		switch (desalojo.motiv) {
 			case INTERRUPTED_BY_USER:
-            log_info(logger, "Proceso detenido por el usuario");
+            log_info(logger, "Proceso con PID: %i - finalizado por el usuario", proceso_exec->pid);
 			list_add(cola_exit, proceso_exec);
             // proceso_exec = NULL;
             // list_remove_and_destroy_element(cola_exit, 0, (void*)destruir_pcb); // esto tiene que ir en el hilo que maneja la cola_exit.
             break;
             
-            case ERROR:
+            case INVALID_INTERFACE:
+            log_error(logger, "PID: %i - acceso a interfaz I/O no valido. Finalizando proceso...", proceso_exec->pid);
+            list_add(cola_exit, proceso_exec);
+            // proceso_exec = NULL;
+            // list_remove_and_destroy_element(cola_exit, 0, (void*)destruir_pcb); // esto tiene que ir en el hilo que maneja la cola_exit.
+            break;
+
+            case INVALID_RESOURCE:
+            log_error(logger, "PID: %i - acceso a recurso no valido. Finalizando proceso...", proceso_exec->pid);
             list_add(cola_exit, proceso_exec);
             // proceso_exec = NULL;
             // list_remove_and_destroy_element(cola_exit, 0, (void*)destruir_pcb); // esto tiene que ir en el hilo que maneja la cola_exit.
             break;
             
             case SUCCESS:
-            log_info(logger, "Proceso con PID: %i finalizado", proceso_exec->pid);
+            log_info(logger, "Proceso con PID: %i - fin de programa", proceso_exec->pid);
             list_add(cola_exit, proceso_exec);
             // proceso_exec = NULL;
             break;
@@ -272,6 +320,14 @@ void planific_corto_vrr(void) {
             // proceso_exec = NULL;
             break;
             
+            case STDIN_READ:
+            // A DESARROLLAR
+            break;
+
+            case STDOUT_WRITE:
+            // A DESARROLLAR
+            break;
+
             case WAIT:
             // hace lo mismo que en RR?
             memcpy(&size_argument, buffer + desplazamiento, sizeof(int));
@@ -311,9 +367,11 @@ void planific_corto_vrr(void) {
             // proceso_exec = NULL;
             break;
             
-            case SUCCESS:
+            case OUT_OF_MEMORY:
+            log_error(logger, "PID: %i - Memoria insuficiente. Finalizando proceso...", proceso_exec->pid);
             list_add(cola_exit, proceso_exec);
             // proceso_exec = NULL;
+            break;
 			//faltan casos
         }
         proceso_exec = NULL;
