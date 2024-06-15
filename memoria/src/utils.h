@@ -115,7 +115,6 @@ resultado_operacion ajustar_tamano_proceso(t_proceso *proceso, int nuevo_size);
 /// @param acceso         : enum para distinguir tipo de acceso
 /// @return retorna CORRECTA si el acceso fue satisfactorio, ERROR si no leyo/escribio
 resultado_operacion acceso_espacio_usuario(t_buffer *data, t_list *solicitudes,t_acceso_esp_usu acceso);
-/* APARENTEMENTE RECIBE UN PID DEL PROCESO QUE PIDIO EL ACCESO MODIFICAR => PENDIENTE */
 
 void liberar_memoria(void);
 void limpiar_estructura_proceso (t_proceso * proc);

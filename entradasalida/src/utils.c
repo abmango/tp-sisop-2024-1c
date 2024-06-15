@@ -1,5 +1,7 @@
 #include "utils.h"
 
+t_log *log_io;
+
 //////////////////////////
 
 void identificarse(char* nombre, t_io_type_code tipo_interfaz_code, int conexion_kernel) {
@@ -11,13 +13,50 @@ void identificarse(char* nombre, t_io_type_code tipo_interfaz_code, int conexion
     eliminar_paquete(paquete);
 }
 
+void iniciar_logger()
+{
+	log_io = log_create("entradaSalida.log", "EntradaSalida", true, LOG_LEVEL_INFO);
+	if(log_io == NULL){
+		printf("No se pudo crear un log");
+	}
+}
+
+void logguear_operacion (int pid, int operacion)
+{
+    switch (operacion)
+    {
+        case GEN_SLEEP:
+            log_info(log_io,
+            "PID: <%i> - Operacion: <GENERICA>",
+            pid);
+            break;
+        case STDIN_READ:
+            log_info(log_io,
+            "PID: <%i> - Operacion: <STDIN>",
+            pid)
+            break;
+        case STDOUT_WRITE:
+            log_info(log_io,
+            "PID: <%i> - Operacion: <STDOUT>",
+            pid)
+            break;
+        default:
+            log_warning (log_io,
+            "PID: <%i> - Operacion: <DESCONOCIDA>",
+            pid)
+            break;
+    }
+}
+
+void logguear_DialFs (void)
+{
+
+}
+
 /* utilizar para RETRASO_COMPACTACION y para TIEMPO_UNIDAD_TRABAJO
 void retardo_operacion()
 {
-    div_t tiempo = div(config_get_int_value(config,"RETARDO_RESPUESTA"), MILISEG_A_SEG );
-    if (tiempo.rem < 5)
-        sleep(tiempo);
-    else
-        sleep(tiempo + 1);
+    unsigned int tiempo_en_microsegs = config_get_int_value(config, "RETARDO_RESPUESTA")*MILISEG_A_MICROSEG;
+    usleep(tiempo_en_microsegs);
 }
 */

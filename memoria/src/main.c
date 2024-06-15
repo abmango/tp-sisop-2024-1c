@@ -5,12 +5,6 @@
 
 #include "main.h"
 
-// esto se puede pasar a main.h 
-pthread_mutex_t sem_socket_global;
-int socket_hilos; // para q los hilos puedan tomar su cliente, protegido x semaforo
-pthread_mutex_t sem_lista_procesos;
-t_list *procesos_cargados; // almacena referencia a todos los procesos cargados
-
 int main(int argc, char* argv[]) {
 	
 	pthread_t hilo_distribuidor;

@@ -16,7 +16,18 @@
 #include <utils/conexiones.h>
 
 //////////////////////////////////
+// lo declaro global aunque solo se va a usar en utils x si quieren hacer logs de prueba
+extern t_log *log_io; 
+
+//////////////////////////////////
 
 void identificarse(char* nombre, t_io_type_code tipo_interfaz_code, int conexion_kernel); // EN DESARROLLO
-
+void iniciar_logger(void);
+/// @brief emite el log obligatorio (NO DIALFS)
+/// @param pid 
+/// @param operacion es un int xq me parecio contraintuitivo usar motivo_desalojo_code 
+void logguear_operacion(int pid, int operacion);
+// para recordar que hay q hacer los logs... posiblemente cuando se desarrollen las operaciones de dial
+// esta funcion no sea necesaria (osea log como memoria que lo hace cada funcion minima)
+void logguear_DialFs (void)
 #endif /* UTILS_H_ */
