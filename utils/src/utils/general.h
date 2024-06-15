@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
+#include <semaphore.h>
 #include <commons/string.h>
 #include <commons/config.h>
 #include <commons/collections/list.h>
@@ -31,7 +32,7 @@ typedef struct
 typedef struct
 {
     char* nombre;
-    int instancias;
+    sem_t sem_contador_instancias;
 } t_recurso;
 
 typedef struct

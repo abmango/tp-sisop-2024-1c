@@ -76,8 +76,11 @@ bool proceso_esta_en_ejecucion(int pid);
 t_contexto_de_ejecucion contexto_de_ejecucion_de_pcb(t_pcb* pcb);
 void actualizar_contexto_de_ejecucion_de_pcb(t_contexto_de_ejecucion nuevo_contexto_de_ejecucion, t_pcb* pcb);
 
-// Espera a recibir un t_desalojo de cpu.
-t_desalojo recibir_desalojo(int socket); // DESARROLLANDO
+// deserializa el t_desalojo del buffer y desplazamiento dados.
+t_desalojo deserializar_desalojo(void* buffer, int* desplazamiento);
+// deserializa el t_contexto_de_ejecucion del buffer y desplazamiento dados.
+t_contexto_de_ejecucion deserializar_contexto_de_ejecucion(void* buffer, int* desplazamiento);
+
 void enviar_contexto_de_ejecucion(t_contexto_de_ejecucion contexto_de_ejecucion, int socket);
 
 void enviar_orden_de_interrupcion(t_interrupt_code interrupt_code);

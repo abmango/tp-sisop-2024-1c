@@ -20,15 +20,23 @@ void* rutina_planificador(t_config* config) {
 
 /////////////////////////////////////////////////////
 
-void planific_corto_fifo(void)
-{
+void planific_corto_fifo(void) {
 
-    while(1){
+    int size_buffer;
+    void* buffer;
+    int desplazamiento = 0;
+
+    while(1) {
 		ejecutar_sig_proceso();
-		t_desalojo desalojo = recibir_desalojo(socket_cpu_dispatch);
+
+        recibir_y_verificar_codigo(socket_cpu_dispatch, DESALOJO, "DESALOJO");
+        buffer = recibir_buffer(&size_buffer, socket_cpu_dispatch);
+		t_desalojo desalojo = deserializar_desalojo(buffer, &desplazamiento);
+
         pthread_mutex_lock(&sem_colas);
-		*proceso_exec = desalojo.pcb;
-		switch (desalojo.motiv){
+        actualizar_contexto_de_ejecucion_de_pcb(desalojo.contexto, proceso_exec);
+
+		switch (desalojo.motiv) {
 			case EXIT:
 			list_add(cola_exit, proceso_exec);
             proceso_exec = NULL;
@@ -40,6 +48,9 @@ void planific_corto_fifo(void)
             // list_remove_and_destroy_element(cola_exit, 0, (void*)destruir_pcb); // esto tiene que ir en el hilo que maneja la cola_exit.
             break;
             case WAIT:
+            
+            int instancias_disponibles;
+            sem_getvalue();
             break;
             case SIGNAL:
             break;
@@ -53,13 +64,11 @@ void planific_corto_fifo(void)
 	}
 }
 
-void planific_corto_rr(void)
-{
-    while(1) // condicion que tiene que cumplir para no desalojar
-    {
+void planific_corto_rr(void) {
+    while(1) {
         ejecutar_sig_proceso();
         esperar_cpu_rr(proceso_exec);
-		switch (desalojo.motiv){
+		switch (desalojo.motiv) {
 			case EXIT:
 			list_add(cola_exit, proceso_exec);
             proceso_exec = NULL;
@@ -79,13 +88,11 @@ void planific_corto_rr(void)
     }
 }
 
-void planific_corto_vrr(void)
-{
-    while(1) // condicion que tiene que cumplir para no desalojar
-    {
-        ejecutar_sig_proceso();
+void planific_corto_vrr(void) {
+    while(1) {
+        ejecutar_sig_proceso_vrr();
         esperar_cpu_vrr(proceso_exec);
-		switch (desalojo.motiv){
+		switch (desalojo.motiv) {
 			case EXIT:
 			list_add(cola_exit, proceso_exec);
             proceso_exec = NULL;
@@ -119,7 +126,7 @@ void planific_corto_vrr(void)
 
 //////////////////////////////////////////////////////////////////
 
-void ejecutar_sig_proceso(void){
+void ejecutar_sig_proceso(void) {
 
     sem_wait(&sem_procesos_ready);
 
@@ -142,6 +149,13 @@ void ejecutar_sig_proceso_vrr(void) {
     
     t_contexto_de_ejecucion contexto_de_ejecucion = contexto_de_ejecucion_de_pcb(proceso_exec);
     enviar_contexto_de_ejecucion(contexto_de_ejecucion, socket_cpu_dispatch);
+}
+
+void recibir_y_verificar_codigo(int socket, op_code cod, char* traduccion_de_cod) {
+    if (recibir_codigo(socket) != cod) {
+        log_error(logger, "Codigo erroneo. Se esperaba %s.", traduccion_de_cod);
+        avisar_y_cerrar_programa_por_error();
+    }
 }
 
 /*

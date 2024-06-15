@@ -10,12 +10,16 @@ int main(int argc, char* argv[]) {
 	cola_exit = list_create();
 
 	t_config* config = iniciar_config("default");
+	
 	grado_multiprogramacion = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");
+
+	char** recursos_nombres = config_get_array_value(config, "RECURSOS");
+	char** recursos_instancias = config_get_array_value(config, "INSTANCIAS_RECURSOS");
+	recursos_del_sistema = crear_lista_de_recursos(recursos_nombres, recursos_instancias);
 
 	pthread_mutex_init(&sem_colas,NULL);
 	pthread_mutex_unlock(&sem_colas);
 	sem_init(&sem_procesos_ready, 0, 0);
-	sem_init(&sem_procesos_ready_plus, 0, 0);
 
 	logger = log_create("log.log", "Kernel", TRUE, LOG_LEVEL_DEBUG);
 
@@ -53,6 +57,22 @@ int main(int argc, char* argv[]) {
 	}
 
 	return EXIT_SUCCESS;
+}
+
+t_list* crear_lista_de_recursos(char* array_nombres[], char* array_instancias[]) {
+
+	t_list* lista_recursos = list_create();
+
+	int i = 0;
+	while (array_nombres[i] != NULL) {
+		t_recurso* recurso = malloc(sizeof(t_recurso));
+		recurso->nombre = array_nombres[i];
+		sem_init(&(recurso->sem_contador_instancias), 0, atoi(array_instancias[i]));
+		list_add(lista_recursos, recurso);
+		i++;
+	}
+
+	return lista_recursos;
 }
 
 void iterator(char* value) {
