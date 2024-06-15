@@ -9,16 +9,64 @@ pthread_mutex_t mutex_interrupt;
 
 /////////////////////
 
-void desalojar(motivo_desalojo_code motivo, t_contexto_de_ejecucion ce){
+void pedir_io(t_contexto_de_ejecucion reg, t_io_op_code opcode, char** arg){
    t_desalojo desalojo;
-   desalojo.motivo = motivo;
-   desalojo.contexto_ejecucion = ce;
+   desalojo.contexto = reg;
+   desalojo.motiv = IO;
    t_paquete* paquete = crear_paquete(DESALOJO);
+   void* buffer; 
+   int desplazamiento = 0;
+   switch(opcode){
+      case GEN_SLEEP:
+         buffer = serializar_desalojo(desalojo);
+         realloc(buffer, sizeof(t_desalojo) + strlen(arg[1]) + 1 + sizeof(int));
+         desplazamiento += sizeof(t_desalojo); 
+         memcpy(buffer + desplazamiento, arg[1], strlen(arg[1]) + 1);
+         desplazamiento += (strlen(arg[1]) + 1);
+         int aux = atoi(arg[2]);
+         memcpy(buffer + desplazamiento, &aux, sizeof(int));
+      break;
+      case STDIN_READ:
+         buffer = serializar_desalojo(desalojo);
+         realloc(buffer, sizeof(t_desalojo) + strlen(arg[1]) + 1 + 2*sizeof(int));
+         desplazamiento += sizeof(t_desalojo); 
+         memcpy(buffer + desplazamiento, arg[1], strlen(arg[1]) + 1);
+         desplazamiento += (strlen(arg[1]) + 1);
+         int aux = atoi(arg[2]);
+         memcpy(buffer + desplazamiento, &aux, sizeof(int));
+         desplazamiento += sizeof(int);
+         aux = atoi(arg[3]);
+         memcpy(buffer + desplazamiento, &aux, sizeof(int));
+      break;
+      case STDOUT_WRITE:
+         buffer = serializar_desalojo(desalojo);
+         realloc(buffer, sizeof(t_desalojo) + strlen(arg[1]) + 1 + 2*sizeof(int));
+         desplazamiento += sizeof(t_desalojo); 
+         memcpy(buffer + desplazamiento, arg[1], strlen(arg[1]) + 1);
+         desplazamiento += (strlen(arg[1]) + 1);
+         int aux = atoi(arg[2]);
+         memcpy(buffer + desplazamiento, &aux, sizeof(int));
+         desplazamiento += sizeof(int);
+         aux = atoi(arg[3]);
+         memcpy(buffer + desplazamiento, &aux, sizeof(int));
+      break;
+   }
+   agregar_a_paquete(paquete, buffer);
+   enviar_paquete(paquete, socket_kernel_dispatch);
+   free(buffer);
+   eliminar_paquete(paquete);
+}
+
+void desalojar(t_contexto_de_ejecucion reg, motivo_desalojo_code opcode){
+   t_desalojo desalojo;
+   desalojo.contexto = reg;
+   desalojo.motiv = opcode;
    void* buffer = serializar_desalojo(desalojo);
-   agregar_a_paquete(paquete,buffer,sizeof(t_desalojo));
+   t_paquete* paquete = crear_paquete(DESALOJO);
+   agregar_a_paquete(paquete, buffer);
    enviar_paquete(paquete);
    eliminar_paquete(paquete);
-   free(buffer);
+   free(buffer); 
 }
 
 void* interrupt(void)
@@ -70,7 +118,19 @@ t_contexto_de_ejecucion deserializar_contexto_ejecucion(void* buffer)
 
 void* serializar_desalojo(t_desalojo desalojo)
 {
+   void* magic = malloc(sizeof(t_desalojo));
+	int desplazamiento = 0;
 
+   memcpy(magic + desplazamiento, &desalojo.motiv, sizeof(int));
+	desplazamiento += sizeof(int);
+	memcpy(magic + desplazamiento, &desalojo.contexto.PC, sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+
+   void* aux = serializar_contexto_de_ejecucion(desalojo.contexto);
+   memccpy(magic + desplazamiento, aux, sizeof(t_contexto_de_ejecucion));
+
+   free(aux);
+	return magic;
 }
 
 char* fetch(uint32_t PC)
