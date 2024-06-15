@@ -23,11 +23,19 @@ extern t_log *log_io;
 
 void identificarse(char* nombre, t_io_type_code tipo_interfaz_code, int conexion_kernel); // EN DESARROLLO
 void iniciar_logger(void);
+
 /// @brief emite el log obligatorio (NO DIALFS)
 /// @param pid 
 /// @param operacion  
 void logguear_operacion (int pid, t_io_type_code operacion);
+
 // para recordar que hay q hacer los logs... posiblemente cuando se desarrollen las operaciones de dial
 // esta funcion no sea necesaria (osea log como memoria que lo hace cada funcion minima)
-void logguear_DialFs (void)
+void logguear_DialFs (void);
+
+/// @brief descarga de la lista todos los pares direccion + size y los agrega al paquete en igual orden
+/// @param paquete ya iniciado y con pid
+/// @param lista lo unico que debe tener son los pares direccion + desplazamiento... sino envia cualquier cosa. hace list_remove() x cada elemento
+/// @param bytes referencia a var q lleva cuenta de los bytes a enviar a memoria
+void agregar_dir_y_size_a_paquete (t_paquete *paquete, t_list *lista, int *bytes);
 #endif /* UTILS_H_ */

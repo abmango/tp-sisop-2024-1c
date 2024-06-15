@@ -33,17 +33,17 @@ void logguear_operacion (int pid, t_io_type_code operacion)
         case STDIN:
             log_info(log_io,
             "PID: <%i> - Operacion: <STDIN>",
-            pid)
+            pid);
             break;
         case STDOUT:
             log_info(log_io,
             "PID: <%i> - Operacion: <STDOUT>",
-            pid)
+            pid);
             break;
         default:
             log_warning (log_io,
             "PID: <%i> - Operacion: <DESCONOCIDA>",
-            pid)
+            pid);
             break;
     }
 }
@@ -51,6 +51,21 @@ void logguear_operacion (int pid, t_io_type_code operacion)
 void logguear_DialFs (void)
 {
 
+}
+
+void agregar_dir_y_size_a_paquete(t_paquete *paquete, t_list *lista, int *bytes)
+{   
+    char *data;
+    while (!list_is_empty(lista)){
+			data = list_remove(lista, 0);
+			agregar_a_paquete(paquete,(int*) data, sizeof(int));
+			free(data);
+
+			data = list_remove(lista, 0);
+			agregar_a_paquete(paquete,(int*) data, sizeof(int));
+			bytes += *(int*)data; 
+			free(data);
+		}
 }
 
 /* utilizar para RETRASO_COMPACTACION y para TIEMPO_UNIDAD_TRABAJO

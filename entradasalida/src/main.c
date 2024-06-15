@@ -180,19 +180,9 @@ void interfaz_stdin(char* nombre, t_config* config, int conexion_kernel)
 		}
 
 		// como dir y size son int los carga directamente al  paquete
-		while (!list_is_empty(recibido)){
-			data = list_remove(recibido, 0);
-			agregar_a_paquete(paquete,*(int*) data, strnlen(int));
-			free(data);
-
-			data = list_remove(recibido, 0);
-			agregar_a_paquete(paquete,*(int*) data, strnlen(int));
-			bytes_totales_a_enviar += *(int*)data; 
-			free(data);
-		}
+		agregar_dir_y_size_a_paquete(paquete, recibido, &bytes_totales_a_enviar);
 		list_clean(recibido); // 
 	
-
 		// Espera input de teclado (se podria agregar bucle)
 		data = readline("> ");
 		// si data sobrepasa bytes_totales_a_enviar no se agrega al paquete
@@ -229,16 +219,14 @@ void interfaz_stdin(char* nombre, t_config* config, int conexion_kernel)
 
 void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 {
-	t_paquete *paquete;
-	t_list *recibido;
-	char *data;
-	int id_interfaz;
 	op_code operacion;
 	char* ip;
 	char* puerto;
 	int conexion_memoria = 1;
-	int cantDirecciones, *direcciones, *aux_direccion, pid;
-
+	t_paquete *paquete;
+	t_list *recibido;
+	char *data;
+	int bytes_totales_a_enviar, pid;
 	enviar_mensaje("Hola Kernel, como va. Soy IO interfaz STDOUT.", conexion_kernel);
 
 	// carga datos para conexion Memoria
@@ -261,63 +249,67 @@ void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 	// Bucle hasta que kernel notifique cierre
 	operacion = recibir_codigo(conexion_kernel);
 	while (operacion != FIN_INTERFAZ){
+		bytes_totales_a_enviar = 0;
 		recibido = recibir_paquete(conexion_kernel);
-		// carga pid para log
-		data = list_get(recibido, 0);
+		
+		// crea paquete y carga pid
+		paquete = crear_paquete(ACCESO_LECTURA);
+		data = list_remove(recibido, 0);
 		pid = *(int*)data;
+		agregar_a_paquete(paquete, pid, sizeof(int));
+		free(data);
 
-		cantDirecciones = list_size(recibido);
-		direcciones = malloc(cantDirecciones * sizeof(int));
-		aux_direccion = direcciones;
-		for (int i=1; i< cantDirecciones; i++){
-			data = list_get (recibido, i);
-			*aux_direccion= *(int*)data;
-			aux_direccion++;
-		/*
-			se deberia recibir una direccion de memoria procesada x MMU
-			nose como afectaria si son multiples direcciones, pero
-			bucle para que soporte (asumi que direccion es int)
-		*/
+		// revision si lo q resta en paquetes es par, sino error
+		if ( (list_size(recibido)% 2) != 0 ){
+			eliminar_paquete(paquete);
+			paquete = crear_paquete(MENSAJE_ERROR);
+			enviar_paquete(paquete,conexion_kernel);
+			eliminar_paquete(paquete);
+			operacion = recibir_codigo(conexion_kernel);
+
+			// limpiando recibido
+			while (!list_is_empty(recibido)){
+				data = list_remove(recibido, 0);
+				free(data);
+			}
+			list_clean(recibido);
+
+			continue; // vuelve a inicio while
 		}
-		list_clean(recibido);
+
+		// como dir y size son int los carga directamente al  paquete
+		agregar_dir_y_size_a_paquete(paquete, recibido, &bytes_totales_a_enviar);
+		list_clean(recibido); // 
 
 		// Inicia Conexion temporal para mandar resultado
 		conexion_memoria = crear_conexion(ip, puerto);
 
 		enviar_mensaje("Hola Memoria, como va. Soy IO interfaz STDOUT.", conexion_memoria);
-
-		paquete = crear_paquete(ACCESO_LECTURA);
-		aux_direccion = direcciones;
-		for (int i=1; i< cantDirecciones; i++){
-			agregar_a_paquete(paquete, *aux_direccion, sizeof(int));
-			aux_direccion++;
-		}
-		free(direcciones);
 		
-		// Planteo para q memoria envia direccion a direccion?
+		// envia el paquete cargado con direcciones
+		enviar_paquete(paquete, conexion_memoria);
+		eliminar_paquete(paquete);
+		
+		// se recibe directamente cod operacion + cadena con todo lo q habia en memoria
 		operacion = recibir_codigo(conexion_memoria);
-		while (operacion != FIN_INTERFAZ){
+		if (operacion = ACCESO_LECTURA){
 			recibido = recibir_paquete(conexion_memoria);
-			// lo planteo para que paquete tenga:
-			// direccion fisica (int) + valor (char *) + df + val + ....
-			cantDirecciones = list_size(recibido);
-			for (int i=0; i< cantDirecciones; i++){
-				data = list_get (recibido, i);
-				*aux_direccion= *(int*)data;
-				// esto deberia ser log me parec
-				printf("%i",*aux_direccion);
-				i++;
-				data = list_get (recibido, i);
-				printf("%s", data);
-			}
+			paquete = crear_paquete(IO_OPERACION);
+			data = list_remove(recibido, 0);
+
+			// loguea y emite operacion
+			logguear_operacion(pid, STDOUT);
+			printf(data);
+
+			free(data);
 			list_clean(recibido);
-		} // en teoria no deberia se bucle necesita revision
+		} else {
+			paquete = crear_paquete(MENSAJE_ERROR);
+		}
+		
 		liberar_conexion(conexion_memoria); // cierra conexion
-	
 
 		// avisa a kernel que termino
-		paquete = crear_paquete(IO_OPERACION);
-		agregar_a_paquete(paquete, &id_interfaz, sizeof(int));
 		enviar_paquete(paquete, conexion_kernel);
 		eliminar_paquete(paquete);
 
