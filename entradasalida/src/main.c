@@ -74,6 +74,8 @@ void interfaz_generica(char* nombre, t_config* config, int conexion_kernel)
 	int id_interfaz;
 	int unidadTrabajo = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO");
 	int tiempo;
+	unsigned int tiempo_en_microsegs;
+	int pid;
 	op_code operacion;
 
 	// un saludo amistoso
@@ -88,19 +90,25 @@ void interfaz_generica(char* nombre, t_config* config, int conexion_kernel)
 		recibido = recibir_paquete(conexion_kernel);
 		// se asume que kernel no confunde id_interfaz, sino agregar if
 		// para elem 0 de la lista...
+		data = list_get(recibido, 0);
+		pid = *(int *)data; // obtiene pid para log
+
 		data = list_get(recibido, 1);
 		tiempo = *(int*)data;
 		tiempo *= unidadTrabajo;
-		unsigned int tiempo_en_microsegs = tiempo*MILISEG_A_MICROSEG;
+		tiempo_en_microsegs = tiempo*MILISEG_A_MICROSEG;
 
 		// si data recibio valor muy alto se bloquea x mucho tiempo
 		usleep(tiempo_en_microsegs);
 
 		list_destroy_and_destroy_elements(recibido, free);
+
+		// loguea operacion
+		logguear_operacion(pid, GEN_SLEEP);
 		
 		// avisa a kernel que termino
-		paquete = crear_paquete(INTERFAZ_GENERICA);
-		agregar_a_paquete(paquete, &id_interfaz, sizeof(int));
+		paquete = crear_paquete(IO_OPERACION);
+		// agregar_a_paquete(paquete, &id_interfaz, sizeof(int));
 		enviar_paquete(paquete, conexion_kernel);
 		eliminar_paquete(paquete);
 
@@ -111,15 +119,14 @@ void interfaz_generica(char* nombre, t_config* config, int conexion_kernel)
 
 void interfaz_stdin(char* nombre, t_config* config, int conexion_kernel)
 {
-	t_paquete *paquete;
-	t_list *recibido;
-	char *data;
-	int id_interfaz;
 	op_code operacion;
 	char* ip;
 	char* puerto;
 	int conexion_memoria = 1;
-	int cantDirecciones, *direcciones, *aux_direccion;
+	t_paquete *paquete;
+	t_list *recibido;
+	char *data;
+	int bytes_totales_a_enviar, pid;
 
 	enviar_mensaje("Hola Kernel, como va. Soy IO interfaz STDIN.", conexion_kernel);
 
@@ -128,69 +135,90 @@ void interfaz_stdin(char* nombre, t_config* config, int conexion_kernel)
 	puerto = config_get_string_value(config, "PUERTO_MEMORIA");
 
 	// se presenta a kernel
-	paquete = crear_paquete(INTERFAZ_STDIN);
-	enviar_paquete(paquete, conexion_kernel);
-	eliminar_paquete(paquete);
+	// paquete = crear_paquete(IO_IDENTIFICACION);
+	// agregar_a_paquete(paquete, nombre, strlen(nombre) + 1);
+	// agregar_a_paquete(paquete, STDIN);
+	// enviar_paquete(paquete, conexion_kernel);
+	// eliminar_paquete(paquete);
+	identificarse(nombre, STDIN, conexion_kernel);
 	
-	// Kernel Asigna id a interfaz (para futuros intercambios)
-	// se espera un paquete q solo tiene el id 
-	operacion = recibir_codigo(conexion_kernel);
-	recibido = recibir_paquete(conexion_kernel);
-	data = list_get(recibido, 0);
-	id_interfaz = *(int*)data; // interpreta data como int*
+	/* NO ES NECESARIO POR CAMBIO PROTOCOLO */ 
+	// operacion = recibir_codigo(conexion_kernel);
+	// recibido = recibir_paquete(conexion_kernel);
+	// data = list_get(recibido, 0);
+	// id_interfaz = *(int*)data; // interpreta data como int*
 
 	// Bucle hasta que kernel notifique cierre
 	operacion = recibir_codigo(conexion_kernel);
 	while (operacion != FIN_INTERFAZ){
+		bytes_totales_a_enviar = 0;
 		recibido = recibir_paquete(conexion_kernel);
-		// se asume que kernel no confunde id_interfaz, sino agregar if
-		// para elem 0 de la lista...
-		cantDirecciones = list_size(recibido);
-		direcciones = malloc(cantDirecciones * sizeof(int));
-		aux_direccion = direcciones;
-		for (int i=1; i< cantDirecciones; i++){
-			data = list_get (recibido, i);
-			*aux_direccion= *(int*)data;
-			aux_direccion++;
-		/*
-			se deberia recibir una direccion de memoria procesada x MMU
-			nose como afectaria si son multiples direcciones, pero
-			bucle para que soporte (asumi que direccion es int)
-		*/
+		
+		// crea paquete y carga pid
+		paquete = crear_paquete(ACCESO_ESCRITURA);
+		data = list_remove(recibido, 0);
+		pid = *(int*)data;
+		agregar_a_paquete(paquete, pid, sizeof(int));
+		free(data);
+
+		// revision si lo q resta en paquetes es par, sino error
+		if ( (list_size(recibido)% 2) != 0 ){
+			eliminar_paquete(paquete);
+			paquete = crear_paquete(MENSAJE_ERROR);
+			enviar_paquete(paquete,conexion_kernel);
+			eliminar_paquete(paquete);
+			operacion = recibir_codigo(conexion_kernel);
+
+			// limpiando recibido
+			while (!list_is_empty(recibido)){
+				data = list_remove(recibido, 0);
+				free(data);
+			}
+			list_clean(recibido);
+
+			continue; // vuelve a inicio while
 		}
-		list_clean(recibido);
+
+		// como dir y size son int los carga directamente al  paquete
+		while (!list_is_empty(recibido)){
+			data = list_remove(recibido, 0);
+			agregar_a_paquete(paquete,*(int*) data, strnlen(int));
+			free(data);
+
+			data = list_remove(recibido, 0);
+			agregar_a_paquete(paquete,*(int*) data, strnlen(int));
+			bytes_totales_a_enviar += *(int*)data; 
+			free(data);
+		}
+		list_clean(recibido); // 
 	
 
 		// Espera input de teclado (se podria agregar bucle)
 		data = readline("> ");
-		agregar_a_paquete(paquete, data, strlen(data) + 1);
+		// si data sobrepasa bytes_totales_a_enviar no se agrega al paquete
+		agregar_a_paquete(paquete, data, bytes_totales_a_enviar);
 		free(data); //libera leido
-
 
 		// Inicia Conexion temporal para mandar resultado
 		conexion_memoria = crear_conexion(ip, puerto);
 
 		enviar_mensaje("Hola Memoria, como va. Soy IO interfaz STDIN.", conexion_memoria);
-
-		paquete = crear_paquete(INTERFAZ_STDIN);
-		aux_direccion = direcciones;
-		for (int i=1; i< cantDirecciones; i++){
-			agregar_a_paquete(paquete, *aux_direccion, sizeof(int));
-			aux_direccion++;
-		}
-		free(direcciones);
+		
+		// envia el paquete q fue cargando
+		enviar_paquete(paquete,conexion_memoria);	
+		eliminar_paquete(paquete);	
 
 		operacion = recibir_codigo(conexion_memoria);
-		if(operacion == INTERFAZ_STDIN)
-			printf("STDIN almacenado");
-		else
+		if(operacion == ACCESO_ESCRITURA){
+			logguear_operacion(pid, STDIN);
+			paquete = crear_paquete(IO_OPERACION);
+		}else{
 			printf("ERROR EN MEMORIA");
+			paquete = crear_paquete(MENSAJE_ERROR);
+		}
 		liberar_conexion(conexion_memoria); // cierra conexion
-	
 
-		// avisa a kernel que termino
-		paquete = crear_paquete(INTERFAZ_STDIN);
-		agregar_a_paquete(paquete, &id_interfaz, sizeof(int));
+		// avisa a kernel que termino 
 		enviar_paquete(paquete, conexion_kernel);
 		eliminar_paquete(paquete);
 
@@ -209,32 +237,35 @@ void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 	char* ip;
 	char* puerto;
 	int conexion_memoria = 1;
-	int cantDirecciones, *direcciones, *aux_direccion;
+	int cantDirecciones, *direcciones, *aux_direccion, pid;
 
 	enviar_mensaje("Hola Kernel, como va. Soy IO interfaz STDOUT.", conexion_kernel);
 
-	// inicia conexion Memoria
+	// carga datos para conexion Memoria
 	ip = config_get_string_value(config, "IP_MEMORIA");
 	puerto = config_get_string_value(config, "PUERTO_MEMORIA");
 
 	// se presenta a kernel
-	paquete = crear_paquete(INTERFAZ_STDOUT);
-	enviar_paquete(paquete, conexion_kernel);
-	eliminar_paquete(paquete);
+	// paquete = crear_paquete(INTERFAZ_STDOUT);
+	// enviar_paquete(paquete, conexion_kernel);
+	// eliminar_paquete(paquete);
+	identificarse(nombre, STDOUT, conexion_kernel);
 	
 	// Kernel Asigna id a interfaz (para futuros intercambios)
 	// se espera un paquete q solo tiene el id 
-	operacion = recibir_codigo(conexion_kernel);
-	recibido = recibir_paquete(conexion_kernel);
-	data = list_get(recibido, 0);
-	id_interfaz = *(int*)data; // interpreta data como int*
+	// operacion = recibir_codigo(conexion_kernel);
+	// recibido = recibir_paquete(conexion_kernel);
+	// data = list_get(recibido, 0);
+	// id_interfaz = *(int*)data; // interpreta data como int*
 
 	// Bucle hasta que kernel notifique cierre
 	operacion = recibir_codigo(conexion_kernel);
 	while (operacion != FIN_INTERFAZ){
 		recibido = recibir_paquete(conexion_kernel);
-		// se asume que kernel no confunde id_interfaz, sino agregar if
-		// para elem 0 de la lista...
+		// carga pid para log
+		data = list_get(recibido, 0);
+		pid = *(int*)data;
+
 		cantDirecciones = list_size(recibido);
 		direcciones = malloc(cantDirecciones * sizeof(int));
 		aux_direccion = direcciones;
@@ -255,7 +286,7 @@ void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 
 		enviar_mensaje("Hola Memoria, como va. Soy IO interfaz STDOUT.", conexion_memoria);
 
-		paquete = crear_paquete(INTERFAZ_STDOUT);
+		paquete = crear_paquete(ACCESO_LECTURA);
 		aux_direccion = direcciones;
 		for (int i=1; i< cantDirecciones; i++){
 			agregar_a_paquete(paquete, *aux_direccion, sizeof(int));
@@ -285,7 +316,7 @@ void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 	
 
 		// avisa a kernel que termino
-		paquete = crear_paquete(INTERFAZ_STDOUT);
+		paquete = crear_paquete(IO_OPERACION);
 		agregar_a_paquete(paquete, &id_interfaz, sizeof(int));
 		enviar_paquete(paquete, conexion_kernel);
 		eliminar_paquete(paquete);

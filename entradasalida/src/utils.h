@@ -25,8 +25,8 @@ void identificarse(char* nombre, t_io_type_code tipo_interfaz_code, int conexion
 void iniciar_logger(void);
 /// @brief emite el log obligatorio (NO DIALFS)
 /// @param pid 
-/// @param operacion es un int xq me parecio contraintuitivo usar motivo_desalojo_code 
-void logguear_operacion(int pid, int operacion);
+/// @param operacion  
+void logguear_operacion (int pid, t_io_type_code operacion);
 // para recordar que hay q hacer los logs... posiblemente cuando se desarrollen las operaciones de dial
 // esta funcion no sea necesaria (osea log como memoria que lo hace cada funcion minima)
 void logguear_DialFs (void)

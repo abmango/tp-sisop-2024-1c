@@ -21,21 +21,21 @@ void iniciar_logger()
 	}
 }
 
-void logguear_operacion (int pid, int operacion)
+void logguear_operacion (int pid, t_io_type_code operacion)
 {
     switch (operacion)
     {
-        case GEN_SLEEP:
+        case GENERICA:
             log_info(log_io,
             "PID: <%i> - Operacion: <GENERICA>",
             pid);
             break;
-        case STDIN_READ:
+        case STDIN:
             log_info(log_io,
             "PID: <%i> - Operacion: <STDIN>",
             pid)
             break;
-        case STDOUT_WRITE:
+        case STDOUT:
             log_info(log_io,
             "PID: <%i> - Operacion: <STDOUT>",
             pid)
