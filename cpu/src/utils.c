@@ -98,6 +98,7 @@ void funcionJNZ (uint32_t PC, uint32_t direccionInstruccion){
 	PC = direccionInstruccion;
 }
 
+// puede ser que acá el tipo de registro sea en realidad uint8_t* ??
 void set_uint8(uint32_t* registro, uint8_t* valor) {
     *registro = *valor;
 }
