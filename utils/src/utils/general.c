@@ -36,22 +36,22 @@ void imprimir_entero(int num) {
 }
 
 int tamanio_de_pcb(t_pcb* pcb) {
-    return 2*sizeof(int) + 4*sizeof(uint8_t) + 7*sizeof(uint32_t) + tamanio_de_lista_de_recursos(pcb->recursos_ocupados);
+    return 2*sizeof(int) + 4*sizeof(uint8_t) + 7*sizeof(uint32_t) + tamanio_de_lista_de_recursos_ocupados(pcb->recursos_ocupados);
 }
 
 int tamanio_de_contexto_de_ejecucion(void) {
     return 4*sizeof(uint8_t) + 7*sizeof(uint32_t);
 }
 
-int tamanio_de_lista_de_recursos(t_list* lista_de_recursos) {
+int tamanio_de_lista_de_recursos_ocupados(t_list* lista_de_recursos_ocupados) {
 
     int bytes_recursos = 0;
 
-	void _sumar_bytes_de_recurso(t_recurso* recurso) {
+	void _sumar_bytes_de_recurso(t_recurso_ocupado* recurso) {
 		bytes_recursos += 2*sizeof(int) + strlen(recurso->nombre) + 1;
 	}
 
-    list_iterate(lista_de_recursos, (void*)_sumar_bytes_de_recurso);
+    list_iterate(lista_de_recursos_ocupados, (void*)_sumar_bytes_de_recurso);
 
     return bytes_recursos + sizeof(int);
 }

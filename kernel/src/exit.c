@@ -15,7 +15,7 @@ void* rutina_exit(void* puntero_null) {
         // y acá se quedaría esperando (con otro semáforo) a que
         // el hilo atenderMemoria reciba una respuesta como "memoria de proceso liberada"
         // .
-        destruir_pcb(proceso_a_destruir);
+        destruir_pcb(proceso_a_destruir); // esta funcion libera los recursos retenidos
     }
 
     return NULL;

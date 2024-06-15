@@ -9,7 +9,7 @@ pthread_mutex_t mutex_interrupt;
 
 /////////////////////
 
-void pedir_io(t_contexto_de_ejecucion reg, t_io_op_code opcode, char** arg){
+void pedir_io(t_contexto_de_ejecucion reg, motivo_desalojo_code opcode, char** arg){
    t_desalojo desalojo;
    desalojo.contexto = reg;
    desalojo.motiv = IO;
@@ -19,8 +19,13 @@ void pedir_io(t_contexto_de_ejecucion reg, t_io_op_code opcode, char** arg){
    switch(opcode){
       case GEN_SLEEP:
          buffer = serializar_desalojo(desalojo);
-         realloc(buffer, sizeof(t_desalojo) + strlen(arg[1]) + 1 + sizeof(int));
-         desplazamiento += sizeof(t_desalojo); 
+         realloc(buffer, sizeof(t_desalojo) + strlen(arg[1]) + 1 + 2*sizeof(int));
+         desplazamiento += sizeof(t_desalojo);
+         // acá agregué para que envie también el tamanio del string,
+         // asi el kernel sabe cuantos bytes leer.
+         int tamanio_argumento = strlen(arg[1]) + 1;
+         memcpy(buffer + desplazamiento, &tamanio_argumento, sizeof(int));
+         desplazamiento += sizeof(int);
          memcpy(buffer + desplazamiento, arg[1], strlen(arg[1]) + 1);
          desplazamiento += (strlen(arg[1]) + 1);
          int aux = atoi(arg[2]);
@@ -28,8 +33,12 @@ void pedir_io(t_contexto_de_ejecucion reg, t_io_op_code opcode, char** arg){
       break;
       case STDIN_READ:
          buffer = serializar_desalojo(desalojo);
-         realloc(buffer, sizeof(t_desalojo) + strlen(arg[1]) + 1 + 2*sizeof(int));
-         desplazamiento += sizeof(t_desalojo); 
+         realloc(buffer, sizeof(t_desalojo) + strlen(arg[1]) + 1 + 3*sizeof(int));
+         desplazamiento += sizeof(t_desalojo);
+         // acá también
+         int tamanio_argumento = strlen(arg[1]) + 1;
+         memcpy(buffer + desplazamiento, &tamanio_argumento, sizeof(int));
+         desplazamiento += sizeof(int);
          memcpy(buffer + desplazamiento, arg[1], strlen(arg[1]) + 1);
          desplazamiento += (strlen(arg[1]) + 1);
          int aux = atoi(arg[2]);
@@ -40,8 +49,12 @@ void pedir_io(t_contexto_de_ejecucion reg, t_io_op_code opcode, char** arg){
       break;
       case STDOUT_WRITE:
          buffer = serializar_desalojo(desalojo);
-         realloc(buffer, sizeof(t_desalojo) + strlen(arg[1]) + 1 + 2*sizeof(int));
-         desplazamiento += sizeof(t_desalojo); 
+         realloc(buffer, sizeof(t_desalojo) + strlen(arg[1]) + 1 + 3*sizeof(int));
+         desplazamiento += sizeof(t_desalojo);
+         // acá también
+         int tamanio_argumento = strlen(arg[1]) + 1;
+         memcpy(buffer + desplazamiento, &tamanio_argumento, sizeof(int));
+         desplazamiento += sizeof(int);
          memcpy(buffer + desplazamiento, arg[1], strlen(arg[1]) + 1);
          desplazamiento += (strlen(arg[1]) + 1);
          int aux = atoi(arg[2]);

@@ -9,25 +9,22 @@ void* rutina_quantum(t_pcb *pcb) {
     return NULL;
 }
 
-t_desalojo esperar_cpu_rr(t_pcb *pcb)
+void esperar_cpu_rr(t_pcb *pcb)
 {
     pthread_t hilo_quantum;
     pthread_create(&hilo_quantum, NULL, rutina_quantum, pcb);
     pthread_detach(hilo_quantum);
-    t_desalojo desalojo = recibir_desalojo(socket_cpu_dispatch);
+    recibir_y_verificar_codigo(socket_cpu_dispatch, DESALOJO, "DESALOJO");
     pthread_cancel(hilo_quantum);
-    return desalojo;
 }
 
-t_desalojo esperar_cpu_vrr(t_pcb * pcb)
+void esperar_cpu_vrr(t_pcb * pcb)
 {
     timer = temporal_create();
-    t_desalojo desalojo = esperar_cpu_rr(pcb);
+    esperar_cpu_rr(pcb);
     temporal_stop(timer);
     ms_transcurridos = temporal_gettime(timer);
     temporal_destroy(timer);
-
-    return desalojo;
 }
 
 void actualizar_vrr(t_pcb *pcb)

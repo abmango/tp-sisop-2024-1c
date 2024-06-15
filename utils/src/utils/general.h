@@ -37,9 +37,15 @@ typedef struct
 
 typedef struct
 {
+    char* nombre;
+    int instancias;
+} t_recurso_ocupado;
+
+typedef struct
+{
     int pid;
     int quantum;
-    t_list* recursos_ocupados; // Es una lista de t_recurso*
+    t_list* recursos_ocupados; // Es una lista de t_recurso_ocupado*
     uint32_t PC;
     t_reg_cpu_uso_general reg_cpu_uso_general;
 } t_pcb;
@@ -60,7 +66,16 @@ typedef enum
     INTERRUPTED_BY_QUANTUM,
     WAIT,
     SIGNAL,
-	IO
+	//IO,
+    // saco este, y agrego los específicos por operación
+
+    //Operaciones de IO:
+    GEN_SLEEP,
+    STDIN_READ,
+    STDOUT_WRITE
+    // cuando desarrollemos el FS, aca iran el resto (las de DIALFS)
+    // ...
+
 } motivo_desalojo_code;
 
 typedef struct {
@@ -82,15 +97,6 @@ typedef enum
     STDOUT,
     DIALFS
 } t_io_type_code;
-
-typedef enum
-{
-    GEN_SLEEP,
-    STDIN_READ,
-    STDOUT_WRITE
-    // cuando desarrollemos el FS, aca iran el resto (las de DIALFS)
-    // ...
-} t_io_op_code;
 
 /**
 * @fn    decir_hola
@@ -126,7 +132,7 @@ void imprimir_entero(int num);
 
 int tamanio_de_pcb(t_pcb* pcb);
 int tamanio_de_contexto_de_ejecucion(void);
-int tamanio_de_lista_de_recursos(t_list* lista_de_recursos);
+int tamanio_de_lista_de_recursos_ocupados(t_list* lista_de_recursos_ocupados);
 
 void* serializar_contexto_de_ejecucion(t_contexto_de_ejecucion contexto_de_ejecucion, int bytes);
 

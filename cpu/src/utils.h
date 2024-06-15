@@ -102,7 +102,7 @@ t_contexto_de_ejecucion deserializar_contexto_ejecucion(void* buffer);
 void* serializar_desalojo(t_desalojo desalojo);
 char* fetch(uint32_t PC);
 void check_interrupt(t_contexto_de_ejecucion reg);
-void pedir_io(t_contexto_de_ejecucion reg, t_io_op_code opcode, char** arg);
+void pedir_io(t_contexto_de_ejecucion reg, motivo_desalojo_code opcode, char** arg);
 
 void* interrupt(void);
 

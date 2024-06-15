@@ -52,12 +52,9 @@ t_pcb* crear_pcb() {
 	return pcb;
 }
 
-// antes de usar esta, hay que liberar los recursos
 void destruir_pcb(t_pcb* pcb) {
-	list_destroy(pcb->recursos_ocupados);
+	list_destroy_and_destroy_elements(pcb->recursos_ocupados, (void*)destruir_recurso_ocupado);
 	free(pcb);
-	// saqué el = NULL ya que no tenia efecto. Habria que pasarlo por referencia.
-	// Mejor que el = NULL lo haga quien llama a esta función.
 }
 
 void enviar_pcb(t_pcb* pcb, int conexion) {
@@ -122,6 +119,24 @@ void buscar_y_finalizar_proceso(int pid) {
 
 bool proceso_esta_en_ejecucion(int pid) {
     return proceso_exec->pid == pid;
+}
+
+void destruir_recurso_ocupado(t_recurso_ocupado* recurso_ocupado) {
+
+	bool _es_mi_querido_recurso (t_recurso* recurso) {
+		return strcmp(recurso->nombre, recurso_ocupado->nombre) == 0;
+	}
+
+	t_recurso* recurso_en_sistema = list_find(recursos_del_sistema, (void*)_es_mi_querido_recurso);
+	
+	// libero una instancia, por cada una retenida
+	for (int instancias_retenidas = recurso_ocupado->instancias; instancias_retenidas > 0; instancias_retenidas--) {
+		(recurso_ocupado->instancias)--;
+		sem_post(&(recurso_en_sistema->sem_contador_instancias));
+	}
+
+	free(recurso_ocupado->nombre);
+	free(recurso_ocupado);
 }
 
 t_contexto_de_ejecucion contexto_de_ejecucion_de_pcb(t_pcb* pcb) {
@@ -222,8 +237,8 @@ void* serializar_pcb(t_pcb* pcb, int bytes) {
 	desplazamiento += sizeof(uint32_t);
     memcpy(magic + desplazamiento, &(pcb->reg_cpu_uso_general.DI), sizeof(uint32_t));
 	desplazamiento += sizeof(uint32_t);
-	int tamanio_recursos_ocupados = tamanio_de_lista_de_recursos(pcb->recursos_ocupados);
-	void* recursos_ocupados_serializados = serializar_lista_de_recursos(pcb->recursos_ocupados, tamanio_recursos_ocupados);
+	int tamanio_recursos_ocupados = tamanio_de_lista_de_recursos_ocupados(pcb->recursos_ocupados);
+	void* recursos_ocupados_serializados = serializar_lista_de_recursos_ocupados(pcb->recursos_ocupados, tamanio_recursos_ocupados);
 	memcpy(magic + desplazamiento, recursos_ocupados_serializados, tamanio_recursos_ocupados);
 	free(recursos_ocupados_serializados);
 	desplazamiento += tamanio_recursos_ocupados;
@@ -231,16 +246,16 @@ void* serializar_pcb(t_pcb* pcb, int bytes) {
 	return magic;
 }
 
-void* serializar_lista_de_recursos(t_list* lista_de_recursos, int bytes) {
+void* serializar_lista_de_recursos_ocupados(t_list* lista_de_recursos_ocupados, int bytes) {
 	void* magic = malloc(bytes);
 	int desplazamiento = 0;
 
-	int cant_recursos = list_size(lista_de_recursos);
-	memcpy(magic + desplazamiento, &cant_recursos, sizeof(int));
+	int cant_recursos_ocupados = list_size(lista_de_recursos_ocupados);
+	memcpy(magic + desplazamiento, &cant_recursos_ocupados, sizeof(int));
 	desplazamiento += sizeof(int);
 
-	for(int index_recurso = 0; index_recurso <= cant_recursos-1; index_recurso++) {
-		t_recurso* recurso = list_get(lista_de_recursos, index_recurso);
+	for(int index_recurso = 0; index_recurso <= cant_recursos_ocupados-1; index_recurso++) {
+		t_recurso* recurso = list_get(lista_de_recursos_ocupados, index_recurso);
 		int tamanio_nombre_recurso = strlen(recurso->nombre) + 1;
 		memcpy(magic + desplazamiento, &tamanio_nombre_recurso, sizeof(int));
 		desplazamiento += sizeof(int);
@@ -276,6 +291,15 @@ t_io_blocked* recibir_nueva_io(int socket) {
 
 void destruir_io(t_io_blocked* io) {
 
+}
+
+t_io_blocked* encontrar_io(char* nombre) {
+
+	bool _es_mi_querida_interfaz (t_io_blocked* io_blocked) {
+		return strcmp(io_blocked->nombre, nombre) == 0;
+	}
+
+	return list_find(lista_io_blocked, (void*)_es_mi_querida_interfaz);
 }
 
 void imprimir_pid_de_pcb(t_pcb* pcb) {

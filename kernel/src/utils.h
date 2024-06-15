@@ -73,6 +73,8 @@ void enviar_pcb(t_pcb* pcb, int conexion);
 void buscar_y_finalizar_proceso(int pid);
 bool proceso_esta_en_ejecucion(int pid);
 
+void destruir_recurso_ocupado(t_recurso_ocupado* recurso_ocupado);
+
 t_contexto_de_ejecucion contexto_de_ejecucion_de_pcb(t_pcb* pcb);
 void actualizar_contexto_de_ejecucion_de_pcb(t_contexto_de_ejecucion nuevo_contexto_de_ejecucion, t_pcb* pcb);
 
@@ -86,12 +88,13 @@ void enviar_contexto_de_ejecucion(t_contexto_de_ejecucion contexto_de_ejecucion,
 void enviar_orden_de_interrupcion(t_interrupt_code interrupt_code);
 
 void* serializar_pcb(t_pcb* pcb, int bytes);
-void* serializar_lista_de_recursos(t_list* lista_de_recursos, int bytes);
+void* serializar_lista_de_recursos_ocupados(t_list* lista_de_recursos_ocupados, int bytes);
 
 // FUNCIONES PARA IOs:
 // Crea la estructura t_io_blocked con los datos identificatorios que recibe de la IO.
 t_io_blocked* recibir_nueva_io(int socket);
 void destruir_io(t_io_blocked* io); // DESARROLLANDO
+t_io_blocked* encontrar_io(char* nombre);
 
 // FUNCIONES AUXILIARES PARA MANEJAR LAS LISTAS DE ESTADOS:
 void imprimir_pid_de_pcb(t_pcb* pcb);
