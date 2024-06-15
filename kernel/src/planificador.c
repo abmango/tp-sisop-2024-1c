@@ -63,18 +63,22 @@ void planific_corto_fifo(void) {
             if(io != NULL) {
                 enviar_paquete(paquete, io->socket);
                 // acá falta mandarlo a blocked.
+                list_add(lista_io_blocked, proceso_exec);
             }
             else {
                 log_error(logger, "Interfaz %s no encontrada", nombre_interfaz);
                 list_add(cola_exit, proceso_exec);
-                proceso_exec = NULL;
             }
+            // Por cualquiera de los dos caminos, se libera la cola de ejecucion
+            proceso_exec = NULL;
             break;
             case STDIN_READ:
             break;
             case STDOUT_WRITE:
             break;
             case OUT_OF_MEMORY:
+            log_error(logger, "Memoria insuficiente");
+            list_add(cola_exit, proceso_exec);
             break;
             case WAIT:
             memcpy(&size_argument, buffer + desplazamiento, sizeof(int));
@@ -131,20 +135,74 @@ void planific_corto_rr(void) {
 		switch (desalojo.motiv) {
 			case EXIT:
 			list_add(cola_exit, proceso_exec);
-            proceso_exec = NULL;
+            // proceso_exec = NULL;
             // list_remove_and_destroy_element(cola_exit, 0, (void*)destruir_pcb); // esto tiene que ir en el hilo que maneja la cola_exit.
             break;
             case ERROR:
             list_add(cola_exit, proceso_exec);
-            proceso_exec = NULL;
+            // proceso_exec = NULL;
             // list_remove_and_destroy_element(cola_exit, 0, (void*)destruir_pcb); // esto tiene que ir en el hilo que maneja la cola_exit.
             break;
-            case WAIT:
+            case GEN_SLEEP:
+            memcpy(&size_argument, buffer + desplazamiento, sizeof(int));
+	        desplazamiento += sizeof(int);
+            char* nombre_interfaz = malloc(size_argument);
+            memcpy(nombre_interfaz, buffer + desplazamiento, size_argument);
+	        desplazamiento += size_argument;
+            int unidades_trabajo;
+            memcpy(&unidades_trabajo, buffer + desplazamiento, sizeof(int));
+	        desplazamiento += sizeof(int);
+            t_paquete* paquete = crear_paquete(IO_OPERACION);
+            agregar_a_paquete(paquete, &(proceso_exec->pid), sizeof(int));
+            agregar_a_paquete(paquete, &unidades_trabajo, sizeof(int));
+            t_io_blocked* io = encontrar_io(nombre_interfaz);
+            if(io != NULL) {
+                enviar_paquete(paquete, io->socket);
+                // acá falta mandarlo a blocked.
+                list_add(lista_io_blocked, proceso_exec);
+            }
+            else {
+                log_error(logger, "Interfaz %s no encontrada", nombre_interfaz);
+                list_add(cola_exit, proceso_exec);
+            }
+            // Por cualquiera de los dos caminos, se libera la cola de ejecucion
             break;
+            case WAIT:
+            memcpy(&size_argument, buffer + desplazamiento, sizeof(int));
+	        desplazamiento += sizeof(int);
+            char* nombre_recurso = malloc(size_argument);
+            memcpy(nombre_recurso, buffer + desplazamiento, size_argument);
+	        desplazamiento += size_argument;
+
+            t_recurso* recurso_en_sistema = encontrar_recurso(recursos_del_sistema, nombre_recurso);
+            int instancias_disponibles;
+            sem_getvalue(&(recurso_en_sistema->sem_contador_instancias), &instancias_disponibles);
+            if (instancias_disponibles > 0) {
+
+                sem_wait(&(recurso_en_sistema->sem_contador_instancias));
+                t_recurso_ocupado* recurso_ocupado = encontrar_recurso_ocupado(proceso_exec->recursos_ocupados, nombre_recurso);
+                if (recurso_ocupado != NULL) {
+                    (recurso_ocupado->instancias)++;
+                }
+                else {
+                    recurso_ocupado = malloc(sizeof(t_recurso_ocupado));
+                    recurso_ocupado->nombre = string_duplicate(nombre_recurso);
+                    recurso_ocupado->instancias = 1;
+                    list_add(proceso_exec->recursos_ocupados, recurso_ocupado);
+                }
+            }
+            list_add(cola_ready, proceso_exec);
+            // proceso_exec = NULL;
+            break;
+
+            case INTERRUMPED_BY_QUANTUM:
+            list_add(cola_ready, proceso_exec);
+            // proceso_exec = NULL;
             case SIGNAL:
             break;
 			//faltan casos
         }
+        proceso_exec = NULL;
     }
 }
 
@@ -169,19 +227,43 @@ void planific_corto_vrr(void) {
 		switch (desalojo.motiv) {
 			case EXIT:
 			list_add(cola_exit, proceso_exec);
-            proceso_exec = NULL;
+            //proceso_exec = NULL;
             // list_remove_and_destroy_element(cola_exit, 0, (void*)destruir_pcb); // esto tiene que ir en el hilo que maneja la cola_exit.
             break;
             case ERROR:
             list_add(cola_exit, proceso_exec);
-            proceso_exec = NULL;
+            //proceso_exec = NULL;
             // list_remove_and_destroy_element(cola_exit, 0, (void*)destruir_pcb); // esto tiene que ir en el hilo que maneja la cola_exit.
             break;
             case WAIT:
+            // hace lo mismo que en RR?
+            memcpy(&size_argument, buffer + desplazamiento, sizeof(int));
+	        desplazamiento += sizeof(int);
+            char* nombre_recurso = malloc(size_argument);
+            memcpy(nombre_recurso, buffer + desplazamiento, size_argument);
+	        desplazamiento += size_argument;
+
+            t_recurso* recurso_en_sistema = encontrar_recurso(recursos_del_sistema, nombre_recurso);
+            int instancias_disponibles;
+            sem_getvalue(&(recurso_en_sistema->sem_contador_instancias), &instancias_disponibles);
+            if (instancias_disponibles > 0) {
+
+                sem_wait(&(recurso_en_sistema->sem_contador_instancias));
+                t_recurso_ocupado* recurso_ocupado = encontrar_recurso_ocupado(proceso_exec->recursos_ocupados, nombre_recurso);
+                if (recurso_ocupado != NULL) {
+                    (recurso_ocupado->instancias)++;
+                }
+                else {
+                    recurso_ocupado = malloc(sizeof(t_recurso_ocupado));
+                    recurso_ocupado->nombre = string_duplicate(nombre_recurso);
+                    recurso_ocupado->instancias = 1;
+                    list_add(proceso_exec->recursos_ocupados, recurso_ocupado);
+                }
+            }
+            // ahora actualiza dependiendo del caso de bloqueo
             actualizar_vrr(proceso_exec);
             break;
             case SIGNAL:
-
             break;
             case INTERRUPTED_BY_QUANTUM:
             //list_remove(cola_exec, proceso_exec);
@@ -193,8 +275,12 @@ void planific_corto_vrr(void) {
             pthread_mutex_lock(&sem_io_exec);
             actualizar_vrr(proceso_exec);
             break;
+            case SUCCESS:
+            list_add(cola_exit, proceso_exec);
+            // proceso_exec = NULL;
 			//faltan casos
         }
+        proceso_exec = NULL;
     }
 }
 
