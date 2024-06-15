@@ -29,88 +29,14 @@ int main(int argc, char* argv[]) {
 	procesos_cargados = list_create();
 
 	int socket_cpu = esperar_cliente(socket_escucha);
-	bool cpu_conectado = true;
+	// handshake aqui
 	recibir_mensaje(socket_cpu); // el CPU se presenta
 
 	resultado_hilo = pthread_create(&hilo_distribuidor, NULL, hilo_recepcion, NULL);
 	if (resultado_hilo != 0) printf("Error al crear hilo recepcion");
 	
 	// implementar servidor para atender a cpu bucle hasta fin_programa = true; (asigna cuando cpu se desconecta)
-	t_list* lista;
-
-	while (cpu_conectado) {
-		int cod_op = recibir_codigo(socket_cpu);
-		switch (cod_op) {
-		case MENSAJE:
-			recibir_mensaje(socket_cpu);
-			break;
-		case PAQUETE_TEMPORAL:
-			lista = recibir_paquete(socket_cpu);
-			imprimir_mensaje("Me llegaron los siguientes valores:");
-			list_iterate(lista, (void*)iterator);
-			break;
-		case -1:
-			imprimir_mensaje("el cpu se desconecto.");
-			cpu_conectado = false;
-			break;
-		default:
-			imprimir_mensaje("Operacion desconocida. No quieras meter la pata");
-			break;
-		}
-	}
-
-///////////////////////////////////////////////////////////
-////////  ESTO TIENE QUE IR DIFERENTE  ////////////////////
-///////////////////////////////////////////////////////////
-/*
-	while (kernel_conectado ) {
-		int cod_op = recibir_codigo(socket_kernel);
-		switch (cod_op) {
-		case MENSAJE:
-			recibir_mensaje(socket_kernel);
-			break;
-		case VARIOS_MENSAJES:
-			lista = recibir_paquete(socket_kernel);
-			imprimir_mensaje("Me llegaron los siguientes valores:");
-			list_iterate(lista, (void*)iterator);
-			break;
-		case -1:
-			imprimir_mensaje("el Kernel se desconecto.");
-			kernel_conectado = false;
-			break;
-		default:
-			imprimir_mensaje("Operacion desconocida. No quieras meter la pata");
-			break;
-		}
-	}
-*/
-///////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////
-
-    // int socket_io = esperar_cliente(socket_escucha);
-	// bool io_conectado = true;
-
-	// while (io_conectado) {
-	// 	int cod_op = recibir_codigo(socket_io);
-	// 	switch (cod_op) {
-	// 	case MENSAJE:
-	// 		recibir_mensaje(socket_io);
-	// 		break;
-	// 	case PAQUETE_TEMPORAL:
-	// 		lista = recibir_paquete(socket_io);
-	// 		imprimir_mensaje("Me llegaron los siguientes valores:");
-	// 		list_iterate(lista, (void*)iterator);
-	// 		break;
-	// 	case -1:
-	// 		imprimir_mensaje("el I/O se desconecto. Terminando servidor");
-	// 		io_conectado = false;
-	// 		terminar_programa(config);
-	// 		return EXIT_FAILURE;
-	// 	default:
-	// 		imprimir_mensaje("Operacion desconocida. No quieras meter la pata");
-	// 		break;
-	// 	}
-	// }
+	atender_cpu(socket_cpu);
 
 	pthread_join(hilo_distribuidor, NULL); // el main va a bloquarse hasta q termine el hilo
 	// antes de destruir lista habria de liberar todos los procesos restantes
@@ -131,7 +57,7 @@ void* hilo_recepcion(void *nada)
 		socket_hilos = esperar_cliente(socket_escucha);
 		pthread_mutex_unlock(&sem_socket_global);
 
-		recibir_mensaje(socket_hilos); // el Kernel se presenta; cambiar x hanshake
+		recibir_mensaje(socket_hilos); // cambiar x hanshake
 
 		resultado = pthread_create(&hilo, NULL, hilo_ejecutor, NULL);
 		if (resultado != 0)
@@ -267,6 +193,116 @@ void* hilo_ejecutor(void *nada)
 	}
 
 	pthread_exit(NULL); // no importa que devuelva porque se hizo detach del hilo
+}
+
+void atender_cpu(int socket)
+{
+	t_list* recibido;
+	t_paquete *paquete;
+	void *aux;
+	int aux_indice;
+	resultado_operacion result;
+	t_buffer *data = NULL;
+	int operacion;
+	t_proceso *proceso;
+
+	while (!fin_programa) {
+		operacion = recibir_codigo(socket);
+		switch (operacion) {
+		case MENSAJE: // lo mantengo solo por si lo usaban para testeo... ideal seria borrarlo
+			recibir_mensaje(socket);
+			break;
+		case PAQUETE_TEMPORAL: // lo mantengo solo por si lo usaban para testeo... ideal seria borrarlo
+			recibido = recibir_paquete(socket);
+			imprimir_mensaje("Me llegaron los siguientes valores:");
+			list_iterate(recibido, (void*)iterator);
+			break;
+
+		case ACCESO_LECTURA:
+		
+			recibido = recibir_paquete(socket);
+			result = acceso_espacio_usuario(data, recibido, LECTURA);
+			if (result == CORRECTA){
+				paquete = crear_paquete(ACCESO_LECTURA);
+				agregar_a_paquete(paquete, data->stream, data->size);
+				enviar_paquete(paquete, socket);
+			} else {
+				paquete = crear_paquete(MENSAJE_ERROR);
+				enviar_paquete(paquete, socket);
+			}
+
+			// se limpia lo recibido
+			for (int i=0; i<list_size(recibido); i++){
+				aux = list_remove(recibido, 0);
+			}
+			list_clean(recibido);
+			free(data->stream);
+			free(data);
+			eliminar_paquete(paquete);
+			break;
+
+		case ACCESO_ESCRITURA:
+			
+			recibido = recibir_paquete(socket);
+			data->stream = list_remove(recibido, list_size(recibido)-1); // obtiene el string
+			data->size = strlen(data->stream);
+			result = acceso_espacio_usuario(data, recibido, ESCRITURA);
+
+			if (result == CORRECTA){
+				paquete = crear_paquete(ACCESO_ESCRITURA);
+				enviar_paquete(paquete, socket);
+			} else {
+				paquete = crear_paquete(MENSAJE_ERROR);
+				enviar_paquete(paquete, socket);
+			}
+
+			// se limpia lo recibido
+			for (int i=0; i<list_size(recibido); i++){
+				aux = list_remove(recibido, 0);
+			}
+			list_clean(recibido);
+			free(data->stream);
+			free(data);
+			eliminar_paquete(paquete);
+			break;
+
+		case AJUSTAR_PROCESO:
+
+			recibido = recibir_paquete(socket);
+			// obtiene el proceso pedido
+			aux = list_get(recibido, 0);
+			aux_indice = obtener_proceso(procesos_cargados,*(int*) aux);
+			proceso = list_get(procesos_cargados, aux_indice);
+			// obtiene el nuevo size
+			aux = list_get(recibido, 1);
+			// realiza operacion
+			result = ajustar_tamano_proceso(proceso, *(int*) aux);
+
+			if (result == CORRECTA){
+				paquete = crear_paquete(AJUSTAR_PROCESO);
+				enviar_paquete(paquete, socket);
+			} else if (result == INSUFICIENTE){
+				paquete = crear_paquete(OUT_OF_MEMORY); // lo robe de CPU 
+				enviar_paquete(paquete, socket);
+			}
+
+			// se limpia lo recibido
+			for (int i=0; i<list_size(recibido); i++){
+				aux = list_remove(recibido, 0);
+			}
+			list_clean(recibido);
+			eliminar_paquete(paquete);
+			break;
+
+		case -1:
+			imprimir_mensaje("el cpu se desconecto.");
+			fin_programa = true;
+			break;
+		default:
+			imprimir_mensaje("Operacion desconocida. No quieras meter la pata");
+			break;
+		}
+	}
 }
 
 void iterator(char* value) {
