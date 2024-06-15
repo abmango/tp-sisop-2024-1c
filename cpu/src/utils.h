@@ -96,12 +96,13 @@ t_pcb* recibir_pcb();
 void planificacion_corto_plazo();
 void esperar_interrupcion();
 
-void desalojar(motivo_desalojo_code motiv, t_contexto_de_ejecucion ce);
+void desalojar(t_contexto_de_ejecucion ce, motivo_desalojo_code motiv);
 t_contexto_de_ejecucion recibir_contexto_ejecucion(void);
 t_contexto_de_ejecucion deserializar_contexto_ejecucion(void* buffer);
 void* serializar_desalojo(t_desalojo desalojo);
 char* fetch(uint32_t PC);
 void check_interrupt(t_contexto_de_ejecucion reg);
+void pedir_io(t_contexto_de_ejecucion reg, t_io_op_code opcode, char** arg);
 
 void* interrupt(void);
 

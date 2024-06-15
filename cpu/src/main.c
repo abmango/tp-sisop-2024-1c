@@ -28,11 +28,10 @@ int main(int argc, char* argv[]) {
 	pthread_create(&interrupciones, NULL, (void*) interrupt, NULL); //hilo pendiente de escuchar las interrupciones
 	pthread_detach(interrupciones);
 	
-	t_contexto_de_ejecucion reg;
+	t_contexto_de_ejecucion reg = recibir_contexto_ejecucion();
 	char* instruccion;
 	while(1)
 	{
-		reg = recibir_contexto_ejecucion();
 		instruccion = fetch(reg.PC);
 		char** arg = string_split(instruccion, " ");
 		execute_op_code op_code = decode(arg[0]);
@@ -74,10 +73,13 @@ int main(int argc, char* argv[]) {
 			case IO_FS_READ:
 			break;
 			case EXIT:
+				desalojar(reg, EXIT);
+				reg = recibir_contexto_ejecucion();
 			break;
 			default:
 			break;
 		}
+		reg.PC++;
 		check_interrupt(reg);
 	}
 
