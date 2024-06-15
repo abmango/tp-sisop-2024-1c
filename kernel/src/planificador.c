@@ -39,7 +39,7 @@ void planific_corto_fifo(void) {
         actualizar_contexto_de_ejecucion_de_pcb(desalojo.contexto, proceso_exec);
 
 		switch (desalojo.motiv) {
-			case EXIT:
+			case INTERRUPTED_BY_USER:
 			list_add(cola_exit, proceso_exec);
             proceso_exec = NULL;
             break;
@@ -133,7 +133,7 @@ void planific_corto_rr(void) {
         actualizar_contexto_de_ejecucion_de_pcb(desalojo.contexto, proceso_exec);
 
 		switch (desalojo.motiv) {
-			case EXIT:
+			case INTERRUPTED_BY_USER:
 			list_add(cola_exit, proceso_exec);
             // proceso_exec = NULL;
             // list_remove_and_destroy_element(cola_exit, 0, (void*)destruir_pcb); // esto tiene que ir en el hilo que maneja la cola_exit.
@@ -225,16 +225,53 @@ void planific_corto_vrr(void) {
         actualizar_contexto_de_ejecucion_de_pcb(desalojo.contexto, proceso_exec);
 
 		switch (desalojo.motiv) {
-			case EXIT:
+			case INTERRUPTED_BY_USER:
+            log_info(logger, "Proceso detenido por el usuario");
 			list_add(cola_exit, proceso_exec);
-            //proceso_exec = NULL;
+            // proceso_exec = NULL;
             // list_remove_and_destroy_element(cola_exit, 0, (void*)destruir_pcb); // esto tiene que ir en el hilo que maneja la cola_exit.
             break;
+            
             case ERROR:
             list_add(cola_exit, proceso_exec);
-            //proceso_exec = NULL;
+            // proceso_exec = NULL;
             // list_remove_and_destroy_element(cola_exit, 0, (void*)destruir_pcb); // esto tiene que ir en el hilo que maneja la cola_exit.
             break;
+            
+            case SUCCESS:
+            log_info(logger, "Proceso con PID: %i finalizado", proceso_exec->pid);
+            list_add(cola_exit, proceso_exec);
+            // proceso_exec = NULL;
+            break;
+
+            case GEN_SLEEP:
+            memcpy(&size_argument, buffer + desplazamiento, sizeof(int));
+	        desplazamiento += sizeof(int);
+            char* nombre_interfaz = malloc(size_argument);
+            memcpy(nombre_interfaz, buffer + desplazamiento, size_argument);
+	        desplazamiento += size_argument;
+            int unidades_trabajo;
+            memcpy(&unidades_trabajo, buffer + desplazamiento, sizeof(int));
+	        desplazamiento += sizeof(int);
+            t_paquete* paquete = crear_paquete(IO_OPERACION);
+            agregar_a_paquete(paquete, &(proceso_exec->pid), sizeof(int));
+            agregar_a_paquete(paquete, &unidades_trabajo, sizeof(int));
+            t_io_blocked* io = encontrar_io(nombre_interfaz);
+            if(io != NULL) {
+                enviar_paquete(paquete, io->socket);
+                // acá falta mandarlo a blocked.
+                list_add(lista_io_blocked, proceso_exec);
+                pthread_mutex_lock(&sem_io_exec);
+                actualizar_vrr(proceso_exec);
+            }
+            else {
+                log_error(logger, "Interfaz %s no encontrada", nombre_interfaz);
+                list_add(cola_exit, proceso_exec);
+            }
+            // Por cualquiera de los dos caminos, se libera la cola de ejecucion
+            // proceso_exec = NULL;
+            break;
+            
             case WAIT:
             // hace lo mismo que en RR?
             memcpy(&size_argument, buffer + desplazamiento, sizeof(int));
@@ -262,19 +299,18 @@ void planific_corto_vrr(void) {
             }
             // ahora actualiza dependiendo del caso de bloqueo
             actualizar_vrr(proceso_exec);
+            // proceso_exec = NULL;
             break;
+            
             case SIGNAL:
             break;
+            
             case INTERRUPTED_BY_QUANTUM:
             //list_remove(cola_exec, proceso_exec);
             actualizar_vrr(proceso_exec);
+            // proceso_exec = NULL;
             break;
-            case IO:
-            //list_remove(cola_exec, proceso_exec);
-            list_add(lista_io_blocked, proceso_exec);
-            pthread_mutex_lock(&sem_io_exec);
-            actualizar_vrr(proceso_exec);
-            break;
+            
             case SUCCESS:
             list_add(cola_exit, proceso_exec);
             // proceso_exec = NULL;
