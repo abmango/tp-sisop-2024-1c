@@ -90,19 +90,15 @@ void JNZ (uint32_t PC, uint32_t direccionInstruccion);
 
 ////////////////////////////////////
 
-t_pcb* recibir_pcb();
-
-// funciones para pasarle a hilos
-void planificacion_corto_plazo();
-void esperar_interrupcion();
-
-void desalojar(t_contexto_de_ejecucion ce, motivo_desalojo_code motiv);
+void desalojar(t_contexto_de_ejecucion ce, motivo_desalojo_code motiv, char** arg);
 t_contexto_de_ejecucion recibir_contexto_ejecucion(void);
 t_contexto_de_ejecucion deserializar_contexto_ejecucion(void* buffer);
 void* serializar_desalojo(t_desalojo desalojo);
-char* fetch(uint32_t PC);
+char* fetch(uint32_t PC, int pid);
+int leer_memoria(int dir_logica, int tamanio);
 void check_interrupt(t_contexto_de_ejecucion reg);
 void pedir_io(t_contexto_de_ejecucion reg, motivo_desalojo_code opcode, char** arg);
+t_dictionary* crear_diccionario(t_contexto_de_ejecucion reg);
 
 void* interrupt(void);
 

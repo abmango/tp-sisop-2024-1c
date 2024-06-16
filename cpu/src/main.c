@@ -5,6 +5,10 @@
 
 #include "main.h"
 
+//falta agregar pid en recibir contexto, es necesario para comunicarse con memoria, tambien hay q enviarlo en kernel
+// tambien necesito el tamanio de la pag
+//falta TLB
+
 int main(int argc, char* argv[]) {
 
     decir_hola("CPU");
@@ -26,41 +30,70 @@ int main(int argc, char* argv[]) {
 	pthread_mutex_init(&sem_interrupt);
 	pthread_t interrupciones;
 	pthread_create(&interrupciones, NULL, (void*) interrupt, NULL); //hilo pendiente de escuchar las interrupciones
-	pthread_detach(interrupciones);
+	pthread_detach(interrupciones);	
 	
-	t_contexto_de_ejecucion reg = recibir_contexto_ejecucion();
+	t_contexto_de_ejecucion reg;
+	int pid;
+	t_dictionary* diccionario = crear_diccionario(reg);
+	reg = recibir_contexto_ejecucion();
 	char* instruccion;
 	while(1)
 	{
-		instruccion = fetch(reg.PC);
+		instruccion = fetch(reg.PC, pid);
 		char** arg = string_split(instruccion, " ");
 		execute_op_code op_code = decode(arg[0]);
+		int *a,*b;
 		switch (op_code){
 			case SET:
+				a = dictionary_get(diccionario,arg[1]);
+				*a = atoi(arg[2]);
 			break;
 			case MOV_IN:
+				a = dictionary_get(diccionario, arg[1]);
+				b = dictionary_get(diccionario, arg[2]);
+				a* = leer_memoria(*b, sizeof(*a));
 			break;
 			case MOV_OUT:
+
 			break;
 			case SUM:
+				a = dictionary_get(diccionario, arg[1]);
+				b = dictionary_get(diccionario, arg[2]);
+				*a = *a + *b;
 			break;
 			case SUB:
+				a = dictionary_get(diccionario, arg[1]);
+				b = dictionary_get(diccionario, arg[2]);
+				*a = *a - *b;
 			break;
 			case JNZ:
+				a = dictionary_get(diccionario, arg[1]);
+				if(*a == 0)
+				{
+					reg.PC = atoi(arg[2]);
+				}
 			break;
 			case RESIZE:
+
 			break;
 			case COPY_STRING:
+
 			break;
 			case WAIT:
 			break;
 			case SIGNAL:
 			break;
 			case IO_GEN_SLEEP:
+				desalojar(reg, IO_GEN_SLEEP, arg);
+				reg = recibir_contexto_ejecucion();
 			break;
 			case IO_STDIN_READ:
+				desalojar(reg, IO_STDIN_READ, arg);
+				reg = recibir_contexto_ejecucion();
 			break;
 			case IO_STDOUT_WRITE:
+				f(reg, IO_STDOUT_WRITE, arg);
+				reg = recibir_contexto_ejecucion();
 			break;
 			case IO_FS_CREATE:
 			break;
@@ -73,7 +106,7 @@ int main(int argc, char* argv[]) {
 			case IO_FS_READ:
 			break;
 			case EXIT:
-				desalojar(reg, EXIT);
+				desalojar(reg, SUCCESS, arg);
 				reg = recibir_contexto_ejecucion();
 			break;
 			default:
@@ -82,11 +115,8 @@ int main(int argc, char* argv[]) {
 		reg.PC++;
 		check_interrupt(reg);
 	}
-
-	
 	
 	return EXIT_SUCCESS;
-
 }
 
 void terminar_programa(int socket_memoria, t_config* config)

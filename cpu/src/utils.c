@@ -8,78 +8,75 @@ t_interrupt_code interrupcion = NADA;
 pthread_mutex_t mutex_interrupt;
 
 /////////////////////
-
-void pedir_io(t_contexto_de_ejecucion reg, motivo_desalojo_code opcode, char** arg){
-   t_desalojo desalojo;
-   desalojo.contexto = reg;
-   desalojo.motiv = IO;
-   t_paquete* paquete = crear_paquete(DESALOJO);
-   void* buffer; 
-   int desplazamiento = 0;
-   switch(opcode){
-      case GEN_SLEEP:
-         buffer = serializar_desalojo(desalojo);
-         realloc(buffer, sizeof(t_desalojo) + strlen(arg[1]) + 1 + 2*sizeof(int));
-         desplazamiento += sizeof(t_desalojo);
-         // acá agregué para que envie también el tamanio del string,
-         // asi el kernel sabe cuantos bytes leer.
-         int tamanio_argumento = strlen(arg[1]) + 1;
-         memcpy(buffer + desplazamiento, &tamanio_argumento, sizeof(int));
-         desplazamiento += sizeof(int);
-         memcpy(buffer + desplazamiento, arg[1], strlen(arg[1]) + 1);
-         desplazamiento += (strlen(arg[1]) + 1);
-         int aux = atoi(arg[2]);
-         memcpy(buffer + desplazamiento, &aux, sizeof(int));
-      break;
-      case STDIN_READ:
-         buffer = serializar_desalojo(desalojo);
-         realloc(buffer, sizeof(t_desalojo) + strlen(arg[1]) + 1 + 3*sizeof(int));
-         desplazamiento += sizeof(t_desalojo);
-         // acá también
-         int tamanio_argumento = strlen(arg[1]) + 1;
-         memcpy(buffer + desplazamiento, &tamanio_argumento, sizeof(int));
-         desplazamiento += sizeof(int);
-         memcpy(buffer + desplazamiento, arg[1], strlen(arg[1]) + 1);
-         desplazamiento += (strlen(arg[1]) + 1);
-         int aux = atoi(arg[2]);
-         memcpy(buffer + desplazamiento, &aux, sizeof(int));
-         desplazamiento += sizeof(int);
-         aux = atoi(arg[3]);
-         memcpy(buffer + desplazamiento, &aux, sizeof(int));
-      break;
-      case STDOUT_WRITE:
-         buffer = serializar_desalojo(desalojo);
-         realloc(buffer, sizeof(t_desalojo) + strlen(arg[1]) + 1 + 3*sizeof(int));
-         desplazamiento += sizeof(t_desalojo);
-         // acá también
-         int tamanio_argumento = strlen(arg[1]) + 1;
-         memcpy(buffer + desplazamiento, &tamanio_argumento, sizeof(int));
-         desplazamiento += sizeof(int);
-         memcpy(buffer + desplazamiento, arg[1], strlen(arg[1]) + 1);
-         desplazamiento += (strlen(arg[1]) + 1);
-         int aux = atoi(arg[2]);
-         memcpy(buffer + desplazamiento, &aux, sizeof(int));
-         desplazamiento += sizeof(int);
-         aux = atoi(arg[3]);
-         memcpy(buffer + desplazamiento, &aux, sizeof(int));
-      break;
-   }
-   agregar_a_paquete(paquete, buffer);
-   enviar_paquete(paquete, socket_kernel_dispatch);
-   free(buffer);
-   eliminar_paquete(paquete);
-}
-
-void desalojar(t_contexto_de_ejecucion reg, motivo_desalojo_code opcode){
+//unifique pedir_io con desalojar para tener una funcion general
+void desalojar(t_contexto_de_ejecucion reg, motivo_desalojo_code opcode, char** arg)
+{
    t_desalojo desalojo;
    desalojo.contexto = reg;
    desalojo.motiv = opcode;
    void* buffer = serializar_desalojo(desalojo);
-   t_paquete* paquete = crear_paquete(DESALOJO);
-   agregar_a_paquete(paquete, buffer);
-   enviar_paquete(paquete);
-   eliminar_paquete(paquete);
-   free(buffer); 
+   int desplazamiento = tamanio_de_desalojo();
+   switch(opcode){
+      case WAIT:
+         realloc(buffer, tamanio_de_contexto_de_desalojo() + strlen(arg[1]) + 1);
+         int tamanio_argumento = strlen(arg[1]) + 1;
+         memcpy(buffer + desplazamiento, &tamanio_argumento, sizeof(int));
+         desplazamiento += sizeof(int);
+         memcpy(buffer + desplazamiento, arg[1], tamanio_argumento);
+      break;
+      case SIGNAL:
+         realloc(buffer, tamanio_de_contexto_de_desalojo() + strlen(arg[1]) + 1);
+         int tamanio_argumento = strlen(arg[1]) + 1;
+         memcpy(buffer + desplazamiento, &tamanio_argumento, sizeof(int));
+         desplazamiento += sizeof(int);
+         memcpy(buffer + desplazamiento, arg[1], tamanio_argumento);
+      break;
+      //en los casos de io falta hacer pasar la dir logica a una fisica a traves de mmu;
+      case IO_GEN_SLEEP:
+         realloc(buffer, tamanio_de_contexto_de_desalojo() + strlen(arg[1]) + 1 + sizeof(int));
+         int tamanio_argumento = strlen(arg[1]) + 1;
+         memcpy(buffer + desplazamiento, &tamanio_argumento, sizeof(int));
+         desplazamiento += sizeof(int);
+         memcpy(buffer + desplazamiento, arg[1], tamanio_argumento);
+         desplazamiento += tamanio_argumento;
+         int aux = atoi(arg[2]);
+         memcpy(buffer + desplazamiento, &aux, sizeof(int));
+      break;
+      case IO_STDIN_READ:
+         realloc(buffer, tamanio_de_contexto_de_desalojo() + strlen(arg[1]) + 1 + 2*sizeof(int));
+         int tamanio_argumento = strlen(arg[1]) + 1;
+         memcpy(buffer + desplazamiento, &tamanio_argumento, sizeof(int));
+         desplazamiento += sizeof(int);
+         memcpy(buffer + desplazamiento, arg[1], tamanio_argumento);
+         desplazamiento += tamanio_argumento;
+         int aux = atoi(arg[2]);
+         memcpy(buffer + desplazamiento, &aux, sizeof(int));
+         desplazamiento += sizeof(int);
+         aux = atoi(arg[3]);
+         memcpy(buffer + desplazamiento, &aux, sizeof(int));
+      break;
+      case IO_STDOUT_WRITE:
+         realloc(buffer, tamanio_de_contexto_de_desalojo() + strlen(arg[1]) + 1 + 2*sizeof(int));
+         int tamanio_argumento = strlen(arg[1]) + 1;
+         memcpy(buffer + desplazamiento, &tamanio_argumento, sizeof(int));
+         desplazamiento += sizeof(int);
+         memcpy(buffer + desplazamiento, arg[1], tamanio_argumento);
+         desplazamiento += tamanio_argumento;
+         int aux = atoi(arg[2]);
+         memcpy(buffer + desplazamiento, &aux, sizeof(int));
+         desplazamiento += sizeof(int);
+         aux = atoi(arg[3]);
+         memcpy(buffer + desplazamiento, &aux, sizeof(int));
+      break;
+      default:
+      break;
+   }
+   t_paquete* paq = crear_paquete(DESALOJO);
+   agregar_a_paquete(paq, buffer);
+   enviar_paquete(paq);
+   eliminar_paquete(paq);
+   free(buffer);
+   interrupcion = NADA; // limpio interrupciones para no usarlas en el proximo pid
 }
 
 void* interrupt(void)
@@ -107,6 +104,60 @@ execute_op_code decode(char* instruc)
 {
    if (strcmp(instruc, "SET") == 0){
       return SET;
+   }
+   if (strcmp(instruc, "MOV_IN") == 0){
+      return MOV_IN;
+   }
+   if (strcmp(instruc, "MOV_OUT") == 0){
+      return MOV_OUT;
+   }
+   if (strcmp(instruc, "SUM") == 0){
+      return SUM;
+   }
+   if (strcmp(instruc, "SUB") == 0){
+      return SUB;
+   }
+   if (strcmp(instruc, "JNZ") == 0){
+      return JNZ;
+   }
+   if (strcmp(instruc, "RESIZE") == 0){
+      return RESIZE;
+   }
+   if (strcmp(instruc, "COPY_STRING") == 0){
+      return COPY_STRING;
+   }
+   if (strcmp(instruc, "WAIT") == 0){
+      return WAIT;
+   }
+   if (strcmp(instruc, "SIGNAL") == 0){
+      return SIGNAL;
+   }
+   if (strcmp(instruc, "IO_GEN_SLEEP") == 0){
+      return IO_GEN_SLEEP;
+   }
+   if (strcmp(instruc, "IO_STDIN_READ") == 0){
+      return IO_STDIN_READ;
+   }
+   if (strcmp(instruc, "IO_STDIN_WRITE") == 0){
+      return IO_STDIN_WRITE;
+   }
+   if (strcmp(instruc, "IO_FS_CREATE") == 0){
+      return IO_FS_CREATE;
+   }
+   if (strcmp(instruc, "IO_FS_DELETE") == 0){
+      return IO_FS_DELETE;
+   }
+   if (strcmp(instruc, "IO_FS_TRUNCATE") == 0){
+      return IO_FS_TRUNCATE;
+   }
+   if (strcmp(instruc, "IO_FS_WRITE") == 0){
+      return IO_FS_WRITE;
+   }
+   if (strcmp(instruc, "IO_FS_READ") == 0){
+      return IO_FS_READ;
+   }
+   if (strcmp(instruc, "EXIT") == 0){
+      return EXIT;
    }
 }
 
@@ -146,9 +197,26 @@ void* serializar_desalojo(t_desalojo desalojo)
 	return magic;
 }
 
-char* fetch(uint32_t PC)
+char* fetch(uint32_t PC, int pid)
 {
+   t_paquete* paq = crear_paquete(SIGUIENTE_INSTRUCCION);
+   agregar_a_paquete(paq, &PC, sizeof(uint32_t));
+   agregar_a_paquete(paq, &pid, sizeof(int));
+   enviar_paquete(paq, socket_memoria);
+   eliminar_paquete(paq);
+   t_list* list = list_create();
+   list = recibir_paquete(socket_memoria);
+   char* instruccion = list_get(list,0);
+   list_destroy(list);
+   return instruccion;
+}
 
+int leer_memoria(int dir_logica, int tamanio)
+{
+   int dir_fisica = mmu()
+   t_paquete* paq = crear_paquete(ACCESO_LECTURA);
+   
+   
 }
 
 void check_interrupt(t_contexto_de_ejecucion reg)
@@ -157,12 +225,31 @@ void check_interrupt(t_contexto_de_ejecucion reg)
       case NADA:
       break;
       case DESALOJAR:
-      desalojar(INTERRUPTED_BY_QUANTUM, reg);
+      desalojar(reg, INTERRUPTED_BY_QUANTUM);
       break;
       case FINALIZAR:
-      desalojar(INTERRUPTED_BY_USER, reg);
+      desalojar(reg, INTERRUPTED_BY_USER);
       break;
    }
+}
+
+int mmu(int dir_logica)
+{
+   int num_pag = floor(dir_logica/tamanio_pagina);
+   t_paquete* paq = crear_paquete(PEDIDO_PAGINA);
+   agregar_a_paquete(paq, &pid, sizeof(int));
+   agregar_a_paquete(paq, &num_pag, sizeof(int));
+   enviar_paquete(paq, socket_memoria);
+   eliminar_paquete(paq);
+   t_list* list = list_create();
+   list = recibir_paquete(socket_memoria);
+   int* aux = list_get(list,0);
+   int marco = *(int*) aux;
+   free(aux);
+   list_destroy(list);
+   deplazamiento = dir_logica - num_pag*tamanio_pagina;
+   dir_fisica = marco*tamanio_pagina + desplazamiento;
+   return dir_fisica;
 }
 
 // INSTRUCCIONES A INTERPRETAR
@@ -211,3 +298,19 @@ void sub_uint32(uint32_t* registro1, uint32_t* registro2) {
     void: sum_uint8, \
     void: sum_uint32 \
 )(x, y)
+
+t_dictionary* crear_diccionario(t_contexto_de_ejecucion reg)
+{
+   t_dictionary* dicc = dictionary_create();
+   dictionary_put(dicc, "AX", &(reg.reg_cpu_uso_general.AX));
+   dictionary_put(dicc, "BX", &(reg.reg_cpu_uso_general.BX));
+   dictionary_put(dicc, "CX", &(reg.reg_cpu_uso_general.CX));
+   dictionary_put(dicc, "DX", &(reg.reg_cpu_uso_general.DX));
+   dictionary_put(dicc, "EAX", &(reg.reg_cpu_uso_general.EAX));
+   dictionary_put(dicc, "EBX", &(reg.reg_cpu_uso_general.EBX));
+   dictionary_put(dicc, "ECX", &(reg.reg_cpu_uso_general.ECX));
+   dictionary_put(dicc, "EDX", &(reg.reg_cpu_uso_general.EDX));
+   dictionary_put(dicc, "SI", &(reg.reg_cpu_uso_general.SI));
+   dictionary_put(dicc, "DI", &(reg.reg_cpu_uso_general.DI));
+   return dicc;
+}
