@@ -8,6 +8,8 @@ pthread_mutex_t sem_memoria;
 MemoriaPaginada *memoria;
 int socket_escucha; // socket servidor
 bool fin_programa;
+pthread_mutex_t sem_lista_procesos;
+t_list *procesos_cargados; // almacena referencia a todos los procesos cargados
 
 MemoriaPaginada* inicializar_memoria(int tamano_memoria, int tamano_pagina) {
     // Verificar que el tamaño de la memoria sea un múltiplo del tamaño de página
@@ -167,10 +169,10 @@ resultado_operacion acceso_espacio_usuario(t_buffer *data, t_list *solicitudes, 
 {
     t_solicitud *pedido;
     void *aux;
-    aux = memoria->espacio_usuario;
     aux = list_get(solicitudes, 0);
     int pid;
     pid = *(int*) aux;
+    aux = memoria->espacio_usuario;
     switch (acceso){
     case LECTURA: // data vacia, copiar de memoria a buffer data (informacion pura sin verificar, no es tarea memoria)
         crear_buffer_mem(data);
@@ -334,4 +336,9 @@ void retardo_operacion()
 {
     unsigned int tiempo_en_microsegs = config_get_int_value(config, "RETARDO_RESPUESTA")*MILISEG_A_MICROSEG;
     usleep(tiempo_en_microsegs);
+}
+
+t_proceso *proceso_en_ejecucion(t_list *l_procs, int pid)
+{
+	return list_get(l_procs, obtener_proceso(l_procs, pid) );
 }

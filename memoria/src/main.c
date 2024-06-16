@@ -84,7 +84,7 @@ void* hilo_ejecutor(void *nada)
 	switch (operacion)
 	{
 	case INICIAR_PROCESO:
-		t_proceso *new_proceso;
+		t_proceso *new_proceso = NULL;
 		recibido = recibir_paquete(cliente);
 		result = crear_proceso(recibido, new_proceso);
 
@@ -191,16 +191,17 @@ void* hilo_ejecutor(void *nada)
 
 void atender_cpu(int socket)
 {
+	// revisar si se pueden reducir
 	t_list* recibido;
 	t_paquete *paquete;
-	void *aux;
-	int aux_indice;
+	void *aux, *aux2;	
 	resultado_operacion result;
 	t_buffer *data = NULL;
 	int operacion;
 	t_proceso *proceso;
+	int frame; 
 
-	while (!fin_programa) {
+	while (!fin_programa) { // INSTRUCCIONES - PEDIDO_PAGINA 
 		operacion = recibir_codigo(socket);
 		switch (operacion) {
 		case MENSAJE: // lo mantengo solo por si lo usaban para testeo... ideal seria borrarlo
@@ -265,8 +266,9 @@ void atender_cpu(int socket)
 			recibido = recibir_paquete(socket);
 			// obtiene el proceso pedido
 			aux = list_get(recibido, 0);
-			aux_indice = obtener_proceso(procesos_cargados,*(int*) aux);
-			proceso = list_get(procesos_cargados, aux_indice);
+			if (proceso == NULL || proceso->pid != *(int*)aux ){
+				proceso = proceso_en_ejecucion(procesos_cargados, *(int*)aux );
+			}
 			// obtiene el nuevo size
 			aux = list_get(recibido, 1);
 			// realiza operacion
@@ -283,6 +285,84 @@ void atender_cpu(int socket)
 			// se limpia lo recibido
 			for (int i=0; i<list_size(recibido); i++){
 				aux = list_remove(recibido, 0);
+				free(aux);
+			}
+			list_clean(recibido);
+			eliminar_paquete(paquete);
+			break;
+
+		case SIGUIENTE_INSTRUCCION:
+
+			recibido = recibir_paquete(socket);
+			aux = list_get(recibido, 0);
+			// verifica si tiene el proceso en variable
+			if (proceso == NULL || proceso->pid != *(int*)aux ){
+				proceso = proceso_en_ejecucion(procesos_cargados, *(int*)aux );
+			}
+			// chequea q instruccion sea valida
+			aux2 = list_get(recibido, 1);
+			if (*(int*)aux2 < 0 || *(int*)aux2 > list_size(proceso->instrucciones) ){
+				paquete = crear_paquete(MENSAJE_ERROR);
+				enviar_paquete(paquete, socket);
+				eliminar_paquete(paquete);
+				for (int i=0;i<list_size(recibido);i++){
+					aux = list_remove(recibido, 0);
+					free(aux);
+				}
+				list_clean(recibido);
+				continue;
+			}
+			// obtiene instruccion
+			aux = list_get(proceso->instrucciones, *(int*)aux2 );
+			paquete = crear_paquete(SIGUIENTE_INSTRUCCION);
+			agregar_a_paquete(paquete, aux, strlen(aux));
+			
+			enviar_paquete(paquete, socket);
+
+			// se limpia lo recibido
+			for (int i=0; i<list_size(recibido); i++){
+				aux = list_remove(recibido, 0);
+				free(aux);
+			}
+			list_clean(recibido);
+			eliminar_paquete(paquete);
+			break;
+
+		case PEDIDO_PAGINA:
+
+			recibido = recibir_paquete(socket);
+			aux = list_get(recibido, 0);
+			// verifica si tiene el proceso en variable
+			if (proceso == NULL || proceso->pid != *(int*)aux ){
+				proceso = proceso_en_ejecucion(procesos_cargados, *(int*)aux );
+			}
+
+			// obtiene pagina pedida y chequeo
+			aux2 = list_get(recibido, 1);
+			if (*(int*)aux2 < 0 || *(int*)aux2 > list_size(proceso->tabla_paginas)){
+				paquete = crear_paquete(MENSAJE_ERROR);
+				enviar_paquete(paquete, socket);
+				eliminar_paquete(paquete);
+				for (int i=0;i<list_size(recibido);i++){
+					aux = list_remove(recibido, 0);
+					free(aux);
+				}
+				list_clean(recibido);
+				continue;
+			}
+			// obtiene pagina /* ARREGLAR EL TEMA DE QUE ACCESO_TABLA_PAGINAS NO DA FRAME*/
+			result = acceso_tabla_paginas(proceso, *(int*)aux2 );
+			frame = obtener_indice_frame(list_get(proceso->tabla_paginas,*(int*)aux2));
+
+			paquete = crear_paquete(SIGUIENTE_INSTRUCCION);
+			agregar_a_paquete(paquete, &frame, sizeof(int));
+			
+			enviar_paquete(paquete, socket);
+
+			// se limpia lo recibido
+			for (int i=0; i<list_size(recibido); i++){
+				aux = list_remove(recibido, 0);
+				free(aux);
 			}
 			list_clean(recibido);
 			eliminar_paquete(paquete);

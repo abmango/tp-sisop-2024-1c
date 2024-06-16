@@ -22,6 +22,9 @@
 extern t_config *config;
 extern t_log *log_memoria;
 extern pthread_mutex_t sem_memoria;
+extern pthread_mutex_t sem_lista_procesos;
+extern t_list *procesos_cargados; // almacena referencia a todos los procesos cargados
+
 typedef enum {
     ERROR,
     CORRECTA,
@@ -128,4 +131,5 @@ void agregar_a_buffer_mem(t_buffer *ref, void *data, int tamanio);
 resultado_operacion agregar_a_memoria(void *direccion, void *data, int cant_bytes);
 int offset_pagina(int desplazamiento, int tamanio_pagina);
 void retardo_operacion(); // incluye redondeo a segundos
+t_proceso *proceso_en_ejecucion(t_list *l_procs, int pid);
 #endif /* UTILS_H_ */
