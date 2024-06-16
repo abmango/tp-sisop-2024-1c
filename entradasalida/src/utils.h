@@ -9,35 +9,33 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <string.h>
-#include <utils/general.h>
+#include <pthread.h>
+#include <semaphore.h>
 #include <commons/log.h>
+#include <utils/general.h>
+#include <utils/conexiones.h>
 
-typedef enum
-{
-	MENSAJE,
-	PAQUETE
-}op_code;
+//////////////////////////////////
+// lo declaro global aunque solo se va a usar en utils x si quieren hacer logs de prueba
+extern t_log *log_io; 
 
-typedef struct
-{
-	int size;
-	void* stream;
-} t_buffer;
+//////////////////////////////////
 
-typedef struct
-{
-	op_code codigo_operacion;
-	t_buffer* buffer;
-} t_paquete;
+void identificarse(char* nombre, t_io_type_code tipo_interfaz_code, int conexion_kernel); // EN DESARROLLO
+void iniciar_logger(void);
 
+/// @brief emite el log obligatorio (NO DIALFS)
+/// @param pid 
+/// @param operacion  
+void logguear_operacion (int pid, t_io_type_code operacion);
 
+// para recordar que hay q hacer los logs... posiblemente cuando se desarrollen las operaciones de dial
+// esta funcion no sea necesaria (osea log como memoria que lo hace cada funcion minima)
+void logguear_DialFs (void);
 
-int crear_conexion(char* ip, char* puerto);
-void enviar_mensaje(char* mensaje, int socket_cliente);
-t_paquete* crear_paquete(void);
-void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
-void enviar_paquete(t_paquete* paquete, int socket_cliente);
-void liberar_conexion(int socket_cliente);
-void eliminar_paquete(t_paquete* paquete);
-
+/// @brief descarga de la lista todos los pares direccion + size y los agrega al paquete en igual orden
+/// @param paquete ya iniciado y con pid
+/// @param lista lo unico que debe tener son los pares direccion + desplazamiento... sino envia cualquier cosa. hace list_remove() x cada elemento
+/// @param bytes referencia a var q lleva cuenta de los bytes a enviar a memoria
+void agregar_dir_y_size_a_paquete (t_paquete *paquete, t_list *lista, int *bytes);
 #endif /* UTILS_H_ */

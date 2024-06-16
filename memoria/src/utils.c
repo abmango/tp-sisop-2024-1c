@@ -1,120 +1,344 @@
 #include "utils.h"
 
-int iniciar_servidor(void)
-{	
-	struct addrinfo hints;
-	struct addrinfo *servinfo;
-	// struct addrinfo *p;
+void *espacio_bitmap_no_tocar = NULL;
+const int LONGITUD_LINEA_ARCHIVOS = 60;
+t_config *config;
+t_log *log_memoria;
+pthread_mutex_t sem_memoria;
+MemoriaPaginada *memoria;
+int socket_escucha; // socket servidor
+bool fin_programa;
+pthread_mutex_t sem_lista_procesos;
+t_list *procesos_cargados; // almacena referencia a todos los procesos cargados
 
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_INET;
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_PASSIVE;
+MemoriaPaginada* inicializar_memoria(int tamano_memoria, int tamano_pagina) {
+    // Verificar que el tamaño de la memoria sea un múltiplo del tamaño de página
+    if (tamano_memoria % tamano_pagina != 0) {
+        return NULL; // Tamaño de memoria no válido
+    }
+    // Calcular el número de páginas
+    // int num_paginas = tamano_memoria / tamano_pagina;
 
-	int err = getaddrinfo(NULL, PUERTO, &hints, &servinfo);
-	if(err != 0)
-	{
-		printf("error en funcion getaddrinfo()\n");
-		exit(3);
-	}
+    // Crear las tablas de páginas
+    // TablaPaginas *tablas_paginas = (TablaPaginas*)malloc(sizeof(TablaPaginas));
+    // if (tablas_paginas == NULL) {
+    //     return NULL; // Error al asignar memoria para las tablas de páginas
+    // }
+    // tablas_paginas->num_paginas = num_paginas;
+    // tablas_paginas->paginas = (pagina*)malloc(num_paginas * sizeof(Pagina));
+    // if (tablas_paginas->paginas == NULL) {
+    //     free(tablas_paginas);
+    //     return NULL; // Error al asignar memoria para las páginas
+    // }
 
-	// Creamos el socket de escucha del servidor
-	int socket_servidor_mm = socket(servinfo->ai_family,
-									 servinfo->ai_socktype,
-									 servinfo->ai_protocol);
-	if(socket_servidor_mm == -1)
-	{
-		printf("error en funcion socket()\n");
-		exit(3);
-	}
+    // Crear el espacio de memoria de usuario
+    void *espacio_usuario = malloc(tamano_memoria);
+    if (espacio_usuario == NULL) {
+        // free(tablas_paginas->paginas);
+        // free(tablas_paginas);
+        return NULL; // Error al asignar memoria para el espacio de usuario
+    }
 
-	// Asociamos el socket a un puerto
-	err = bind(socket_servidor_mm, servinfo->ai_addr, servinfo->ai_addrlen);
-	if(err != 0)
-	{
-		printf("error en funcion bind()\n");
-		exit(3);
-	}
+    // Crear la estructura de memoria paginada y devolverla
+    MemoriaPaginada *new_memoria = (MemoriaPaginada*)malloc(sizeof(MemoriaPaginada));
+    if (new_memoria == NULL) {
+        free(espacio_usuario);
+        // free(tablas_paginas->paginas);
+        // free(tablas_paginas);
+        return NULL; // Error al asignar memoria para la estructura de memoria paginada
+    }
 
-	// Escuchamos las conexiones entrantes
-	err = listen(socket_servidor_mm, SOMAXCONN);
-	if(err != 0)
-	{
-		printf("error en funcion listen()\n");
-		exit(3);
-	}
+    new_memoria->espacio_usuario = espacio_usuario;
+    // memoria->tablas_paginas = tablas_paginas;
+    // memoria->num_tablas = 1; // Por ahora solo una tabla
+    new_memoria->tamano_pagina = tamano_pagina;
+    new_memoria->tamano_memoria = tamano_memoria;
+    new_memoria->cantidad_marcos = tamano_memoria / tamano_pagina;
+    pthread_mutex_init(&sem_memoria, NULL);
 
-	freeaddrinfo(servinfo);
-	decir_hola("Listo para escuchar a mi cliente");
+    // Crear el bitarray de la memoria
+    int aux_marcos = new_memoria->cantidad_marcos / 8;
+    if (new_memoria->cantidad_marcos % 8 == 0){
+        espacio_bitmap_no_tocar = malloc(aux_marcos);
+    } else { // Bitmap no puede ser menor q cantidadMarcos x eso + 1 (redondeo para abajo)
+        aux_marcos++;
+        espacio_bitmap_no_tocar = malloc(aux_marcos);
+    }
+    new_memoria->bitmap = bitarray_create_with_mode(espacio_bitmap_no_tocar, aux_marcos, LSB_FIRST);
 
-	return socket_servidor_mm;
+    return new_memoria;
 }
 
-int esperar_cliente(int socket_servidor_mm)
-{
-	// Aceptamos un nuevo cliente
-	int socket_cliente_mm = accept(socket_servidor_mm, NULL, NULL);
-	if(socket_cliente_mm == -1)
-	{
-		imprimir_mensaje("error en funcion accept()");
-		exit(3);
-	}
-
-	imprimir_mensaje("Se conecto un cliente!");
-
-	return socket_cliente_mm;
+// recibe la lista asi como se descarga x conexion (se podria verificar que tenga
+// solo 2 elementos antes de mandarla... proceso se recibe sin iniciar)
+resultado_operacion crear_proceso (t_list *solicitud, t_proceso *proceso)
+{   
+    char *data = NULL;
+    proceso = malloc(sizeof(t_proceso));
+    data = list_get(solicitud, 0);
+    proceso->pid = *(int*) data;
+    data = list_get(solicitud, 1);
+    proceso->instrucciones = cargar_instrucciones(data);
+    proceso->tabla_paginas = list_create();
+    
+    retardo_operacion();
+    if (proceso->instrucciones == NULL){
+        printf("Script no cargo");
+        limpiar_estructura_proceso(proceso);
+        proceso = NULL;
+        return ERROR;
+    }
+    log_info(log_memoria, "PID: <%i> - Tamaño: <0>",proceso->pid);
+    return CORRECTA;
 }
 
-int recibir_operacion(int socket_cliente)
-{
-	int cod_op;
-	if(recv(socket_cliente, &cod_op, sizeof(int), MSG_WAITALL) > 0)
-		return cod_op;
-	else
-	{
-		close(socket_cliente);
-		return -1;
-	}
+resultado_operacion finalizar_proceso (t_proceso *proceso)
+{   
+    int indice_frame;
+    int pid_temp = proceso->pid;
+    // pensar si requiere zona critica (utilizar mutex de memoria)
+    for (int i=0; i < list_size(proceso->tabla_paginas); i++){
+        indice_frame = obtener_indice_frame(list_get(proceso->tabla_paginas,i));
+        bitarray_clean_bit(memoria->bitmap, indice_frame);
+    }
+    limpiar_estructura_proceso(proceso);
+
+    retardo_operacion();
+    log_info(log_memoria, "PID: <%i> - Tamaño: <0>",pid_temp);
+    return CORRECTA;
 }
 
-void* recibir_buffer(int* size, int socket_cliente)
+// ind_pagina_cosulta tendra el indice relativo a la tabla de paginas del proceso
+// revisar xq capaz esta funcion deberia devolver una direccion... x ahora solo esta preparada para el log
+resultado_operacion acceso_tabla_paginas(t_proceso *proceso, int ind_pagina_consulta)
 {
-	void * buffer;
-
-	recv(socket_cliente, size, sizeof(int), MSG_WAITALL);
-	buffer = malloc(*size);
-	recv(socket_cliente, buffer, *size, MSG_WAITALL);
-
-	return buffer;
+    if (ind_pagina_consulta >= list_size(proceso->tabla_paginas)) {
+        retardo_operacion();
+        log_info(log_memoria, "Tabla de Paginas del proceso <%i> no tiene asignada una pagina asignada en la posicion: %i",proceso->pid,ind_pagina_consulta);
+        return ERROR;
+    }
+    int frame = obtener_indice_frame(list_get(proceso->tabla_paginas,ind_pagina_consulta));
+    retardo_operacion();
+    log_info(log_memoria, "PID: <%i> - Pagina: <%i> - Marco: <%i>",proceso->pid,ind_pagina_consulta,frame);
+    return CORRECTA;
 }
 
-void recibir_mensaje(int socket_cliente)
+resultado_operacion ajustar_tamano_proceso(t_proceso *proceso, int nuevo_size)
 {
-	int size;
-	char* buffer = recibir_buffer(&size, socket_cliente);
-	imprimir_mensaje("Me llego el mensaje:");
-	imprimir_mensaje(buffer);
-	free(buffer);
+    // calcula tamaño actula, util para logs
+    void *aux;
+    int indice_aux;
+    int tamano_a_ampliar = nuevo_size - (list_size(proceso->tabla_paginas) * memoria->tamano_pagina);
+    int paginas_a_modificar = 0;
+    if (tamano_a_ampliar % memoria->tamano_pagina !=0 && tamano_a_ampliar > 0)
+        paginas_a_modificar = (tamano_a_ampliar / memoria->tamano_pagina) + 1;
+    else if (tamano_a_ampliar % memoria->tamano_pagina !=0 && tamano_a_ampliar < 0)
+        paginas_a_modificar = -1 * (tamano_a_ampliar / memoria->tamano_pagina); // se redondea para abajo
+    else 
+        paginas_a_modificar = tamano_a_ampliar / memoria->tamano_pagina;
+
+    retardo_operacion();
+    if (tamano_a_ampliar > 0){
+        for (int i=0; i<paginas_a_modificar; i++){
+            indice_aux = 0;
+            aux = obtener_frame_libre();
+
+            if (aux == NULL) // si no hay + frames libres
+                return INSUFICIENTE;
+
+            indice_aux = obtener_indice_frame(aux);
+            list_add(proceso->tabla_paginas, aux);
+            bitarray_set_bit(memoria->bitmap, indice_aux);
+        }
+        printf("PID: <%i> - Tamaño Actual: <%i> - Tamaño a Ampliar: <%i>",proceso->pid,(list_size(proceso->tabla_paginas) * memoria->tamano_pagina), nuevo_size);
+    } else if (tamano_a_ampliar < 0) {
+        for (int i=0; i<paginas_a_modificar; i++){
+            aux = list_get(proceso->tabla_paginas, list_size(proceso->tabla_paginas) - 1);
+            list_remove(proceso->tabla_paginas, list_size(proceso->tabla_paginas) - 1); // -1 para entrar en rango
+            indice_aux = obtener_indice_frame(aux);
+            bitarray_clean_bit(memoria->bitmap, indice_aux);
+        }
+        printf("PID: <%i> - Tamaño Actual: <%i> - Tamaño a Reducir: <%i>",proceso->pid,(list_size(proceso->tabla_paginas) * memoria->tamano_pagina), nuevo_size);
+    }
+    return CORRECTA; // si se quizo poner el mismo tamaño se considera q se ajusto bien
 }
 
-t_list* recibir_paquete(int socket_cliente)
+// t_list solicitudes contiene t_solicitudes (direccion + cant_bytes) es decir, un frame y cuanto de ese frame [verificar al cagar]
+// memoria asume "permite" que si cant_bytes sobrepasa la pagina se efectue, xq no le interesa... es tarea de MMU eso
+resultado_operacion acceso_espacio_usuario(t_buffer *data, t_list *solicitudes, t_acceso_esp_usu acceso)
 {
-	int size;
-	int desplazamiento = 0;
-	void * buffer;
-	t_list* valores = list_create();
-	int tamanio;
+    t_solicitud *pedido;
+    void *aux;
+    aux = list_get(solicitudes, 0);
+    int pid;
+    pid = *(int*) aux;
+    aux = memoria->espacio_usuario;
+    switch (acceso){
+    case LECTURA: // data vacia, copiar de memoria a buffer data (informacion pura sin verificar, no es tarea memoria)
+        crear_buffer_mem(data);
+        for (int i=1; i<list_size(solicitudes); i++){
+            pedido = list_get(solicitudes, i);
+            aux = (aux + pedido->desplazamiento);
 
-	buffer = recibir_buffer(&size, socket_cliente);
-	while(desplazamiento < size)
-	{
-		memcpy(&tamanio, buffer + desplazamiento, sizeof(int));
-		desplazamiento+=sizeof(int);
-		char* valor = malloc(tamanio);
-		memcpy(valor, buffer+desplazamiento, tamanio);
-		desplazamiento+=tamanio;
-		list_add(valores, valor);
-	}
-	free(buffer);
-	return valores;
+            log_info(log_memoria, "PID: <%i> - Accion: <LEER> - Direccion fisica: <%i> - Tamaño <%i>", pid, pedido->desplazamiento, pedido->cant_bytes);
+
+            pthread_mutex_lock(&sem_memoria);
+            agregar_a_buffer_mem(data, aux, pedido->cant_bytes);
+            pthread_mutex_unlock(&sem_memoria);
+
+            retardo_operacion();
+        }
+        if (data->size == 0)
+            return ERROR;
+        else
+            return CORRECTA;
+    break;
+
+    case ESCRITURA:
+        void *stream = data->stream;
+        for (int i=1; i<list_size(solicitudes); i++){
+            pedido = list_get(solicitudes, i);
+            aux = (aux + pedido->desplazamiento);
+
+            log_info(log_memoria, "PID: <%i> - Accion: <ESCRIBIR> - Direccion fisica: <%i> - Tamaño <%i>", pid, pedido->desplazamiento, pedido->cant_bytes);
+
+            pthread_mutex_lock(&sem_memoria);
+            agregar_a_memoria(aux, stream, pedido->cant_bytes);
+            pthread_mutex_unlock(&sem_memoria);
+
+            stream = stream + pedido->cant_bytes;
+            retardo_operacion();
+        }
+        if (stream == (data->stream + data->size)) // verifica que apunte a final buffer ?? verificar q sea correcto
+            return CORRECTA;
+        else
+            return ERROR;
+    break;
+
+    default: return ERROR;
+    }
+
+}
+
+// Función para liberar la memoria ocupada por la estructura de memoria paginada
+void liberar_memoria() {
+    free(memoria->espacio_usuario);
+    // free(memoria->tablas_paginas->paginas);
+    // free(memoria->tablas_paginas);
+    pthread_mutex_destroy(&sem_memoria);
+    bitarray_destroy(memoria->bitmap);
+    free(espacio_bitmap_no_tocar); // puede general double free, pero no deberia
+    free(memoria);
+}
+
+void limpiar_estructura_proceso (t_proceso * proc)
+{
+    list_clean(proc->tabla_paginas);
+    list_clean(proc->instrucciones);
+    free(proc->instrucciones);
+    free(proc->tabla_paginas);
+    free(proc);
+}
+
+t_list * cargar_instrucciones (char *directorio)
+{
+    FILE *archivo;
+    char *lineaInstruccion; 
+    char *dir_completa = config_get_string_value(config,"PATH_INSTRUCCIONES");
+    strcat(dir_completa, directorio);
+    strcat(dir_completa, ".txt"); // si no encuentra archivo eliminar
+
+    archivo = fopen(dir_completa, "r");
+    free(dir_completa);
+    if (archivo == NULL){
+        return NULL;
+    }
+    lineaInstruccion = malloc (LONGITUD_LINEA_ARCHIVOS); // nose si fgets hace malloc o no?
+    
+    t_list *lista;
+    lista = list_create();
+
+    while (fgets(lineaInstruccion, LONGITUD_LINEA_ARCHIVOS, archivo) != NULL){
+        list_add(lista, lineaInstruccion);
+    }
+    fclose(archivo);
+    free(lineaInstruccion);
+    return lista;
+}
+
+int obtener_indice_frame(void *ref_frame)
+{
+    // como EU es continuo, va a devolver Delta bytes (Bfinal - Binicial)
+    int Delta_bytes = ref_frame - memoria->espacio_usuario;
+    if (Delta_bytes % memoria->tamano_pagina == 0)
+        return Delta_bytes / memoria->tamano_pagina;
+    else // no se si es correcto o necesario...
+        return (Delta_bytes / memoria->tamano_pagina) + 1;
+}
+
+void * obtener_frame_libre()
+{   
+    void *aux = NULL;
+    aux = memoria->espacio_usuario;
+    for (int i=0; i < memoria->cantidad_marcos; i++){
+        memoria->ultimo_frame_verificado++; // pasa al siguiente frame
+        if (memoria->ultimo_frame_verificado >= memoria->cantidad_marcos){
+            memoria->ultimo_frame_verificado = 0; // si dio vuelta completa lo reinicia
+        }
+        // verifica frame
+        if ((bitarray_test_bit(memoria->bitmap,memoria->ultimo_frame_verificado)) == false )
+            aux += (memoria->ultimo_frame_verificado * memoria->tamano_pagina);
+    }
+    if (aux == memoria->espacio_usuario) 
+        return NULL;
+    else 
+        return (aux);
+}
+
+int obtener_proceso(t_list *lista, int pid)
+{
+    t_proceso *temp;
+    for (int i=0; i< list_size(lista); i++){
+        temp = list_get(lista, i);
+        if (temp->pid == pid)
+            return i;
+    }
+    return -1;
+}
+
+void crear_buffer_mem(t_buffer *new)
+{
+    new = malloc(sizeof(t_buffer));
+    new->stream = NULL;
+    new->size = 0;
+}
+
+void agregar_a_buffer_mem(t_buffer *ref, void *data, int tamanio)
+{
+    ref->stream = realloc (ref->stream, ref->size + tamanio);
+
+    memcpy(ref->stream + ref->size, data, tamanio);
+    ref->size += tamanio;
+}
+
+resultado_operacion agregar_a_memoria(void *direccion, void *data, int cant_bytes)
+{
+    memcpy(direccion, data, cant_bytes);
+    return CORRECTA;
+}
+
+int offset_pagina (int desplazamiento, int tamanio_pagina)
+{
+    return desplazamiento % tamanio_pagina;   
+}
+
+void retardo_operacion()
+{
+    unsigned int tiempo_en_microsegs = config_get_int_value(config, "RETARDO_RESPUESTA")*MILISEG_A_MICROSEG;
+    usleep(tiempo_en_microsegs);
+}
+
+t_proceso *proceso_en_ejecucion(t_list *l_procs, int pid)
+{
+	return list_get(l_procs, obtener_proceso(l_procs, pid) );
 }

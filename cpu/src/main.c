@@ -1,64 +1,132 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <utils/general.h>
+#include <utils/conexiones.h>
 
 #include "main.h"
+
+//falta agregar pid en recibir contexto, es necesario para comunicarse con memoria, tambien hay q enviarlo en kernel
+// tambien necesito el tamanio de la pag
+//falta TLB
 
 int main(int argc, char* argv[]) {
 
     decir_hola("CPU");
 
-	int conexion_memoria = 1;
-    char* ip;
-	char* puerto;
-	char* valor;
-
     t_config* config = iniciar_config("default");
 	
-	ip = config_get_string_value(config, "IP_MEMORIA");
-	puerto = config_get_string_value(config, "PUERTO_MEMORIA");
+	char* ip = config_get_string_value(config, "IP_MEMORIA");
+	char* puerto = config_get_string_value(config, "PUERTO_MEMORIA");
+    socket_memoria = crear_conexion(ip, puerto);
+    enviar_mensaje("Hola Memoria, como va. Soy CPU.", socket_memoria);
 
-    int conexion_cpu = crear_conexion(ip, puerto);
+	puerto = config_get_string_value(config, "PUERTO_ESCUCHA_DISPATCH");
+	int socket_escucha = iniciar_servidor(puerto);
 
-    enviar_mensaje("Hola Memoria, como va. Soy CPU.", conexion_cpu);
-
-
-	int socket_escucha_cpu = iniciar_servidor();
-
-    int socket_file_descriptor_cpu = esperar_cliente(socket_escucha_cpu);
-
-	t_list* lista;
-	while (1) {
-		int cod_op = recibir_operacion(socket_file_descriptor_cpu);
-		switch (cod_op) {
-		case MENSAJE:
-			recibir_mensaje(socket_file_descriptor_cpu);
+    int socket_kernel_dispatch = esperar_cliente(socket_escucha);
+	int socket_kernel_interrupt = esperar_cliente(socket_escucha);
+	close(socket_escucha);
+	recibir_mensaje(socket_kernel_dispatch); // el Kernel se presenta
+	pthread_mutex_init(&sem_interrupt);
+	pthread_t interrupciones;
+	pthread_create(&interrupciones, NULL, (void*) interrupt, NULL); //hilo pendiente de escuchar las interrupciones
+	pthread_detach(interrupciones);	
+	
+	t_contexto_de_ejecucion reg;
+	int pid;
+	t_dictionary* diccionario = crear_diccionario(reg);
+	reg = recibir_contexto_ejecucion();
+	char* instruccion;
+	while(1)
+	{
+		instruccion = fetch(reg.PC, pid);
+		char** arg = string_split(instruccion, " ");
+		execute_op_code op_code = decode(arg[0]);
+		int *a,*b;
+		switch (op_code){ //las de enviar y recibir memoria hay que modificar, para hacerlas genericas
+			case SET:
+				a = dictionary_get(diccionario,arg[1]);
+				*a = atoi(arg[2]);
 			break;
-		case PAQUETE:
-			lista = recibir_paquete(socket_file_descriptor_cpu);
-			imprimir_mensaje("Me llegaron los siguientes valores:");
-			list_iterate(lista, (void*) iterator);
+			case MOV_IN:
+				a = dictionary_get(diccionario, arg[1]);
+				b = dictionary_get(diccionario, arg[2]);
+				a* = leer_memoria(*b, sizeof(*a));
 			break;
-		case -1:
-			imprimir_mensaje("el cliente se desconecto. Terminando servidor");
-			return EXIT_FAILURE;
-		default:
-			imprimir_mensaje("Operacion desconocida. No quieras meter la pata");
+			case MOV_OUT:
+				a = dictionary_get(diccionario, arg[1]);
+				b = dictionary_get(diccionario, arg[2]);
+				enviar_memoria(*a, sizeof(*b), *b);
+			break;
+			case SUM:
+				a = dictionary_get(diccionario, arg[1]);
+				b = dictionary_get(diccionario, arg[2]);
+				*a = *a + *b;
+			break;
+			case SUB:
+				a = dictionary_get(diccionario, arg[1]);
+				b = dictionary_get(diccionario, arg[2]);
+				*a = *a - *b;
+			break;
+			case JNZ:
+				a = dictionary_get(diccionario, arg[1]);
+				if(*a == 0)
+				{
+					reg.PC = atoi(arg[2]);
+				}
+			break;
+			case RESIZE:
+				resize(atoi(arg[1]));
+			break;
+			case COPY_STRING:
+				char* aux = leer_memoria(reg.reg_cpu_uso_general.SI, arg[1]);
+				enviar_memoria(reg.reg_cpu_uso_general.DI, arg[1], aux);
+			break;
+			case WAIT:
+			break;
+			case SIGNAL:
+			break;
+			case IO_GEN_SLEEP:
+				desalojar(reg, IO_GEN_SLEEP, arg);
+				reg = recibir_contexto_ejecucion();
+			break;
+			case IO_STDIN_READ:
+				desalojar(reg, IO_STDIN_READ, arg);
+				reg = recibir_contexto_ejecucion();
+			break;
+			case IO_STDOUT_WRITE:
+				desalojar(reg, IO_STDOUT_WRITE, arg);
+				reg = recibir_contexto_ejecucion();
+			break;
+			case IO_FS_CREATE:
+			break;
+			case IO_FS_DELETE:
+			break;
+			case IO_FS_TRUNCATE:
+			break;
+			case IO_FS_WRITE:
+			break;
+			case IO_FS_READ:
+			break;
+			case EXIT:
+				desalojar(reg, SUCCESS, arg);
+				reg = recibir_contexto_ejecucion();
+			break;
+			default:
 			break;
 		}
+		reg.PC++;
+		check_interrupt(reg);
 	}
+	
 	return EXIT_SUCCESS;
-
-    terminar_programa(conexion_memoria, config);
-
-    return 0;
 }
 
-void terminar_programa(int socket_conexion_cpu, t_config* config)
+void terminar_programa(int socket_memoria, t_config* config)
 {
 	// Y por ultimo, hay que liberar lo que utilizamos (conexion, log y config) 
 	 // con las funciones de las commons y del TP mencionadas en el enunciado /
-	int err = close(socket_conexion_cpu);
+	int err = close(socket_memoria);
 	if(err != 0)
 	{
 		imprimir_mensaje("error en funcion close()");

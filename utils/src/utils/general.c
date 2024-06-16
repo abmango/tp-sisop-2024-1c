@@ -34,3 +34,59 @@ void imprimir_mensaje(char* mensaje) {
 void imprimir_entero(int num) {
     printf("%d\n", num);
 }
+
+int tamanio_de_pcb(t_pcb* pcb) {
+    return 2*sizeof(int) + 4*sizeof(uint8_t) + 7*sizeof(uint32_t) + tamanio_de_lista_de_recursos_ocupados(pcb->recursos_ocupados);
+}
+
+int tamanio_de_contexto_de_ejecucion(void) {
+    return 4*sizeof(uint8_t) + 7*sizeof(uint32_t);
+}
+
+int tamanio_de_lista_de_recursos_ocupados(t_list* lista_de_recursos_ocupados) {
+
+    int bytes_recursos = 0;
+
+	void _sumar_bytes_de_recurso(t_recurso_ocupado* recurso) {
+		bytes_recursos += 2*sizeof(int) + strlen(recurso->nombre) + 1;
+	}
+
+    list_iterate(lista_de_recursos_ocupados, (void*)_sumar_bytes_de_recurso);
+
+    return bytes_recursos + sizeof(int);
+}
+
+void* serializar_contexto_de_ejecucion(t_contexto_de_ejecucion contexto_de_ejecucion, int bytes) {
+	void* magic = malloc(bytes);
+	int desplazamiento = 0;
+
+	memcpy(magic + desplazamiento, &(contexto_de_ejecucion.PC), sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+	memcpy(magic + desplazamiento, &(contexto_de_ejecucion.reg_cpu_uso_general.AX), sizeof(uint8_t));
+	desplazamiento += sizeof(uint8_t);
+	memcpy(magic + desplazamiento, &(contexto_de_ejecucion.reg_cpu_uso_general.BX), sizeof(uint8_t));
+	desplazamiento += sizeof(uint8_t);
+	memcpy(magic + desplazamiento, &(contexto_de_ejecucion.reg_cpu_uso_general.CX), sizeof(uint8_t));
+	desplazamiento += sizeof(uint8_t);
+	memcpy(magic + desplazamiento, &(contexto_de_ejecucion.reg_cpu_uso_general.DX), sizeof(uint8_t));
+	desplazamiento += sizeof(uint8_t);
+	memcpy(magic + desplazamiento, &(contexto_de_ejecucion.reg_cpu_uso_general.EAX), sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+	memcpy(magic + desplazamiento, &(contexto_de_ejecucion.reg_cpu_uso_general.EBX), sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+	memcpy(magic + desplazamiento, &(contexto_de_ejecucion.reg_cpu_uso_general.ECX), sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+	memcpy(magic + desplazamiento, &(contexto_de_ejecucion.reg_cpu_uso_general.EDX), sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+	memcpy(magic + desplazamiento, &(contexto_de_ejecucion.reg_cpu_uso_general.SI), sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+    memcpy(magic + desplazamiento, &(contexto_de_ejecucion.reg_cpu_uso_general.DI), sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+
+	return magic;
+}
+
+void avisar_y_cerrar_programa_por_error(void) {
+	imprimir_mensaje("CERRANDO PROGRAMA POR ERROR...");
+	exit(3);
+}
