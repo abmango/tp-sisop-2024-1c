@@ -62,6 +62,11 @@ typedef struct{
     uint32_t DI;            //Contiene la dirección lógica de memoria de destino a donde se va a copiar un string.
 }registros_CPU;
 
+typedef struct{
+    int tamanio;
+    int direccion;
+} t_mmu;
+
 
 void SET (void* registro, void* elemento);
 // void MOV_IN (Registro Datos, Registro Dirección);
@@ -99,6 +104,9 @@ int leer_memoria(int dir_logica, int tamanio);
 void check_interrupt(t_contexto_de_ejecucion reg);
 void pedir_io(t_contexto_de_ejecucion reg, motivo_desalojo_code opcode, char** arg);
 t_dictionary* crear_diccionario(t_contexto_de_ejecucion reg);
+t_list* mmu(int dir_logica, int tamanio);
+void enviar_memoria(int direccion, int tamanio, int valor);
+void resize(int tamanio);
 
 void* interrupt(void);
 

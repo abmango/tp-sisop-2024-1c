@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
 		char** arg = string_split(instruccion, " ");
 		execute_op_code op_code = decode(arg[0]);
 		int *a,*b;
-		switch (op_code){
+		switch (op_code){ //las de enviar y recibir memoria hay que modificar, para hacerlas genericas
 			case SET:
 				a = dictionary_get(diccionario,arg[1]);
 				*a = atoi(arg[2]);
@@ -54,7 +54,9 @@ int main(int argc, char* argv[]) {
 				a* = leer_memoria(*b, sizeof(*a));
 			break;
 			case MOV_OUT:
-
+				a = dictionary_get(diccionario, arg[1]);
+				b = dictionary_get(diccionario, arg[2]);
+				enviar_memoria(*a, sizeof(*b), *b);
 			break;
 			case SUM:
 				a = dictionary_get(diccionario, arg[1]);
@@ -74,10 +76,11 @@ int main(int argc, char* argv[]) {
 				}
 			break;
 			case RESIZE:
-
+				resize(atoi(arg[1]));
 			break;
 			case COPY_STRING:
-
+				char* aux = leer_memoria(reg.reg_cpu_uso_general.SI, arg[1]);
+				enviar_memoria(reg.reg_cpu_uso_general.DI, arg[1], aux);
 			break;
 			case WAIT:
 			break;
@@ -92,7 +95,7 @@ int main(int argc, char* argv[]) {
 				reg = recibir_contexto_ejecucion();
 			break;
 			case IO_STDOUT_WRITE:
-				f(reg, IO_STDOUT_WRITE, arg);
+				desalojar(reg, IO_STDOUT_WRITE, arg);
 				reg = recibir_contexto_ejecucion();
 			break;
 			case IO_FS_CREATE:

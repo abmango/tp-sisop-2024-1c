@@ -213,8 +213,24 @@ char* fetch(uint32_t PC, int pid)
 
 int leer_memoria(int dir_logica, int tamanio)
 {
-   int dir_fisica = mmu()
-   t_paquete* paq = crear_paquete(ACCESO_LECTURA);
+   t_paquete paq = crear_paquete(ACCESO_ESCRITURA);
+   agregar_a_paquete(paq,&pid,sizeof(int));
+   
+   t_list* aux = list_create();
+   aux = mmu(dir_logica, tamanio);
+   t_mmu* aux2;
+
+   while(!list_is_empty(aux))
+   {
+      aux2 = list_get(aux,0);
+      agregar_a_paquete(paq, &(aux2->direccion), sizeof(int));
+      agregar_a_paquete(paq, &(aux2->tamanio), sizeof(int));
+   }
+   
+   enviar_paquete(paq,socket_memoria);
+   eliminar_paquete(paq);
+   recibir_codigo(socket_memoria);
+   aux = recibir_paquete(socket_memoria);
    
    
 }
@@ -225,7 +241,7 @@ void check_interrupt(t_contexto_de_ejecucion reg)
       case NADA:
       break;
       case DESALOJAR:
-      desalojar(reg, INTERRUPTED_BY_QUANTUM);
+      desalojar(reg, INTERRUPTED_BY_QUANTUM); //desalojar mal llamado
       break;
       case FINALIZAR:
       desalojar(reg, INTERRUPTED_BY_USER);
@@ -233,23 +249,83 @@ void check_interrupt(t_contexto_de_ejecucion reg)
    }
 }
 
-int mmu(int dir_logica)
+t_list* mmu(int dir_logica, int tamanio)
 {
    int num_pag = floor(dir_logica/tamanio_pagina);
+   int desplazamiento = dir_logica - num_pag*tamanio_pagina;
+
    t_paquete* paq = crear_paquete(PEDIDO_PAGINA);
    agregar_a_paquete(paq, &pid, sizeof(int));
    agregar_a_paquete(paq, &num_pag, sizeof(int));
    enviar_paquete(paq, socket_memoria);
    eliminar_paquete(paq);
-   t_list* list = list_create();
-   list = recibir_paquete(socket_memoria);
-   int* aux = list_get(list,0);
-   int marco = *(int*) aux;
-   free(aux);
-   list_destroy(list);
-   deplazamiento = dir_logica - num_pag*tamanio_pagina;
-   dir_fisica = marco*tamanio_pagina + desplazamiento;
-   return dir_fisica;
+
+   t_list* aux = list_create();
+   recibir_codigo(socket_memoria);
+   aux = recibir_paquete(socket_memoria);
+   int *aux2 = list_get(aux,0);
+   int marco = *aux2;
+   free(aux2);
+   list_destroy(aux);
+   int dir_fisica = marco*tamanio_pagina + desplazamiento;
+
+   t_list* format = list_create();
+   t_mmu* aux3 = malloc(sizeof(t_mmu));
+   aux3->tamanio = tamanio_pagina - desplazamiento;
+   aux3->direccion = dir_fisica;
+   list_add(format, aux3);
+   tamanio-= tamanio_pagina - desplazamiento;
+   aux3->tamanio = tamanio_pagina;
+   marco+=1;
+
+   while(floor(tamanio/tamanio_pagina) > 0){
+      aux3 = malloc(sizeof(t_mmu));
+      dir_fisica = marco*tamanio_pagina;
+      marco+=1;
+      tamanio-=tamanio_pagina;
+      aux3->direccion = dir_fisica;
+      list_add(format,aux3);
+   }
+
+   aux3 = malloc(sizeof(t_mmu));
+   dir_fisica = marco*tamanio_pagina;
+   aux3->direccion = dir_fisica;
+   aux3->tamanio = tamanio;
+   list_add(format, aux3);
+   return aux3;
+}
+
+void enviar_memoria(int dir_logica, int tamanio, int valor) //hay q adaptar valor a string
+{
+   t_paquete paq = crear_paquete(ACCESO_ESCRITURA);
+   agregar_a_paquete(paq,&pid,sizeof(int));
+   
+   t_list* aux = list_create();
+   aux = mmu(dir_logica, tamanio);
+   t_mmu* aux2;
+
+   while(!list_is_empty(aux))
+   {
+      aux2 = list_get(aux,0);
+      agregar_a_paquete(paq, &(aux2->direccion), sizeof(int));
+      agregar_a_paquete(paq, &(aux2->tamanio), sizeof(int));
+   }
+
+   agregar_a_paquete(paq, &valor, tamanio);
+   
+   enviar_paquete(paq,socket_memoria);
+   eliminar_paquete(paq);
+   recibir_codigo(socket_memoria);
+   aux = recibir_paquete(socket_memoria);
+   
+}
+
+void resize(int tamanio){
+   t_paquete paq = crear_paquete(AJUSTAR_PROCESO);
+   agregar_a_paquete(paq, &pid, sizeof(int));
+   agregar_a_paquete(paq, &tamanio, sizeof(int));
+   enviar_paquete(paq,socket_memoria);
+   eliminar_paquete(paq);
 }
 
 // INSTRUCCIONES A INTERPRETAR
