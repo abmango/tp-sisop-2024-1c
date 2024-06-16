@@ -98,6 +98,12 @@ void planific_corto_fifo(void) {
 	        desplazamiento += size_argument;
 
             t_recurso* recurso_en_sistema = encontrar_recurso(recursos_del_sistema, nombre_recurso);
+            if( recurso_en_sistema==NULL )
+            {
+                log_error(logger, "PID: %i - No se encuentra el recurso solicitado. Finalizando proceso...", proceso_exec->pid);
+                list_add(cola_exit, proceso_exec);
+                break;
+            }
             int instancias_disponibles;
             sem_getvalue(&(recurso_en_sistema->sem_contador_instancias), &instancias_disponibles);
             if (instancias_disponibles > 0) {
@@ -116,9 +122,29 @@ void planific_corto_fifo(void) {
             }
             break;
             case SIGNAL:
-            break;
+            memcpy(&size_argument, buffer + desplazamiento, sizeof(int));
+	        desplazamiento += sizeof(int);
+            char* nombre_recurso = malloc(size_argument);
+            memcpy(nombre_recurso, buffer + desplazamiento, size_argument);
+	        desplazamiento += size_argument;
             
-			//faltan casos
+            t_recurso* recurso_en_sistema = encontrar_recurso(recursos_del_sistema, nombre_recurso);
+            // verifico que exista, si no existe lo mando a EXIT
+            if( recurso_en_sistema==NULL )
+            {
+                log_error(logger, "PID: %i - No se encuentra el recurso solicitado. Finalizando proceso...", proceso_exec->pid);
+                list_add(cola_exit, proceso_exec);
+                break;
+            }
+            int instancias_maximas;
+            sem_getvalue(&(recurso_en_sistema->sem_contador_instancias), &instancias_maximas);
+            sem_post(&(recurso_en_sistema->sem_contador_instancias));
+            t_recurso_ocupado* recurso_ocupado = encontrar_recurso_ocupado(proceso_exec->recursos_ocupados, nombre_recurso);
+            if (recurso_ocupado != NULL) {
+                (recurso_ocupado->instancias)--;
+            }
+            //falta desbloquear el primer proceso de la cola de bloqueados
+            break;
 		}
         proceso_exec = NULL;		
 	}
@@ -215,6 +241,12 @@ void planific_corto_rr(void) {
 	        desplazamiento += size_argument;
 
             t_recurso* recurso_en_sistema = encontrar_recurso(recursos_del_sistema, nombre_recurso);
+            if( recurso_en_sistema==NULL )
+            {
+                log_error(logger, "PID: %i - No se encuentra el recurso solicitado. Finalizando proceso...", proceso_exec->pid);
+                list_add(cola_exit, proceso_exec);
+                break;
+            }
             int instancias_disponibles;
             sem_getvalue(&(recurso_en_sistema->sem_contador_instancias), &instancias_disponibles);
             if (instancias_disponibles > 0) {
@@ -239,7 +271,28 @@ void planific_corto_rr(void) {
             list_add(cola_ready, proceso_exec);
             // proceso_exec = NULL;
             case SIGNAL:
-            // A DESARROLLAR
+            memcpy(&size_argument, buffer + desplazamiento, sizeof(int));
+	        desplazamiento += sizeof(int);
+            char* nombre_recurso = malloc(size_argument);
+            memcpy(nombre_recurso, buffer + desplazamiento, size_argument);
+	        desplazamiento += size_argument;
+            
+            t_recurso* recurso_en_sistema = encontrar_recurso(recursos_del_sistema, nombre_recurso);
+            // verifico que exista, si no existe lo mando a EXIT
+            if( recurso_en_sistema==NULL )
+            {
+                log_error(logger, "PID: %i - No se encuentra el recurso solicitado. Finalizando proceso...", proceso_exec->pid);
+                list_add(cola_exit, proceso_exec);
+                break;
+            }
+            int instancias_maximas;
+            sem_getvalue(&(recurso_en_sistema->sem_contador_instancias), &instancias_maximas);
+            sem_post(&(recurso_en_sistema->sem_contador_instancias));
+            t_recurso_ocupado* recurso_ocupado = encontrar_recurso_ocupado(proceso_exec->recursos_ocupados, nombre_recurso);
+            if (recurso_ocupado != NULL) {
+                (recurso_ocupado->instancias)--;
+            }
+            //falta desbloquear el primer proceso de la cola de bloqueados
             break;
         }
         proceso_exec = NULL;
@@ -337,6 +390,12 @@ void planific_corto_vrr(void) {
 	        desplazamiento += size_argument;
 
             t_recurso* recurso_en_sistema = encontrar_recurso(recursos_del_sistema, nombre_recurso);
+            if( recurso_en_sistema==NULL )
+            {
+                log_error(logger, "PID: %i - No se encuentra el recurso solicitado. Finalizando proceso...", proceso_exec->pid);
+                list_add(cola_exit, proceso_exec);
+                break;
+            }
             int instancias_disponibles;
             sem_getvalue(&(recurso_en_sistema->sem_contador_instancias), &instancias_disponibles);
             if (instancias_disponibles > 0) {
@@ -359,6 +418,28 @@ void planific_corto_vrr(void) {
             break;
             
             case SIGNAL:
+            memcpy(&size_argument, buffer + desplazamiento, sizeof(int));
+	        desplazamiento += sizeof(int);
+            char* nombre_recurso = malloc(size_argument);
+            memcpy(nombre_recurso, buffer + desplazamiento, size_argument);
+	        desplazamiento += size_argument;
+            
+            t_recurso* recurso_en_sistema = encontrar_recurso(recursos_del_sistema, nombre_recurso);
+            // verifico que exista, si no existe lo mando a EXIT
+            if( recurso_en_sistema==NULL )
+            {
+                log_error(logger, "PID: %i - No se encuentra el recurso solicitado. Finalizando proceso...", proceso_exec->pid);
+                list_add(cola_exit, proceso_exec);
+                break;
+            }
+            int instancias_maximas;
+            sem_getvalue(&(recurso_en_sistema->sem_contador_instancias), &instancias_maximas);
+            sem_post(&(recurso_en_sistema->sem_contador_instancias));
+            t_recurso_ocupado* recurso_ocupado = encontrar_recurso_ocupado(proceso_exec->recursos_ocupados, nombre_recurso);
+            if (recurso_ocupado != NULL) {
+                (recurso_ocupado->instancias)--;
+            }
+            //falta desbloquear el primer proceso de la cola de bloqueados
             break;
             
             case INTERRUPTED_BY_QUANTUM:
