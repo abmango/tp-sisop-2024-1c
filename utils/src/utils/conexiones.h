@@ -47,7 +47,7 @@ typedef enum
 	PEDIDO_PAGINA,
 
 	// CPU-MEMORIA
-	AJUSTAR_PROCESO,
+	AJUSTAR_PROCESO
 } op_code; //op code para: PAQUETES o COMUNICACIONES CON SOLO UN CODIGO. Requiere limpieza
 
 typedef struct

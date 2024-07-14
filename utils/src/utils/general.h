@@ -58,25 +58,26 @@ typedef struct
 
 typedef enum
 {
-/* ----------------------------------------------------------------------------------- */
-/* ------ Motivos que indican FIN DE PROCESO (mueven el proceso al estado EXIT) ------ */
-/* ----------------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------------------------- */
+/* ------ Motivos que siempre indican FIN DE PROCESO (mueven el proceso al estado EXIT). ------ */
+/* -------------------------------------------------------------------------------------------- */
     // Se leyó la "instrucción EXIT".
 	SUCCESS,
-    // El recurso a retener/liberar no existe (falló la "instrucción WAIT/SIGNAL").
-	INVALID_RESOURCE,
-    // La interfaz solicitada no existe o no está conectada (falló la "instrucción IO_XXXX_XXXX").
-    INVALID_INTERFACE,
     // Memoria no pudo asignar más tamanio al proceso (falló la "instrucción RESIZE").
     OUT_OF_MEMORY,
     // Desde consola se solicitó finalizar el proceso.
     INTERRUPTED_BY_USER,
 
-/* ------------------------------------------------------------------------------------------ */
-/* ------ Motivos que indican BLOQUEO DE PROCESO (mueven el proceso al estado BLOCKED) ------ */
-/* ------------------------------------------------------------------------------------------ */
+/* ------------------------------------------------------------------------------------------------------------------------------- */
+/* ------ Motivos que siempre indican que el PROCESO ESTÁ LISTO PARA SEGUIR EJECUTANDO (mueven el proceso al estado READY). ------ */
+/* ------------------------------------------------------------------------------------------------------------------------------- */
     // En RR o VRR, se consumió todo el quantum.
     INTERRUPTED_BY_QUANTUM,
+
+/* -------------------------------------------------------------------------------------------------------------------------- */
+/* ------ Motivos que indican un BLOQUEO DE PROCESO (mueven el proceso al estado BLOCKED), siempre que la interfaz ---------- */
+/* ------ solicitada existe y acepta la operación. Caso contrario, se realiza un FIN DE PROCESO por INVALID_INTERFACE. ------ */
+/* -------------------------------------------------------------------------------------------------------------------------- */
     // Se leyó la "instrucción IO_GEN_SLEEP".
     GEN_SLEEP,
     // Se leyó la "instrucción IO_STDIN_READ".
@@ -86,10 +87,12 @@ typedef enum
     // cuando desarrollemos el FS, aca irán el resto (las de DIALFS)
     // ...
 
-/* ----------------------------------------------------------------------------------------------- */
-/* ------ Syscalls que pueden, o no, quitar al proceso del estado EXEC. -------------------------- */
-/* ------ Depende de las instancias disponibles del recurso en cuestión (y si este existe). ------ */
-/* ----------------------------------------------------------------------------------------------- */
+/* ------------------------------------------------------------------------------------------------------------------------- */
+/* ------ Motivos que indican que el PROCESO SIGUE EJECUTANDO (permanece en el estado EXEC), siempre que el recurso -------- */
+/* ------ solicitado existe y dispone de instancias disponibles. ----------------------------------------------------------- */
+/* ------ Si no existe se realiza un FIN DE PROCESO por INVALID_RESOURCE. -------------------------------------------------- */
+/* ------ Por su parte, si no hay instancias disponibles (solo en el caso del WAIT) se realiza un BLOQUEO DE PROCESO. ------ */
+/* ------------------------------------------------------------------------------------------------------------------------- */
     // Se leyó la "instrucción WAIT", que solicita retener una instancia de un recurso.
     WAIT,
     // Se leyó la "instrucción SIGNAL", que solicita liberar una instancia de un recurso.
