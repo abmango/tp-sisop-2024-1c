@@ -58,23 +58,42 @@ typedef struct
 
 typedef enum
 {
+/* ----------------------------------------------------------------------------------- */
+/* ------ Motivos que indican FIN DE PROCESO (mueven el proceso al estado EXIT) ------ */
+/* ----------------------------------------------------------------------------------- */
+    // Se leyó la "instrucción EXIT".
 	SUCCESS,
+    // El recurso a retener/liberar no existe (falló la "instrucción WAIT/SIGNAL").
 	INVALID_RESOURCE,
+    // La interfaz solicitada no existe o no está conectada (falló la "instrucción IO_XXXX_XXXX").
     INVALID_INTERFACE,
+    // Memoria no pudo asignar más tamanio al proceso (falló la "instrucción RESIZE").
     OUT_OF_MEMORY,
+    // Desde consola se solicitó finalizar el proceso.
     INTERRUPTED_BY_USER,
-    INTERRUPTED_BY_QUANTUM,
-    WAIT,
-    SIGNAL,
-	//IO,
-    // saco este, y agrego los específicos por operación
 
-    //Operaciones de IO:
+/* ------------------------------------------------------------------------------------------ */
+/* ------ Motivos que indican BLOQUEO DE PROCESO (mueven el proceso al estado BLOCKED) ------ */
+/* ------------------------------------------------------------------------------------------ */
+    // En RR o VRR, se consumió todo el quantum.
+    INTERRUPTED_BY_QUANTUM,
+    // Se leyó la "instrucción IO_GEN_SLEEP".
     GEN_SLEEP,
+    // Se leyó la "instrucción IO_STDIN_READ".
     STDIN_READ,
-    STDOUT_WRITE
-    // cuando desarrollemos el FS, aca iran el resto (las de DIALFS)
+    // Se leyó la "instrucción IO_STDOUT_WRITE".
+    STDOUT_WRITE,
+    // cuando desarrollemos el FS, aca irán el resto (las de DIALFS)
     // ...
+
+/* ----------------------------------------------------------------------------------------------- */
+/* ------ Syscalls que pueden, o no, quitar al proceso del estado EXEC. -------------------------- */
+/* ------ Depende de las instancias disponibles del recurso en cuestión (y si este existe). ------ */
+/* ----------------------------------------------------------------------------------------------- */
+    // Se leyó la "instrucción WAIT", que solicita retener una instancia de un recurso.
+    WAIT,
+    // Se leyó la "instrucción SIGNAL", que solicita liberar una instancia de un recurso.
+    SIGNAL
 
 } motivo_desalojo_code;
 
