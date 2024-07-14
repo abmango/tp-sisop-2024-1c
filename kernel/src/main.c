@@ -17,9 +17,10 @@ int main(int argc, char* argv[]) {
 	char** recursos_instancias = config_get_array_value(config, "INSTANCIAS_RECURSOS");
 	recursos_del_sistema = crear_lista_de_recursos(recursos_nombres, recursos_instancias);
 
-	pthread_mutex_init(&sem_colas,NULL);
-	pthread_mutex_unlock(&sem_colas);
+	pthread_mutex_init(&mutex_colas, NULL);
+	pthread_mutex_unlock(&mutex_colas);
 	sem_init(&sem_procesos_ready, 0, 0);
+	sem_init(&sem_procesos_exit, 0, 0);
 
 	logger = log_create("log.log", "Kernel", TRUE, LOG_LEVEL_DEBUG);
 

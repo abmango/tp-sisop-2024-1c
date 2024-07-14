@@ -50,14 +50,15 @@ extern t_list* cola_exit; // Estado EXIT. Es una lista de t_pcb*
 
 extern t_list* recursos_del_sistema; // Recursos, con sus instancias disponibles actualmente. Es una lista de t_recurso*
 
-extern pthread_mutex_t sem_colas;
-extern pthread_mutex_t sem_cola_new;
-extern pthread_mutex_t sem_cola_ready;
-extern pthread_mutex_t sem_cola_ready_plus;
-extern pthread_mutex_t sem_proceso_exec;
-extern pthread_mutex_t sem_cola_exit;
-// extern pthread_mutex_t sem_plan_c; // este lo cambié por "sem_t sem_procesos_ready"
+extern pthread_mutex_t mutex_colas;
+extern pthread_mutex_t mutex_cola_new;
+extern pthread_mutex_t mutex_cola_ready;
+extern pthread_mutex_t mutex_cola_ready_plus;
+extern pthread_mutex_t mutex_proceso_exec;
+extern pthread_mutex_t mutex_cola_exit;
+
 extern sem_t sem_procesos_ready; // Cantidad de procesos en estado READY. incluye procesos tanto en cola_ready como en cola_ready_plus
+extern sem_t sem_procesos_exit; // Cantidad de procesos en estado EXIT
 
 extern int socket_memoria;
 extern int socket_cpu_dispatch;

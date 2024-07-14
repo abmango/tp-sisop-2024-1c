@@ -17,13 +17,15 @@ t_list* cola_exit = NULL;
 
 t_list* recursos_del_sistema = NULL;
 
-pthread_mutex_t sem_colas;
-pthread_mutex_t sem_cola_new;
-pthread_mutex_t sem_cola_ready;
-pthread_mutex_t sem_cola_ready_plus;
-pthread_mutex_t sem_proceso_exec;
-pthread_mutex_t sem_cola_exit;
+pthread_mutex_t mutex_colas;
+pthread_mutex_t mutex_cola_new;
+pthread_mutex_t mutex_cola_ready;
+pthread_mutex_t mutex_cola_ready_plus;
+pthread_mutex_t mutex_proceso_exec;
+pthread_mutex_t mutex_cola_exit;
+
 sem_t sem_procesos_ready;
+sem_t sem_procesos_exit;
 
 int socket_memoria = 1;
 int socket_cpu_dispatch = 1;

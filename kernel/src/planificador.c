@@ -35,7 +35,7 @@ void planific_corto_fifo(void) {
         buffer = recibir_buffer(&size_buffer, socket_cpu_dispatch);
 		t_desalojo desalojo = deserializar_desalojo(buffer, &desplazamiento);
 
-        pthread_mutex_lock(&sem_colas);
+        pthread_mutex_lock(&mutex_colas);
         actualizar_contexto_de_ejecucion_de_pcb(desalojo.contexto, proceso_exec);
 
 		switch (desalojo.motiv) {
@@ -169,7 +169,7 @@ void planific_corto_rr(void) {
         buffer = recibir_buffer(&size_buffer, socket_cpu_dispatch);
 		t_desalojo desalojo = deserializar_desalojo(buffer, &desplazamiento);
 
-        pthread_mutex_lock(&sem_colas);
+        pthread_mutex_lock(&mutex_colas);
         actualizar_contexto_de_ejecucion_de_pcb(desalojo.contexto, proceso_exec);
 
 		switch (desalojo.motiv) {
@@ -311,7 +311,7 @@ void planific_corto_vrr(void) {
         buffer = recibir_buffer(&size_buffer, socket_cpu_dispatch);
 		t_desalojo desalojo = deserializar_desalojo(buffer, &desplazamiento);
 
-        pthread_mutex_lock(&sem_colas);
+        pthread_mutex_lock(&mutex_colas);
         actualizar_contexto_de_ejecucion_de_pcb(desalojo.contexto, proceso_exec);
 
 		switch (desalojo.motiv) {
@@ -438,7 +438,7 @@ void planific_corto_vrr(void) {
             break;
             
         }
-        
+
         proceso_exec = NULL;
     }
 }
