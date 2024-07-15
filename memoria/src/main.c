@@ -7,8 +7,8 @@
 
 int main(int argc, char* argv[]) {
 	
-	pthread_t hilo_distribuidor;
-	int resultado_hilo;
+	pthread_t hilo_recepcion;
+	int error;
     decir_hola("Memoria");
 
 	config = iniciar_config("default");
@@ -26,46 +26,47 @@ int main(int argc, char* argv[]) {
 	// handshake aqui
 	recibir_mensaje(socket_cpu); // el CPU se presenta
 
-	resultado_hilo = pthread_create(&hilo_distribuidor, NULL, hilo_recepcion, NULL);
-	if (resultado_hilo != 0) printf("Error al crear hilo recepcion");
+	error = pthread_create(&hilo_recepcion, NULL, rutina_recepcion, NULL);
+	if (error != 0) printf("Error al crear hilo recepcion");
 	
 	// implementar servidor para atender a cpu bucle hasta fin_programa = true; (asigna cuando cpu se desconecta)
 	atender_cpu(socket_cpu);
 
-	pthread_join(hilo_distribuidor, NULL); // el main va a bloquarse hasta q termine el hilo
-	// antes de destruir lista habria de liberar todos los procesos restantes
+	pthread_join(hilo_recepcion, NULL); // el main va a bloquearse hasta que termine el hilo
+	// antes de destruir la lista habria que liberar todos los procesos restantes
 	list_destroy(procesos_cargados);
 	pthread_mutex_destroy(&sem_lista_procesos);
 	liberar_memoria();
-	return EXIT_SUCCESS;
 
+	return EXIT_SUCCESS;
 }
 
-void* hilo_recepcion(void *nada)
+void* rutina_recepcion(void *nada)
 {
-	pthread_t hilo;
-	int resultado;
+	pthread_t hilo_ejecucion;
+	int error;
 	pthread_mutex_init(&sem_socket_global, NULL);
 	while (!fin_programa){
 		pthread_mutex_lock(&sem_socket_global);
 		socket_hilos = esperar_cliente(socket_escucha);
 		pthread_mutex_unlock(&sem_socket_global);
 
-		recibir_mensaje(socket_hilos); // cambiar x hanshake
+		recibir_mensaje(socket_hilos); // cambiar x handshake
 
-		resultado = pthread_create(&hilo, NULL, hilo_ejecutor, NULL);
-		if (resultado != 0)
-			printf("Error al crear el hilo");
+		error = pthread_create(&hilo_ejecucion, NULL, rutina_ejecucion, NULL);
+		if (error != 0)
+			printf("Error al crear el hilo_ejecucion");
 		else
-			pthread_detach(hilo);			
+			pthread_detach(hilo_ejecucion);			
 		
-		sleep(1); // para que hilo ejecutor tenga tiempo a tomar socket... en teoria el mutex deberia bastar
+		sleep(1); // para que hilo_ejecucion tenga tiempo a tomar socket... en teoria el mutex deberia bastar
 	}
 	pthread_mutex_destroy(&sem_socket_global);
-	pthread_exit(NULL);
+
+	return NULL; // cambié el pthread_exit() por un return, me pareció más seguro.
 }
 
-void* hilo_ejecutor(void *nada)
+void* rutina_ejecucion(void *nada)
 {
 	t_list *recibido;
 	int operacion;
@@ -183,10 +184,10 @@ void* hilo_ejecutor(void *nada)
 		eliminar_paquete(paquete);
 	break;
 	default:
-		printf("no reconosco el codigo operacion, hilo finaliza"); 
+		printf("no reconozco el codigo operacion. finalizando hilo_ejecucion..."); 
 	}
 
-	pthread_exit(NULL); // no importa que devuelva porque se hizo detach del hilo
+	return NULL; // no importa que devuelva porque se hizo detach del hilo. // cambié el pthread_exit() por un return, me pareció más seguro.
 }
 
 void atender_cpu(int socket)
