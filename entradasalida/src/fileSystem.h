@@ -2,12 +2,24 @@
 #define FILESYSTEM_H_
 
 #include <utils.h>
+#include <commons/bitarray.h>
 
-// variables bitmap y FS (variables q referencian archivos)
+/* variables bitmap y FS (variables q referencian archivos) usar "wb+" (lect+escr+bin+creacion [sobreescribe]) */
+typedef struct {
+    FILE *f_bloques; // ref a archivo principal
+    FILE *f_bitmap; // ref a archivo bitmap
+    uint tam_bloques; 
+    uint cant_bloques;
+    t_bitarray *bitmap; // estructura volatil 
+    t_list *lista_f_metadata; // lista de punteros a archivos de metadata (utiliza lib config)
+} t_file_system;
+
+extern *t_file_system fs;
+void *espacio_bitmap; // para funcionamiento interno bitmap
 
 /* Funcionamiento interno FS */
-// * iniciar_FS (crea archivos: bloques.dat (utiliza datos config) - bitmap.dat (e iniciar estructuras) 
-//       >> inicia t_list con variables para cada archivo de metadata)
+void iniciar_FS (int t_bloq, int c_bloq, int unidad_trabj, int ret_comp);
+
 // * crear_f (creara el file metadata, marcara un bloque libre del bitmap (pide busqueda)... capaz verifica si file ya existe?)
 // * eliminar_f (eliminara archivo metadata y marcara como libres los bloques en bitmap)
 // * truncar_f (modificara bitmap a pedido (y metadata), puede llamar a compactación de ser necesario)
@@ -15,6 +27,8 @@
 // * escribir_f (recibira un un stream y lo escribira en el archivo (verificar q no haya problemas de reserva??))
 // * compactar_FS (repasara todo el FS, juntando los espacios libres al final del archivo, modifica bitmap (y metadata de los archivos afectados... logea))
 // * calcular_bloques (funcion auxiliar para calculos de bloques) ??
+
+void finalizar_FS (void);
 
 /* Instrucciones de CPU (recibiran las operaciones y pediran operaciones de funcionamiento interno, manejara logs)*/
 // datos para log ==>> pid y "nombre"
