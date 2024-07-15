@@ -66,6 +66,7 @@ extern int socket_cpu_interrupt;
 
 extern t_log* logger; // Logger para todo (por ahora) del kernel
 // ==========================================================================
+// ==========================================================================
 
 // FUNCIONES PARA PCB/PROCESOS:
 t_pcb* crear_pcb();

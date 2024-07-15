@@ -14,12 +14,12 @@ int main(int argc, char* argv[]) {
 	config = iniciar_config("default");
 	iniciar_logger();
 
-	memoria = inicializar_memoria(config_get_int_value(config, "TAM_MEMORIA"),config_get_int_value(config, "TAM_PAGINA"));
+	memoria = inicializar_memoria(config_get_int_value(config, "TAM_MEMORIA"), config_get_int_value(config, "TAM_PAGINA"));
 
 	char* puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
     socket_escucha = iniciar_servidor(puerto);
 
-	pthread_mutex_init(&sem_lista_procesos, NULL);
+	pthread_mutex_init(&mutex_procesos_cargados, NULL);
 	procesos_cargados = list_create();
 
 	int socket_cpu = esperar_cliente(socket_escucha);
@@ -27,15 +27,18 @@ int main(int argc, char* argv[]) {
 	recibir_mensaje(socket_cpu); // el CPU se presenta
 
 	error = pthread_create(&hilo_recepcion, NULL, rutina_recepcion, NULL);
-	if (error != 0) printf("Error al crear hilo recepcion");
-	
+	if (error != 0) {
+		log_error(log_memoria, "Error al crear hilo_recepcion");
+	}
+
 	// implementar servidor para atender a cpu bucle hasta fin_programa = true; (asigna cuando cpu se desconecta)
 	atender_cpu(socket_cpu);
 
 	pthread_join(hilo_recepcion, NULL); // el main va a bloquearse hasta que termine el hilo
+
 	// antes de destruir la lista habria que liberar todos los procesos restantes
 	list_destroy(procesos_cargados);
-	pthread_mutex_destroy(&sem_lista_procesos);
+	pthread_mutex_destroy(&mutex_procesos_cargados);
 	liberar_memoria();
 
 	return EXIT_SUCCESS;
@@ -45,23 +48,25 @@ void* rutina_recepcion(void *nada)
 {
 	pthread_t hilo_ejecucion;
 	int error;
-	pthread_mutex_init(&sem_socket_global, NULL);
-	while (!fin_programa){
-		pthread_mutex_lock(&sem_socket_global);
-		socket_hilos = esperar_cliente(socket_escucha);
-		pthread_mutex_unlock(&sem_socket_global);
+	pthread_mutex_init(&mutex_socket_cliente_temp, NULL);
+	while (!fin_programa) {
+		pthread_mutex_lock(&mutex_socket_cliente_temp);
+		socket_cliente_temp = esperar_cliente(socket_escucha);
+		// el unlock lo hace el hilo_ejecucion
 
-		recibir_mensaje(socket_hilos); // cambiar x handshake
+		recibir_mensaje(socket_cliente_temp); // cambiar x handshake
 
 		error = pthread_create(&hilo_ejecucion, NULL, rutina_ejecucion, NULL);
-		if (error != 0)
-			printf("Error al crear el hilo_ejecucion");
-		else
+		if (error != 0) {
+			log_error(log_memoria, "Error al crear hilo_ejecucion");
+		}
+		else {
 			pthread_detach(hilo_ejecucion);			
-		
+		}
+
 		sleep(1); // para que hilo_ejecucion tenga tiempo a tomar socket... en teoria el mutex deberia bastar
 	}
-	pthread_mutex_destroy(&sem_socket_global);
+	pthread_mutex_destroy(&mutex_socket_cliente_temp);
 
 	return NULL; // cambié el pthread_exit() por un return, me pareció más seguro.
 }
@@ -75,30 +80,29 @@ void* rutina_ejecucion(void *nada)
 	resultado_operacion result;
 	t_buffer *data = NULL;
 
-	// toma cliente de var global protegida
-	pthread_mutex_lock(&sem_socket_global);
-	int cliente = socket_hilos;
-	pthread_mutex_unlock(&sem_socket_global);
+	// toma cliente de var global lockeada, y hace el unlock
+	int socket_cliente = socket_cliente_temp;
+	pthread_mutex_unlock(&mutex_socket_cliente_temp);
 
 	// no es bucles porque plantee que IOs y Kernel hagan conexiones descartables
-	operacion = recibir_codigo(cliente);
+	operacion = recibir_codigo(socket_cliente);
 	switch (operacion)
 	{
 	case INICIAR_PROCESO:
 		t_proceso *new_proceso = NULL;
-		recibido = recibir_paquete(cliente);
+		recibido = recibir_paquete(socket_cliente);
 		result = crear_proceso(recibido, new_proceso);
 
 		if (result == CORRECTA){
-			pthread_mutex_lock(&sem_lista_procesos);
+			pthread_mutex_lock(&mutex_procesos_cargados);
 			list_add(procesos_cargados, new_proceso);
-			pthread_mutex_unlock(&sem_lista_procesos);
+			pthread_mutex_unlock(&mutex_procesos_cargados);
 
 			paquete = crear_paquete(INICIAR_PROCESO);
-			enviar_paquete(paquete, cliente);
+			enviar_paquete(paquete, socket_cliente);
 		} else {
 			paquete = crear_paquete(MENSAJE_ERROR);
-			enviar_paquete(paquete, cliente);
+			enviar_paquete(paquete, socket_cliente);
 		} 
 
 		// se limpia lo recibido
@@ -110,24 +114,24 @@ void* rutina_ejecucion(void *nada)
 	break;
 	case FINALIZAR_PROCESO:
 		t_proceso *proceso_temp;
-		recibido = recibir_paquete(cliente);
+		recibido = recibir_paquete(socket_cliente);
 		aux = list_get(recibido, 0);
 		int ind_proceso = obtener_proceso(procesos_cargados,*(int *) aux);
 		
 		if (ind_proceso != -1 )
 		{
-			pthread_mutex_lock(&sem_lista_procesos);
+			pthread_mutex_lock(&mutex_procesos_cargados);
 			proceso_temp = list_remove(procesos_cargados, obtener_proceso(procesos_cargados,*(int *) aux) );
-			pthread_mutex_unlock(&sem_lista_procesos);
+			pthread_mutex_unlock(&mutex_procesos_cargados);
 
 			finalizar_proceso(proceso_temp);
 			
 			// avisa a kernel que completo la operacion 
 			paquete = crear_paquete(FINALIZAR_PROCESO);
-			enviar_paquete(paquete, cliente);
+			enviar_paquete(paquete, socket_cliente);
 		} else {
 			paquete = crear_paquete(MENSAJE_ERROR);
-			enviar_paquete(paquete, cliente);
+			enviar_paquete(paquete, socket_cliente);
 		}
 
 		// se limpia lo recibido
@@ -139,15 +143,15 @@ void* rutina_ejecucion(void *nada)
 	break;
 	case ACCESO_LECTURA:
 		
-		recibido = recibir_paquete(cliente);
+		recibido = recibir_paquete(socket_cliente);
 		result = acceso_espacio_usuario(data, recibido, LECTURA);
 		if (result == CORRECTA){
 			paquete = crear_paquete(ACCESO_LECTURA);
 			agregar_a_paquete(paquete, data->stream, data->size);
-			enviar_paquete(paquete, cliente);
+			enviar_paquete(paquete, socket_cliente);
 		} else {
 			paquete = crear_paquete(MENSAJE_ERROR);
-			enviar_paquete(paquete, cliente);
+			enviar_paquete(paquete, socket_cliente);
 		}
 
 		// se limpia lo recibido
@@ -161,17 +165,17 @@ void* rutina_ejecucion(void *nada)
 	break;
 	case ACCESO_ESCRITURA:
 		
-		recibido = recibir_paquete(cliente);
+		recibido = recibir_paquete(socket_cliente);
 		data->stream = list_remove(recibido, list_size(recibido)-1); // obtiene el string
 		data->size = strlen(data->stream);
 		result = acceso_espacio_usuario(data, recibido, ESCRITURA);
 
 		if (result == CORRECTA){
 			paquete = crear_paquete(ACCESO_ESCRITURA);
-			enviar_paquete(paquete, cliente);
+			enviar_paquete(paquete, socket_cliente);
 		} else {
 			paquete = crear_paquete(MENSAJE_ERROR);
-			enviar_paquete(paquete, cliente);
+			enviar_paquete(paquete, socket_cliente);
 		}
 
 		// se limpia lo recibido

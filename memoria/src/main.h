@@ -8,9 +8,6 @@
 
 #include "utils.h"
 
-pthread_mutex_t sem_socket_global;
-int socket_hilos; // para q los hilos puedan tomar su cliente, protegido x semaforo
-
 /// @brief recibe solo conexiones temporales (IO y KERNEL)
 /// @param nada // no deberia recibir nada, simplemente es * por pthread
 /// @return // no deberia retornar, solo utilizar pthread_exit()

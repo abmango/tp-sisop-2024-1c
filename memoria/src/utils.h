@@ -19,11 +19,24 @@
 #include <utils/general.h>
 //#define PUERTO "51689"
 
-extern t_config *config;
-extern t_log *log_memoria;
-extern pthread_mutex_t sem_memoria;
-extern pthread_mutex_t sem_lista_procesos;
+// ====  Variables globales:  ===============================================
+// ==========================================================================
+extern MemoriaPaginada *memoria;
+extern bool fin_programa;
+
 extern t_list *procesos_cargados; // almacena referencia a todos los procesos cargados
+
+extern pthread_mutex_t mutex_memoria;
+extern pthread_mutex_t mutex_procesos_cargados;
+extern pthread_mutex_t mutex_socket_cliente_temp;
+
+extern int socket_escucha; // socket servidor
+extern int socket_cliente_temp; // para que los hilos puedan tomar su cliente, protegido x semaforo
+
+extern t_config *config; // donde se levanta lo del archivo .config del módulo memoria
+extern t_log *log_memoria; // logger para todo lo del módulo memoria
+// ==========================================================================
+// ==========================================================================
 
 typedef enum {
     ERROR,

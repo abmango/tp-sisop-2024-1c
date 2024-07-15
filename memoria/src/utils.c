@@ -1,15 +1,26 @@
 #include "utils.h"
 
+// ====  Variables globales:  ===============================================
+// ==========================================================================
 void *espacio_bitmap_no_tocar = NULL;
 const int LONGITUD_LINEA_ARCHIVOS = 60;
+
+MemoriaPaginada *memoria;
+bool fin_programa;
+
+t_list *procesos_cargados;
+
+pthread_mutex_t mutex_memoria;
+pthread_mutex_t mutex_procesos_cargados;
+pthread_mutex_t mutex_socket_cliente_temp;
+
+int socket_escucha;
+int socket_cliente_temp;
+
 t_config *config;
 t_log *log_memoria;
-pthread_mutex_t sem_memoria;
-MemoriaPaginada *memoria;
-int socket_escucha; // socket servidor
-bool fin_programa;
-pthread_mutex_t sem_lista_procesos;
-t_list *procesos_cargados; // almacena referencia a todos los procesos cargados
+// ==========================================================================
+// ==========================================================================
 
 MemoriaPaginada* inicializar_memoria(int tamano_memoria, int tamano_pagina) {
     // Verificar que el tamaño de la memoria sea un múltiplo del tamaño de página
@@ -54,7 +65,7 @@ MemoriaPaginada* inicializar_memoria(int tamano_memoria, int tamano_pagina) {
     new_memoria->tamano_pagina = tamano_pagina;
     new_memoria->tamano_memoria = tamano_memoria;
     new_memoria->cantidad_marcos = tamano_memoria / tamano_pagina;
-    pthread_mutex_init(&sem_memoria, NULL);
+    pthread_mutex_init(&mutex_memoria, NULL);
 
     // Crear el bitarray de la memoria
     int aux_marcos = new_memoria->cantidad_marcos / 8;
@@ -182,9 +193,9 @@ resultado_operacion acceso_espacio_usuario(t_buffer *data, t_list *solicitudes, 
 
             log_info(log_memoria, "PID: <%i> - Accion: <LEER> - Direccion fisica: <%i> - Tamaño <%i>", pid, pedido->desplazamiento, pedido->cant_bytes);
 
-            pthread_mutex_lock(&sem_memoria);
+            pthread_mutex_lock(&mutex_memoria);
             agregar_a_buffer_mem(data, aux, pedido->cant_bytes);
-            pthread_mutex_unlock(&sem_memoria);
+            pthread_mutex_unlock(&mutex_memoria);
 
             retardo_operacion();
         }
@@ -202,9 +213,9 @@ resultado_operacion acceso_espacio_usuario(t_buffer *data, t_list *solicitudes, 
 
             log_info(log_memoria, "PID: <%i> - Accion: <ESCRIBIR> - Direccion fisica: <%i> - Tamaño <%i>", pid, pedido->desplazamiento, pedido->cant_bytes);
 
-            pthread_mutex_lock(&sem_memoria);
+            pthread_mutex_lock(&mutex_memoria);
             agregar_a_memoria(aux, stream, pedido->cant_bytes);
-            pthread_mutex_unlock(&sem_memoria);
+            pthread_mutex_unlock(&mutex_memoria);
 
             stream = stream + pedido->cant_bytes;
             retardo_operacion();
@@ -225,7 +236,7 @@ void liberar_memoria() {
     free(memoria->espacio_usuario);
     // free(memoria->tablas_paginas->paginas);
     // free(memoria->tablas_paginas);
-    pthread_mutex_destroy(&sem_memoria);
+    pthread_mutex_destroy(&mutex_memoria);
     bitarray_destroy(memoria->bitmap);
     free(espacio_bitmap_no_tocar); // puede general double free, pero no deberia
     free(memoria);
