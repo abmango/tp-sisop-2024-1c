@@ -47,8 +47,26 @@ typedef enum
 	PEDIDO_PAGINA,
 
 	// CPU-MEMORIA
-	AJUSTAR_PROCESO
-} op_code; //op code para: PAQUETES o COMUNICACIONES CON SOLO UN CODIGO. Requiere limpieza
+	AJUSTAR_PROCESO,
+
+	// PARA TODAS LAS CONEXIONES
+	HANDSHAKE
+} op_code; //op code para: PAQUETES o para COMUNICACIONES CON SOLO UN CODIGO. Requiere limpieza.
+
+typedef enum
+{
+	// Módulo cliente
+
+	KERNEL,
+	CPU,
+	MEMORIA,
+	INTERFAZ,
+
+	// Respuesta del Módulo servidor
+
+	HANDSHAKE_OK,
+	HANDSHAKE_INVALIDO
+} handshake_code; // cod para agregar a los paquetes de HANDSHAKE.
 
 typedef struct
 {
