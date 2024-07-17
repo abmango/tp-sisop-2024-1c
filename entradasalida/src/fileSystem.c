@@ -23,12 +23,9 @@ void iniciar_FS (int t_bloq, int c_bloq, int unidad_trabj, int ret_comp){
 
     // crear bitarray para bitmap
     aux = fs->cant_bloques / 8; // convertir bytes a bites
-    if (aux % 8 == 0){
-        espacio_bitmap = malloc(aux);
-    } else { // corregir para q bitmap no sea menor q cant_bloques
+    if (aux % 8 != 0)
         aux++;
-        espacio_bitmap = malloc(aux);
-    }
+    espacio_bitmap = malloc(aux);
     fs->bitmap = bitarray_create_with_mode(espacio_bitmap, aux, LSB_FIRST);
 
     // crear archivo f_bitmap
@@ -36,7 +33,7 @@ void iniciar_FS (int t_bloq, int c_bloq, int unidad_trabj, int ret_comp){
     if (!fs->f_bitmap)
     { // si no existe lo creamos
         fs->f_bitmap = fopen("bitmap.dat", "wb+");
-        fwrite(fs->bitmap->size, sizeof(size_t), 1, fs->f_bitmap); // almacena el tamaño bitmap (para si se abre archivo desp comprobar)
+        fwrite(bitarray_get_max_bit(fs->bitmap), sizeof(size_t), 1, fs->f_bitmap); // almacena el tamaño bitmap (para si se abre archivo desp comprobar)
         actualizar_f_bitmap();
     } 
     else 
@@ -47,7 +44,7 @@ void iniciar_FS (int t_bloq, int c_bloq, int unidad_trabj, int ret_comp){
         if (tam_bitmap_prev != aux){
             fclose(fs->f_bitmap);
             fs->f_bitmap = fopen("bitmap.dat", "wb+"); // lo sobreescribimos
-            fwrite(fs->bitmap->size, sizeof(size_t), 1, fs->f_bitmap); 
+            fwrite(bitarray_get_max_bit(fs->bitmap), sizeof(size_t), 1, fs->f_bitmap); 
             actualizar_f_bitmap();
         } else {
             fgets(fs->bitmap->bitarray, aux, fs->f_bitmap); // tomamos el bitmap almacenado
@@ -114,7 +111,7 @@ void eliminar_f (char *ruta_metadata){
         log_warning(log_io, "Error al borrar archivo");
 }
 
-bool truncar_f (char *ruta_metadata, int nuevo_size){ /* PENDIENTE (implementar mover_f y compactar_FS)*/
+bool truncar_f (char *ruta_metadata, int nuevo_size){
     uint bloque, cant_bloq;
     t_bloques_libres *libres;
 
@@ -127,14 +124,13 @@ bool truncar_f (char *ruta_metadata, int nuevo_size){ /* PENDIENTE (implementar 
     bloque = config_get_int_value(metadata, "BLOQUE");
     cant_bloq = config_get_int_value(metadata, "SIZE");
 
+    // obtengo cuantos bloques implica el nuevo size
+    nuevo_size = calcular_bloques(nuevo_size);
+
     if (nuevo_size < cant_bloq) 
     {
         config_set_value(metadata, "SIZE", nuevo_size);
-        config_save(metadata);
-        config_destroy(metadata);
         liberar_bloques(bloque + nuevo_size, cant_bloq-nuevo_size);
-        actualizar_f_bitmap();
-        return true;
     } 
     else if (nuevo_size > cant_bloq) 
     {
@@ -145,15 +141,14 @@ bool truncar_f (char *ruta_metadata, int nuevo_size){ /* PENDIENTE (implementar 
         }
         
         if (libres->bloque == -1){
-            /*
-                PEDIR COMPACTACIÓN
-            */
-            libres = bloques_libres(nuevo_size); // chequeo desp de compactación
+            // Pedimos compactar FS
+            compactar_FS();
+            libres = bloques_libres(nuevo_size); // bbtenemos bloq
         }
-        /*
-            MOVER DATOS DE POSICION INICIAL A NUEVO BLOQUE INICIAL Y LIBERAR BLOQUES Y ACTUALIZAR
-        */
+        // movemos archivo a nuevo bloque libre
+        mover_f(metadata, libres->bloque);
         config_set_value(metadata, "SIZE", nuevo_size);
+        reservar_bloques(libres->bloque, nuevo_size);
     }
     
     config_save(metadata);
@@ -236,6 +231,38 @@ void compactar_FS (void){
     actualizar_f_bitmap();
 }
 
+char * leer_f (char *ruta_metadata, int offset, int cant_bytes){
+    t_config *metadata;
+    char *data = NULL;
+    int aux;
+
+    // verificamos que este dentro del size del archivo
+    metadata = config_create(ruta_metadata);
+    if (!metadata || calcular_bloques(offset + cant_bytes) > config_get_int_value(metadata, "SIZE")){
+        log_warning(log_io, "Error al leer archivo, archivo inexistente ó leyendo fuera del archivo");
+        return data;
+    } 
+
+    data = malloc(calcular_bloques(cant_bytes));
+    aux = offset % fs->tam_bloques; // el resto es el offset dentro del bloque q quiere leer
+    fseek(fs->f_bloques, offset, SEEK_SET); // posiciono en archivo
+
+    // si offset apunta a bloque empezado lo consumo y obtengo bloques a leer restantes
+    if (aux != 0) {
+        fread(data, aux, 1, fs->f_bloques); // leo el bloque con offset
+        aux = calcular_bloques(cant_bytes) - 1; // cuento bloques restantes a leer
+    } else
+        aux = calcular_bloques(cant_bytes);
+    
+    // leo bloques restantes
+    fread(data, fs->tam_bloques, aux, fs->f_bloques); // aux es cant bloques a leer
+    return data;
+}
+
+bool escribir_f (char *ruta_metadata, int offset, int cant_bytes){ /* PENDIENTE */
+
+}
+
 void finalizar_FS (void){
     FILE *f_aux;
 
@@ -246,8 +273,15 @@ void finalizar_FS (void){
 }
 
 // Funciones Auxiliar
+int calcular_bloques (int cant_bytes){
+    int bloques = cant_bytes / fs->tam_bloques;
+    if (cant_bytes % fs->tam_bloques != 0) 
+        bloques++;
+    return bloques;
+}
 
-t_bloques_libres * bloques_libres (int cant_bloques){ /* CAMBIAR TODO PORQUE BLOQUES TOTALES DISP SE PUEDE OBTERNER FACIL */
+t_bloques_libres * bloques_libres (int cant_bloques){
+
     t_bloques_libres *libres = malloc(sizeof(t_bloques_libres));
     uint inicio = aux_bitmap;
     uint bloq_temp = 0;
@@ -291,10 +325,20 @@ t_bloques_libres * bloques_libres (int cant_bloques){ /* CAMBIAR TODO PORQUE BLO
     return libres; // se retorna primer bloque libre
 }
 
-void liberar_bloques (int bloque, int cant_bloq){
+void liberar_bloques (int bloq_ini, int cant_bloq){
+
     for (int i=0; i<cant_bloq; i++){
-        bitarray_clean_bit(fs->bitmap, bloque);
-        bloque++;
+        bitarray_clean_bit(fs->bitmap, bloq_ini);
+        bloq_ini++;
+    }
+    actualizar_f_bitmap()
+}
+
+void reservar_bloques (int bloq_ini, int cant_bloq){
+
+    for (int i=0; i<cant_bloq; i++){
+        bitarray_set_bit(fs->bitmap, bloq_ini);
+        bloq_ini++;
     }
     actualizar_f_bitmap()
 }
