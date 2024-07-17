@@ -11,24 +11,33 @@ typedef struct {
     uint tam_bloques; 
     uint cant_bloques;
     t_bitarray *bitmap; // estructura volatil 
-    t_list *lista_f_metadata; // lista de punteros a archivos de metadata (utiliza lib config)
 } t_file_system;
+
+typedef struct {
+    int bloque; // apuntara a un bloque libre [si vale -1 revisar los no_contiguos]
+    uint no_contiguos; // contara el total de bloques libres no contiguos encontrados en todo el FS
+} t_bloques_libres; 
 
 extern *t_file_system fs;
 void *espacio_bitmap; // para funcionamiento interno bitmap
 
-/* Funcionamiento interno FS */
+/* Funcionamiento interno FS */ // REVISAR TEMA CON CHAR* RECIBIDO (TEMA DIRECTORIOS)
 void iniciar_FS (int t_bloq, int c_bloq, int unidad_trabj, int ret_comp);
+bool crear_f (char *nombre);
+void eliminar_f (char *ruta_metadata);
+bool truncar_f (char *ruta_metadata, int nuevo_size); // PENDIENTE a que este mover_f
+void mover_f (t_config *metadata, int bloq_new); // PENDIENTE
+void compactar_FS (void); // PENDIENTE requiere mover_f
 
-// * crear_f (creara el file metadata, marcara un bloque libre del bitmap (pide busqueda)... capaz verifica si file ya existe?)
-// * eliminar_f (eliminara archivo metadata y marcara como libres los bloques en bitmap)
-// * truncar_f (modificara bitmap a pedido (y metadata), puede llamar a compactación de ser necesario)
 // * leer_f (leera del archivo y devolvera lo leido (posiblemente tenga q separar lecturas para el envio a memoria))
 // * escribir_f (recibira un un stream y lo escribira en el archivo (verificar q no haya problemas de reserva??))
 // * compactar_FS (repasara todo el FS, juntando los espacios libres al final del archivo, modifica bitmap (y metadata de los archivos afectados... logea))
 // * calcular_bloques (funcion auxiliar para calculos de bloques) ??
 
 void finalizar_FS (void);
+t_bloques_libres * bloques_libres (int cant_bloques);
+void liberar_bloques (int bloq_ini, int cant_bloq);
+void actualizar_f_bitmap (void);
 
 /* Instrucciones de CPU (recibiran las operaciones y pediran operaciones de funcionamiento interno, manejara logs)*/
 // datos para log ==>> pid y "nombre"
