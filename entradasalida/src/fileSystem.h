@@ -25,17 +25,16 @@ void *espacio_bitmap; // para funcionamiento interno bitmap
 void iniciar_FS (int t_bloq, int c_bloq, int unidad_trabj, int ret_comp);
 bool crear_f (char *nombre);
 void eliminar_f (char *ruta_metadata);
-bool truncar_f (char *ruta_metadata, int nuevo_size); // PENDIENTE a que este mover_f
-void mover_f (t_config *metadata, int bloq_new); // PENDIENTE
-void compactar_FS (void); // PENDIENTE requiere mover_f
+bool truncar_f (char *ruta_metadata, int nuevo_size); // PENDIENTE (implementar mover_f y compactar_FS)
+void mover_f (t_config *metadata, int bloq_new);
+void compactar_FS (void);
 
 // * leer_f (leera del archivo y devolvera lo leido (posiblemente tenga q separar lecturas para el envio a memoria))
 // * escribir_f (recibira un un stream y lo escribira en el archivo (verificar q no haya problemas de reserva??))
-// * compactar_FS (repasara todo el FS, juntando los espacios libres al final del archivo, modifica bitmap (y metadata de los archivos afectados... logea))
 // * calcular_bloques (funcion auxiliar para calculos de bloques) ??
 
 void finalizar_FS (void);
-t_bloques_libres * bloques_libres (int cant_bloques);
+t_bloques_libres * bloques_libres (int cant_bloques); /* CORREGIR Y UTILIZAR fs->cant_bloq - bitarray_get_max_bit */
 void liberar_bloques (int bloq_ini, int cant_bloq);
 void actualizar_f_bitmap (void);
 

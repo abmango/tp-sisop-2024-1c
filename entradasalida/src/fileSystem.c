@@ -114,7 +114,7 @@ void eliminar_f (char *ruta_metadata){
         log_warning(log_io, "Error al borrar archivo");
 }
 
-bool truncar_f (char *ruta_metadata, int nuevo_size){
+bool truncar_f (char *ruta_metadata, int nuevo_size){ /* PENDIENTE (implementar mover_f y compactar_FS)*/
     uint bloque, cant_bloq;
     t_bloques_libres *libres;
 
@@ -164,40 +164,76 @@ bool truncar_f (char *ruta_metadata, int nuevo_size){
 void mover_f (t_config *metadata, int bloq_new){
     int bloque = config_get_int_value(metadata, "BLOQUE");
     int cant_bloq = config_get_int_value(metadata, "SIZE");
-    char *data = malloc(fs->tam_bloques); // reserva 1 bloq
+    void *data = malloc(fs->tam_bloques); // reserva 1 bloq
     
     // bucle que lee 1 bloque y lo almacena (marca y desmarca bitmap)
-
+    // se podria hacer un solo fread/fwrite cambiando el 1 x la cant_bloques (creo)
     for (int i=0; i<cant_bloq; i++)
     {
-        /* 
-            lee bloque 
-        */
+        /* Se lee bloque */
         fseek(fs->f_bloques, fs->tam_bloques * bloque, SEEK_SET );
-        fread();
-
+        fread(data, fs->tam_bloques, 1, fs->f_bloques);
         bitarray_clean_bit(fs->bitmap,bloque);
 
-        /* 
-            escribe en bloq_new 
-        */
+        /* Se escribe en nuevo bloque*/
         fseek(fs->f_bloques, fs->tam_bloques * bloq_new, SEEK_SET );
-        fwrite();
-
+        fwrite(data,fs->tam_bloques, 1, fs->f_bloques);
         bitarray_set_bit(fs->bitmap,bloq_new);
+
         bloque++;
         bloq_new++;
     }
 
     // modifica t_config y lo guarda
     config_set_value(metadata, "BLOQUE", bloq_new);
+    config_save(metadata);
     free(data);
 }
 
 void compactar_FS (void){
-    /*
-        PENDIENTE
-    */
+    FILE *new;
+    void *data;
+    void *espacio_bitmap_temporal;
+    t_bitarray *new_bitmap;
+    uint aux;
+
+    new = fopen("temp", "wb+");
+    data = malloc(fs->tam_bloques);
+
+    aux = fs->cant_bloques / 8; // convertir bytes a bites
+    if (aux % 8 == 0){
+        espacio_bitmap_temporal = malloc(aux);
+    } else { // corregir para q bitmap no sea menor q cant_bloques
+        aux++;
+        espacio_bitmap_temporal = malloc(aux);
+    }
+    new_bitmap = bitarray_create_with_mode(espacio_bitmap_temporal, aux, LSB_FIRST);
+
+    fseek(fs->f_bloques, 0, SEEK_SET);
+
+    for (int i=0; i<fs->cant_bloq; i++){
+        if (bitarray_test_bit(fs->bitmap, i)){
+            fseek(fs->f_bloques, fs->tam_bloques * i, SEEK_SET);
+            fread(data, fs->tam_bloques, 1, fs->f_bloques);
+
+            fwrite(data, new, 1, fs->f_bloques);
+            bitarray_set_bit(new_bitmap, i);
+        }
+    }
+
+    // Intercambiando archivos
+    fclose(fs->f_bloques);
+    fclose(new);
+    remove("bloques.dat");
+    rename("temp","bloques.dat");
+    fs->f_bloques = fopen("bloques.dat", "rb+");
+
+    // Intercambiando bitmaps y referencias
+    bitarray_destroy(fs->bitmap);
+    free(espacio_bitmap);
+    fs->bitmap = new_bitmap;
+    espacio_bitmap = espacio_bitmap_temporal;
+    actualizar_f_bitmap();
 }
 
 void finalizar_FS (void){
@@ -211,7 +247,7 @@ void finalizar_FS (void){
 
 // Funciones Auxiliar
 
-t_bloques_libres * bloques_libres (int cant_bloques){
+t_bloques_libres * bloques_libres (int cant_bloques){ /* CAMBIAR TODO PORQUE BLOQUES TOTALES DISP SE PUEDE OBTERNER FACIL */
     t_bloques_libres *libres = malloc(sizeof(t_bloques_libres));
     uint inicio = aux_bitmap;
     uint bloq_temp = 0;
