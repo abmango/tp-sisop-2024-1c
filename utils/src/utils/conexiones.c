@@ -118,6 +118,44 @@ void liberar_conexion(int socket_cliente)
 /////////////////////////////////////////////////////
 /////////////////////////////////////////////////////
 
+void enviar_handshake(handshake_code handshake_codigo, int socket)
+{
+	t_paquete* paquete = crear_paquete(HANDSHAKE);
+	agregar_a_paquete(paquete, &handshake_codigo, sizeof(handshake_code));
+	enviar_paquete(paquete, socket);
+	eliminar_paquete(paquete);
+}
+
+handshake_code recibir_handshake(int socket)
+{
+	op_code codigo_op = recibir_codigo(socket);
+
+	if(codigo_op != HANDSHAKE) {
+		return -1; // error, op_code no esperado.
+	}
+
+	int size;
+	int desplazamiento = 0;
+	void* buffer;
+
+	buffer = recibir_buffer(&size, socket);
+
+	int tamanio_codigo_handshake;
+	memcpy(&tamanio_codigo_handshake, buffer + desplazamiento, sizeof(int));
+	desplazamiento += sizeof(int);
+	handshake_code handshake_codigo;
+	memcpy(&handshake_codigo, buffer + desplazamiento, tamanio_codigo_handshake);
+	desplazamiento += tamanio_codigo_handshake;
+
+	if(desplazamiento != size) {
+		free(buffer);
+		return -2; // error al recibir handshake. Tamanio de buffer no esperado.
+	}
+
+	free(buffer);
+	return handshake_codigo;
+}
+
 void* recibir_buffer(int* size, int socket)
 {
 	void* buffer;

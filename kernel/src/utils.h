@@ -68,6 +68,11 @@ extern t_log* logger; // Logger para todo (por ahora) del kernel
 // ==========================================================================
 // ==========================================================================
 
+void manejar_rta_handshake(handshake_code rta_handshake, const char* nombre_servidor);
+
+// verifica el handshake y crea la estructura t_io_blocked con los datos identificatorios que recibe de la IO.
+t_io_blocked* recibir_handshake_y_datos_de_nueva_io(int socket);
+
 // FUNCIONES PARA PCB/PROCESOS:
 t_pcb* crear_pcb();
 void destruir_pcb(t_pcb* pcb);
@@ -93,8 +98,6 @@ void* serializar_pcb(t_pcb* pcb, int bytes);
 void* serializar_lista_de_recursos_ocupados(t_list* lista_de_recursos_ocupados, int bytes);
 
 // FUNCIONES PARA IOs:
-// Crea la estructura t_io_blocked con los datos identificatorios que recibe de la IO.
-t_io_blocked* recibir_nueva_io(int socket);
 void destruir_io(t_io_blocked* io); // DESARROLLANDO
 t_io_blocked* encontrar_io(char* nombre);
 

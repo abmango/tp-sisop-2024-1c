@@ -13,12 +13,17 @@ int main(int argc, char* argv[]) {
 
     decir_hola("CPU");
 
-    t_config* config = iniciar_config("default");
+	t_config* config = iniciar_config("default");
+
+	pthread_mutex_init(&mutex_interrupt);
+
+	logger = log_create("cpu.log", "CPU", true, LOG_LEVEL_DEBUG);
 	
 	char* ip = config_get_string_value(config, "IP_MEMORIA");
 	char* puerto = config_get_string_value(config, "PUERTO_MEMORIA");
     socket_memoria = crear_conexion(ip, puerto);
-    enviar_mensaje("Hola Memoria, como va. Soy CPU.", socket_memoria);
+    enviar_handshake(CPU, socket_memoria);
+	manejar_rta_handshake(recibir_handshake(socket_memoria), "MEMORIA");
 
 	puerto = config_get_string_value(config, "PUERTO_ESCUCHA_DISPATCH");
 	int socket_escucha = iniciar_servidor(puerto);
@@ -27,7 +32,7 @@ int main(int argc, char* argv[]) {
 	int socket_kernel_interrupt = esperar_cliente(socket_escucha);
 	close(socket_escucha);
 	recibir_mensaje(socket_kernel_dispatch); // el Kernel se presenta
-	pthread_mutex_init(&sem_interrupt);
+
 	pthread_t interrupciones;
 	pthread_create(&interrupciones, NULL, (void*) interrupt, NULL); //hilo pendiente de escuchar las interrupciones
 	pthread_detach(interrupciones);	

@@ -21,7 +21,10 @@ extern t_log *log_io;
 
 //////////////////////////////////
 
-void identificarse(char* nombre, t_io_type_code tipo_interfaz_code, int conexion_kernel); // EN DESARROLLO
+void enviar_handshake_e_identificacion(char* nombre, t_io_type_code tipo_interfaz_code, int socket);
+
+void manejar_rta_handshake(handshake_code rta_handshake, const char* nombre_servidor);
+
 void iniciar_logger(void);
 
 /// @brief emite el log obligatorio (NO DIALFS)

@@ -89,6 +89,9 @@ void liberar_conexion(int socket_cliente);
 
 //////////////////////////////////////////////
 
+void enviar_handshake(handshake_code handshake_codigo, int socket);
+handshake_code recibir_handshake(int socket);
+
 void* recibir_buffer(int*, int);
 int recibir_codigo(int);
 void recibir_mensaje(int);

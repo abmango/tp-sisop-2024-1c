@@ -35,6 +35,52 @@ t_log* logger = NULL;
 // ==========================================================================
 // ==========================================================================
 
+void manejar_rta_handshake(handshake_code rta_handshake, const char* nombre_servidor) {
+
+	switch (rta_handshake) {
+		case HANDSHAKE_OK:
+		log_debug(logger, "Handshake aceptado. Conexion con %s establecida.", nombre_servidor);
+		break;
+		case HANDSHAKE_INVALIDO:
+		log_error(logger, "Handshake invalido. Conexion con %s no establecida.", nombre_servidor);
+		break;
+		case -1:
+		log_error(logger, "op_code no esperado. Conexion con %s no establecida.", nombre_servidor);
+		break;
+		case -2:
+		log_error(logger, "al recibir handshake hubo un tamanio de buffer no esperado. Conexion con %s no establecida.", nombre_servidor);
+		break;
+		default:
+		log_error(logger, "error desconocido. Conexion con %s no establecida.", nombre_servidor);
+		break;
+	}
+}
+
+t_io_blocked* recibir_handshake_y_datos_de_nueva_io(int socket) {
+
+	if(recibir_codigo(socket) != HANDSHAKE) {
+		log_error(logger, "op_code no esperado. se rechazo la conexion con la interfaz.");
+		return NULL;
+	}
+
+	t_list* datos_identificatorios_io = recibir_paquete(socket);
+
+	if (*(list_get(datos_identificatorios_io, 0)) != INTERFAZ) {
+		log_error(logger, "handshake invalido. se rechazo la conexion con la interfaz.");
+		return NULL;
+	}
+
+	t_io_blocked* io_blocked = malloc(sizeof(t_io_blocked));
+	io_blocked->nombre = string_duplicate(list_get(datos_identificatorios_io, 1));
+	io_blocked->tipo = *(list_get(datos_identificatorios_io, 2));
+	io_blocked->socket = socket;
+	io_blocked->cola_blocked = list_create();
+
+	list_destroy_and_destroy_elements(datos_identificatorios_io, (void*)free);
+
+	return io_blocked;
+}
+
 t_pcb* crear_pcb() {
 	t_pcb* pcb = malloc(sizeof(t_pcb));
 	pcb->pid = contador_pid;
@@ -269,27 +315,6 @@ void* serializar_lista_de_recursos_ocupados(t_list* lista_de_recursos_ocupados, 
 	}
 
 	return magic;
-}
-
-t_io_blocked* recibir_nueva_io(int socket) {
-
-	if(recibir_codigo(socket) != IO_IDENTIFICACION) {
-		log_error(logger, "Error: codigo incorrecto para identificacion de IO");
-		aviso_cierre_programa();
-		exit(3);
-	}
-
-	t_list* datos_identificatorios_io = recibir_paquete(socket);
-
-	t_io_blocked* io_blocked = malloc(sizeof(t_io_blocked));
-	io_blocked->nombre = string_duplicate(list_get(datos_identificatorios_io, 0));
-	io_blocked->tipo = *(list_get(datos_identificatorios_io, 1));
-	io_blocked->socket = socket;
-	io_blocked->cola_blocked = list_create();
-
-	list_destroy_and_destroy_elements(datos_identificatorios_io, (void*)free);
-
-	return io_blocked;
 }
 
 void destruir_io(t_io_blocked* io) {

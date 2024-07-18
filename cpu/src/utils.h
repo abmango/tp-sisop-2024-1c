@@ -18,11 +18,18 @@
 #include <utils/conexiones.h>
 #include <pthread.h>
 
+// ====  Variables globales:  ===============================================
+// ==========================================================================
 extern int socket_kernel_dispatch;
 extern int socket_memoria;
 extern int socket_kernel_interrupt;
 extern t_interrupt_code interrupcion;
-extern pthread_mutex_t sem_interrupt;
+
+extern pthread_mutex_t mutex_interrupt;
+
+extern t_log* logger; // Logger para todo (por ahora) del cpu
+// ==========================================================================
+// ==========================================================================
 
 typedef enum {
     SET,
@@ -94,6 +101,8 @@ void JNZ (uint32_t PC, uint32_t direccionInstruccion);
 
 
 ////////////////////////////////////
+
+void manejar_rta_handshake(handshake_code rta_handshake, const char* nombre_servidor);
 
 void desalojar(t_contexto_de_ejecucion ce, motivo_desalojo_code motiv, char** arg);
 t_contexto_de_ejecucion recibir_contexto_ejecucion(void);

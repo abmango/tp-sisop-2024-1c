@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
 	sem_init(&sem_procesos_ready, 0, 0);
 	sem_init(&sem_procesos_exit, 0, 0);
 
-	logger = log_create("log.log", "Kernel", TRUE, LOG_LEVEL_DEBUG);
+	logger = log_create("kernel.log", "Kernel", true, LOG_LEVEL_DEBUG);
 
     decir_hola("Kernel");
 
@@ -32,29 +32,35 @@ int main(int argc, char* argv[]) {
 	ip = config_get_string_value(config, "IP_MEMORIA");
 	puerto = config_get_string_value(config, "PUERTO_MEMORIA");
 	socket_memoria = crear_conexion(ip, puerto);
-	enviar_mensaje("Hola Memoria, como va. Soy KERNEL.", socket_memoria);
+    enviar_handshake(KERNEL, socket_memoria);
+	manejar_rta_handshake(recibir_handshake(socket_memoria), "MEMORIA");
 	
 	ip = config_get_string_value(config, "IP_CPU");
 	puerto = config_get_string_value(config, "PUERTO_CPU_DISPATCH");
     socket_cpu_dispatch = crear_conexion(ip, puerto);
-    enviar_mensaje("Hola CPU puerto Dispatch, como va. Soy KERNEL.", socket_cpu_dispatch);
+    enviar_handshake(KERNEL, socket_cpu_dispatch);
+	manejar_rta_handshake(recibir_handshake(socket_cpu_dispatch), "CPU DISPATCH");
 
 	puerto = config_get_string_value(config, "PUERTO_CPU_INTERRUPT");
 	socket_cpu_interrupt = crear_conexion(ip, puerto);
-	enviar_mensaje("Hola CPU puerto Interrupt, como va. Soy KERNEL.", socket_cpu_interrupt);
+    enviar_handshake(KERNEL, socket_cpu_interrupt);
+	manejar_rta_handshake(recibir_handshake(socket_cpu_interrupt), "CPU INTERRUPT");
 
 	puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
 	int socket_escucha = iniciar_servidor(puerto);
 
 	while(1) {
 		int socket_io = esperar_cliente(socket_escucha);
-		recibir_mensaje(socket_io); // el I/O se presenta
-		t_io_blocked* io = recibir_nueva_io(socket_io);
-		list_add(lista_io_blocked, io);
 
-		pthread_t* hilo_io = malloc(sizeof(pthread_t)); // acá no habría memory leak, pues al terminar el hilo detacheado, lo liberaría
-		pthread_create(hilo_io, NULL, rutina_atender_io, io);
-		pthread_detach(*hilo_io);
+		t_io_blocked* io = recibir_handshake_y_datos_de_nueva_io(socket_io);
+
+		if (io != NULL) {
+			list_add(lista_io_blocked, io);
+
+			pthread_t* hilo_io = malloc(sizeof(pthread_t)); // acá no habría memory leak, pues al terminar el hilo detacheado, lo liberaría
+			pthread_create(hilo_io, NULL, rutina_atender_io, io);
+			pthread_detach(*hilo_io);
+		}
 	}
 
 	return EXIT_SUCCESS;

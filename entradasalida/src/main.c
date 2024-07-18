@@ -78,11 +78,9 @@ void interfaz_generica(char* nombre, t_config* config, int conexion_kernel)
 	int pid;
 	op_code operacion;
 
-	// un saludo amistoso
-	enviar_mensaje("Hola Kernel, como va. Soy IO interfaz Generica.", conexion_kernel);
-
-	// se identifica ante kernel, dándole nombre y tipo de interfaz
-	identificarse(nombre, GENERICA, conexion_kernel);
+	// handshake y se identifica ante kernel, dándole nombre y tipo de interfaz
+	enviar_handshake_e_identificacion(nombre, GENERICA, conexion_kernel);
+	manejar_rta_handshake(recibir_handshake(conexion_kernel), "KERNEL");
 
 	// Bucle hasta que kernel notifique cierre
 	operacion = recibir_codigo(conexion_kernel);
@@ -140,7 +138,7 @@ void interfaz_stdin(char* nombre, t_config* config, int conexion_kernel)
 	// agregar_a_paquete(paquete, STDIN);
 	// enviar_paquete(paquete, conexion_kernel);
 	// eliminar_paquete(paquete);
-	identificarse(nombre, STDIN, conexion_kernel);
+	enviar_handshake_e_identificacion(nombre, STDIN, conexion_kernel);
 	
 	/* NO ES NECESARIO POR CAMBIO PROTOCOLO */ 
 	// operacion = recibir_codigo(conexion_kernel);
@@ -237,7 +235,7 @@ void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 	// paquete = crear_paquete(INTERFAZ_STDOUT);
 	// enviar_paquete(paquete, conexion_kernel);
 	// eliminar_paquete(paquete);
-	identificarse(nombre, STDOUT, conexion_kernel);
+	enviar_handshake_e_identificacion(nombre, STDOUT, conexion_kernel);
 	
 	// Kernel Asigna id a interfaz (para futuros intercambios)
 	// se espera un paquete q solo tiene el id 

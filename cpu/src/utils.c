@@ -1,5 +1,7 @@
 #include "utils.h"
 
+// ====  Variables globales:  ===============================================
+// ==========================================================================
 int socket_kernel_dispatch = 1;
 int socket_memoria = 1;
 int socket_kernel_interrupt = 1;
@@ -7,7 +9,31 @@ t_interrupt_code interrupcion = NADA;
 
 pthread_mutex_t mutex_interrupt;
 
-/////////////////////
+t_log* logger = NULL;
+// ==========================================================================
+// ==========================================================================
+
+void manejar_rta_handshake(handshake_code rta_handshake, const char* nombre_servidor) {
+
+	switch (rta_handshake) {
+		case HANDSHAKE_OK:
+		log_debug(logger, "Handshake aceptado. Conexion con %s establecida.", nombre_servidor);
+		break;
+		case HANDSHAKE_INVALIDO:
+		log_error(logger, "Handshake invalido. Conexion con %s no establecida.", nombre_servidor);
+		break;
+		case -1:
+		log_error(logger, "op_code no esperado. Conexion con %s no establecida.", nombre_servidor);
+		break;
+		case -2:
+		log_error(logger, "al recibir handshake hubo un tamanio de buffer no esperado. Conexion con %s no establecida.", nombre_servidor);
+		break;
+		default:
+		log_error(logger, "error desconocido. Conexion con %s no establecida.", nombre_servidor);
+		break;
+	}
+}
+
 //unifique pedir_io con desalojar para tener una funcion general
 void desalojar(t_contexto_de_ejecucion reg, motivo_desalojo_code opcode, char** arg)
 {
@@ -86,15 +112,15 @@ void* interrupt(void)
    {
       cod = recibir_codigo(socket_kernel_interrupt);
       if(cod == FINALIZAR){
-         pthread_mutex_lock(&sem_interrupt);
+         pthread_mutex_lock(&mutex_interrupt);
          interrupcion = cod;
-         pthread_mutex_unlock(&sem_interrupt); 
+         pthread_mutex_unlock(&mutex_interrupt); 
       }
       if(cod == DESALOJAR){
          if(interrupcion != FINALIZAR){
-            pthread_mutex_lock(&sem_interrupt);
+            pthread_mutex_lock(&mutex_interrupt);
             interrupcion = cod;
-            pthread_mutex_unlock(&sem_interrupt);
+            pthread_mutex_unlock(&mutex_interrupt);
          }
       }
    }
