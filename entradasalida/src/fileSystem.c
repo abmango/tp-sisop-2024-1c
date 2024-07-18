@@ -52,7 +52,7 @@ void iniciar_FS (int t_bloq, int c_bloq, int unidad_trabj, int ret_comp){
     }
 }
 
-bool crear_f (char *nombre){
+bool crear_f (char *ruta_metadata){
     FILE *aux;
     t_bloques_libres *libres;
 
@@ -61,12 +61,12 @@ bool crear_f (char *nombre){
         return false; // FS lleno, no se encontro espacio
 
     // los archivos de metadata se manejaran por libreria config.h (revisar tema de nombre despues)
-    t_config *metadata = config_create(nombre);
+    t_config *metadata = config_create(ruta_metadata);
     if (!metadata){
-        aux = fopen (nombre, "w"); // crea archivo de texto (revisar si path no debe modificarse antes)
+        aux = fopen (ruta_metadata, "w"); // crea archivo de texto (revisar si path no debe modificarse antes)
         fclose(aux);
 
-        metadata = config_create(nombre);
+        metadata = config_create(ruta_metadata);
         
         bitarray_set_bit(fs->bitmap, libres->bloque);
         config_set_value(metadata, "BLOQUE", libres->bloque);
@@ -193,6 +193,8 @@ void compactar_FS (void){
     uint aux;
 
     new = fopen("temp", "wb+");
+    aux = (fs->tam_bloques * fs->cant_bloques) - 1; // tamaño en bytes 0-->tam_tot-1 
+    ftruncate(new, aux);
     data = malloc(fs->tam_bloques);
 
     aux = fs->cant_bloques / 8; // convertir bytes a bites
@@ -231,23 +233,25 @@ void compactar_FS (void){
     actualizar_f_bitmap();
 }
 
-char * leer_f (char *ruta_metadata, int offset, int cant_bytes){
+char * leer_f (char *ruta_metadata, int offset, int cant_bytes){ /* NO CONSIDERE QUE PASA SI NO SE LEE EL ULTIMO BLOQUE COMPLETO */
     t_config *metadata;
     char *data = NULL;
     int aux;
 
     // verificamos que este dentro del size del archivo
     metadata = config_create(ruta_metadata);
-    if (!metadata || calcular_bloques(offset + cant_bytes) > config_get_int_value(metadata, "SIZE")){
+    if (!metadata || calcular_bloques(offset + cant_bytes) > config_get_int_value(metadata, "SIZE"))
+    { // Si no existe la metadata Ó los bloques a leer (deplazamiento dentro file + cant) sobrepasan el tamaño del file...
         log_warning(log_io, "Error al leer archivo, archivo inexistente ó leyendo fuera del archivo");
         return data;
     } 
 
+    int bloq_ini = config_get_int_value(metadata, "BLOQUE");
     data = malloc(calcular_bloques(cant_bytes));
-    aux = offset % fs->tam_bloques; // el resto es el offset dentro del bloque q quiere leer
-    fseek(fs->f_bloques, offset, SEEK_SET); // posiciono en archivo
+    fseek(fs->f_bloques, bloq_ini + offset, SEEK_SET); // posiciono en archivo
 
     // si offset apunta a bloque empezado lo consumo y obtengo bloques a leer restantes
+    aux = offset % fs->tam_bloques; // el resto es el offset dentro del bloque q quiere leer
     if (aux != 0) {
         fread(data, aux, 1, fs->f_bloques); // leo el bloque con offset
         aux = calcular_bloques(cant_bytes) - 1; // cuento bloques restantes a leer
@@ -256,15 +260,48 @@ char * leer_f (char *ruta_metadata, int offset, int cant_bytes){
     
     // leo bloques restantes
     fread(data, fs->tam_bloques, aux, fs->f_bloques); // aux es cant bloques a leer
+    config_destroy(metadata);
     return data;
 }
 
-bool escribir_f (char *ruta_metadata, int offset, int cant_bytes){ /* PENDIENTE */
+bool escribir_f (char *ruta_metadata, int offset, int cant_bytes, char *data){ /* PENDIENTE */
+    t_config *metadata;
+    int aux;
+    char *data_temp;
+    bool temp = false;
 
+    // verificamos que este dentro del size del archivo
+    metadata = config_create(ruta_metadata);
+    if (!metadata || calcular_bloques(offset + cant_bytes) > config_get_int_value(metadata, "SIZE"))
+    { // Si no existe la metadata Ó los bloques a leer (deplazamiento dentro file + cant) sobrepasan el tamaño del file...
+        log_warning(log_io, "Error al leer archivo, archivo inexistente ó leyendo fuera del archivo");
+        return false;
+    }
+
+    int bloq_ini = config_get_int_value(metadata, "BLOQUE");
+    fseek(fs->f_bloques, bloq_ini + offset, SEEK_SET);
+
+    aux = offset % fs->tam_bloques; // el resto es el offset dentro del bloque q quiere leer
+    if (aux != 0) {
+        fwrite(data, aux, 1, fs->f_bloques); // leo el bloque con offset
+        data_temp = string_substring_from(data, aux); // me quedo con los caracteres (string_substr... devuelve mem din)
+        aux = calcular_bloques(cant_bytes) - 1; // cuento bloques restantes a leer
+        temp = true;
+    } else{
+        aux = calcular_bloques(cant_bytes);
+        data_temp = data;
+    }
+
+    // escribo bloques /* REVISAR SI IMPLEMENTACION ES CORRECTA */
+    fwrite(data_temp, fs->tam_bloques, aux, fs->f_bloques); // imprime aux bloques contiguos tomados de data_temp
+
+    if (temp) // si data_temp recibio espacio hay q liberarlo
+        free(data_temp);
+    config_destroy(metadata);
+    return true;
 }
 
 void finalizar_FS (void){
-    FILE *f_aux;
 
     fclose(fs->f_bloques);
     fclose(fs->f_bitmap);
