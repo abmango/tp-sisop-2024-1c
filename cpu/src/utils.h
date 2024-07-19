@@ -121,4 +121,20 @@ void* interrupt(void);
 
 execute_op_code decode(char* instruc);
 
+// ACÁ VA TODO LO DE LA TLB
+typedef struct {
+    unsigned int virtual_page;   // Número de página virtual
+    unsigned int physical_page;  // Número de página física
+    int valid;                   // Indicador de validez de la entrada (0: no válida, 1: válida)
+} tlb_entry;
+
+tlb_entry *tlb; // TLB como un arreglo de entradas
+
+int tlb_size = 16;  // Tamaño predeterminado de la TLB
+
+void init_tlb(int size);
+int tlb_lookup(unsigned int virtual_page, unsigned int *physical_page);
+void tlb_update(unsigned int virtual_page, unsigned int physical_page);
+void tlb_flush();
+
 #endif /* UTILS_H_ */
