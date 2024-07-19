@@ -34,7 +34,8 @@ extern int socket_escucha; // socket servidor
 extern int socket_cliente_temp; // para que los hilos puedan tomar su cliente, protegido x semaforo
 
 extern t_config *config; // donde se levanta lo del archivo .config del módulo memoria
-extern t_log *log_memoria; // logger para todo lo del módulo memoria
+extern t_log *log_memoria_oblig; // logger para los logs obligatorios
+extern t_log *log_memoria_gral; // logger para los logs nuestros. Loguear con criterio de niveles.
 // ==========================================================================
 // ==========================================================================
 
@@ -93,6 +94,12 @@ typedef struct {
     int cant_bytes;
     int desplazamiento;
 } t_solicitud;
+
+/// @brief Recibe handshake y lo responde. En caso de no aceptarlo cierra la conexion
+/// @param socket : el socket de la conexion
+/// @param nombre_modulo  : variable pasada por referencia donde se guarda el nombre de la conexion recibida, o NULL en caso de error en handshake
+/// @return               : retorna true en caso de handshake exitoso, false en caso contrario
+bool recibir_y_manejar_handshake_conexiones_temp(int socket, char** nombre_modulo);
 
 /// @brief Inicia el espacio memoria, bitmap y el mutex
 /// @param tamano_memoria : recibido de config

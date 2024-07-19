@@ -7,6 +7,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <semaphore.h>
+#include <commons/log.h>
 #include <commons/string.h>
 #include <commons/config.h>
 #include <commons/collections/list.h>
@@ -158,6 +159,6 @@ int tamanio_de_lista_de_recursos_ocupados(t_list* lista_de_recursos_ocupados);
 
 void* serializar_contexto_de_ejecucion(t_contexto_de_ejecucion contexto_de_ejecucion, int bytes);
 
-void avisar_y_cerrar_programa_por_error(void);
+void avisar_y_cerrar_programa_por_error(t_log* log);
 
 #endif

@@ -23,7 +23,9 @@ extern t_log *log_io;
 
 void enviar_handshake_e_identificacion(char* nombre, t_io_type_code tipo_interfaz_code, int socket);
 
-void manejar_rta_handshake(handshake_code rta_handshake, const char* nombre_servidor);
+void enviar_handshake_a_memoria(char* nombre, int socket);
+
+bool manejar_rta_handshake(handshake_code rta_handshake, const char* nombre_servidor);
 
 void iniciar_logger(void);
 

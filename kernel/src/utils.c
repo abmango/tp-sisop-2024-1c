@@ -35,6 +35,21 @@ t_log* logger = NULL;
 // ==========================================================================
 // ==========================================================================
 
+void enviar_handshake_a_memoria(int socket) {
+	t_paquete* paquete = crear_paquete(HANDSHAKE);
+
+    handshake_code handshake_codigo = KERNEL;
+	agregar_a_paquete(paquete, &handshake_codigo, sizeof(handshake_code));
+	char* nombre = string_from_format("Kernel"); // un asquito, ignorenlo pls
+    int tamanio_nombre = strlen(nombre) + 1;
+    agregar_a_paquete(paquete, nombre, tamanio_nombre);
+
+	enviar_paquete(paquete, socket);
+
+	free(nombre);
+	eliminar_paquete(paquete);
+}
+
 void manejar_rta_handshake(handshake_code rta_handshake, const char* nombre_servidor) {
 
 	switch (rta_handshake) {
@@ -56,19 +71,22 @@ void manejar_rta_handshake(handshake_code rta_handshake, const char* nombre_serv
 	}
 }
 
-t_io_blocked* recibir_handshake_y_datos_de_nueva_io(int socket) {
+t_io_blocked* recibir_handshake_y_datos_de_nueva_io_y_responder(int socket) {
 
 	if(recibir_codigo(socket) != HANDSHAKE) {
-		log_error(logger, "op_code no esperado. se rechazo la conexion con la interfaz.");
+		log_warning(logger, "op_code no esperado. se rechazo la conexion con la interfaz.");
 		return NULL;
 	}
 
 	t_list* datos_identificatorios_io = recibir_paquete(socket);
 
 	if (*(list_get(datos_identificatorios_io, 0)) != INTERFAZ) {
-		log_error(logger, "handshake invalido. se rechazo la conexion con la interfaz.");
+		log_warning(logger, "handshake invalido. se rechazo la conexion con la interfaz.");
+		enviar_handshake(HANDSHAKE_INVALIDO, socket);
 		return NULL;
 	}
+
+	enviar_handshake(HANDSHAKE_OK, socket);
 
 	t_io_blocked* io_blocked = malloc(sizeof(t_io_blocked));
 	io_blocked->nombre = string_duplicate(list_get(datos_identificatorios_io, 1));

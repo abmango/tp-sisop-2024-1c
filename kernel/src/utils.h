@@ -50,28 +50,34 @@ extern t_list* cola_exit; // Estado EXIT. Es una lista de t_pcb*
 
 extern t_list* recursos_del_sistema; // Recursos, con sus instancias disponibles actualmente. Es una lista de t_recurso*
 
-extern pthread_mutex_t mutex_colas;
-extern pthread_mutex_t mutex_cola_new;
-extern pthread_mutex_t mutex_cola_ready;
-extern pthread_mutex_t mutex_cola_ready_plus;
-extern pthread_mutex_t mutex_proceso_exec;
-extern pthread_mutex_t mutex_cola_exit;
-
-extern sem_t sem_procesos_ready; // Cantidad de procesos en estado READY. incluye procesos tanto en cola_ready como en cola_ready_plus
-extern sem_t sem_procesos_exit; // Cantidad de procesos en estado EXIT
-
 extern int socket_memoria;
 extern int socket_cpu_dispatch;
 extern int socket_cpu_interrupt;
 
 extern t_log* logger; // Logger para todo (por ahora) del kernel
+
+// ====  Semáforos globales:  ===============================================
+// -- -- -- -- -- -- -- --
+// --IMPORTANTE-- al hacer lock o wait de estos semáforos donde haga falta, hacerlo en este orden, para minimizar riesgo de deadlocks.
+// -- -- -- -- -- -- -- --
+// ==========================================================================
+extern pthread_mutex_t mutex_cola_new; 
+extern pthread_mutex_t mutex_cola_ready;
+extern pthread_mutex_t mutex_cola_ready_plus;
+extern pthread_mutex_t mutex_proceso_exec;
+extern pthread_mutex_t mutex_cola_exit;
+extern sem_t sem_procesos_ready; // Cantidad de procesos en estado READY. incluye procesos tanto en cola_ready como en cola_ready_plus
+extern sem_t sem_procesos_exit; // Cantidad de procesos en estado EXIT
+// extern pthread_mutex_t mutex_colas;
 // ==========================================================================
 // ==========================================================================
+
+void enviar_handshake_a_memoria(int socket);
 
 void manejar_rta_handshake(handshake_code rta_handshake, const char* nombre_servidor);
 
-// verifica el handshake y crea la estructura t_io_blocked con los datos identificatorios que recibe de la IO.
-t_io_blocked* recibir_handshake_y_datos_de_nueva_io(int socket);
+// verifica el handshake, y lo responde. Además crea la estructura t_io_blocked con los datos identificatorios que recibe de la IO.
+t_io_blocked* recibir_handshake_y_datos_de_nueva_io_y_responder(int socket);
 
 // FUNCIONES PARA PCB/PROCESOS:
 t_pcb* crear_pcb();

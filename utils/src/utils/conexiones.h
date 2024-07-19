@@ -84,8 +84,9 @@ typedef struct
 
 int crear_conexion(char* ip, char* puerto);
 int iniciar_servidor(char* puerto);
+// recordatorio de que tengo que modificar estas funciones, para mejorar los logs.
 int esperar_cliente(int);
-void liberar_conexion(int socket_cliente);
+void liberar_conexion(t_log* log, char* nombre_conexion, int socket);
 
 //////////////////////////////////////////////
 

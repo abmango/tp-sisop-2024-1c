@@ -53,8 +53,8 @@ void* rutina_recepcion(void *nada)
 		pthread_mutex_lock(&mutex_socket_cliente_temp);
 		socket_cliente_temp = esperar_cliente(socket_escucha);
 		// el unlock lo hace el hilo_ejecucion
-
-		recibir_mensaje(socket_cliente_temp); // cambiar x handshake
+		
+		// el handshake lo hice en rutina_ejecucion() por necesidades de implementación
 
 		error = pthread_create(&hilo_ejecucion, NULL, rutina_ejecucion, NULL);
 		if (error != 0) {
@@ -64,7 +64,7 @@ void* rutina_recepcion(void *nada)
 			pthread_detach(hilo_ejecucion);			
 		}
 
-		sleep(1); // para que hilo_ejecucion tenga tiempo a tomar socket... en teoria el mutex deberia bastar
+		// sleep(1); // para que hilo_ejecucion tenga tiempo a tomar socket... en teoria el mutex deberia bastar
 	}
 	pthread_mutex_destroy(&mutex_socket_cliente_temp);
 
@@ -79,10 +79,17 @@ void* rutina_ejecucion(void *nada)
 	void *aux;
 	resultado_operacion result;
 	t_buffer *data = NULL;
+	char* nombre; // agrego esto para poder loguear más claramente.
 
 	// toma cliente de var global lockeada, y hace el unlock
 	int socket_cliente = socket_cliente_temp;
 	pthread_mutex_unlock(&mutex_socket_cliente_temp);
+
+	// En caso de handshake fallido, termina la rutina_ejecucion().
+	bool handshake_aceptado = recibir_y_manejar_handshake_conexiones_temp(socket_cliente, &nombre);
+	if (!handshake_aceptado) {
+		return NULL;
+	}
 
 	// no es bucles porque plantee que IOs y Kernel hagan conexiones descartables
 	operacion = recibir_codigo(socket_cliente);
@@ -188,8 +195,11 @@ void* rutina_ejecucion(void *nada)
 		eliminar_paquete(paquete);
 	break;
 	default:
-		printf("no reconozco el codigo operacion. finalizando hilo_ejecucion..."); 
+		log_warning(log_memoria_gral, "no se reconoce el cod_op recibido de %s. finalizando rutina_ejecucion...", nombre);
 	}
+
+	liberar_conexion(log_memoria_gral, nombre, socket_cliente);
+	free(nombre);
 
 	return NULL; // no importa que devuelva porque se hizo detach del hilo. // cambié el pthread_exit() por un return, me pareció más seguro.
 }

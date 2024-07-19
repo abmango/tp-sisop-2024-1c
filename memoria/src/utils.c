@@ -18,9 +18,42 @@ int socket_escucha;
 int socket_cliente_temp;
 
 t_config *config;
-t_log *log_memoria;
+t_log *log_memoria_oblig;
+t_log *log_memoria_gral;
 // ==========================================================================
 // ==========================================================================
+
+bool recibir_y_manejar_handshake_conexiones_temp(int socket, char** nombre_modulo) {
+    bool exito_handshake = false;
+    *nombre_modulo = NULL;
+
+	if(recibir_codigo(socket) != HANDSHAKE) {
+		log_warning(log_memoria_gral, "op_code no esperado. Se esperaba un handshake.");
+        liberar_conexion(log_memoria_gral, "DESCONOCIDO", socket);
+		return exito_handshake;
+	}
+
+	t_list* datos_handshake = recibir_paquete(socket);
+
+    handshake_code handshake_codigo = *(list_get(datos_handshake, 0));
+    switch (handshake_codigo) {
+        case KERNEL:
+        case INTERFAZ:
+        exito_handshake = true;
+        *nombre_modulo = string_duplicate(list_get(datos_handshake, 1));
+        enviar_handshake(HANDSHAKE_OK, socket);
+        log_debug(log_memoria_gral, "Handshake con %s aceptado.", *nombre_modulo);
+        break;
+        default:
+        enviar_handshake(HANDSHAKE_INVALIDO, socket);
+        log_warning(log_memoria_gral, "Handshake invalido.");
+        liberar_conexion(log_memoria_gral, "DESCONOCIDO", socket);
+        break;
+    }
+
+    list_destroy_and_destroy_elements(datos_handshake, (void*)free);
+    return exito_handshake;
+}
 
 MemoriaPaginada* inicializar_memoria(int tamano_memoria, int tamano_pagina) {
     // Verificar que el tamaño de la memoria sea un múltiplo del tamaño de página

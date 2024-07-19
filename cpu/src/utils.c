@@ -258,6 +258,7 @@ int leer_memoria(int dir_logica, int tamanio)
    recibir_codigo(socket_memoria);
    aux = recibir_paquete(socket_memoria);
    
+   // falta recibir el ok o la falla
    
 }
 
@@ -277,7 +278,7 @@ void check_interrupt(t_contexto_de_ejecucion reg)
 
 t_list* mmu(int dir_logica, int tamanio)
 {
-   int num_pag = floor(dir_logica/tamanio_pagina);
+   int num_pag = floor(dir_logica/tamanio_pagina); // falta desarrollar floor()
    int desplazamiento = dir_logica - num_pag*tamanio_pagina;
 
    t_paquete* paq = crear_paquete(PEDIDO_PAGINA);
@@ -343,6 +344,8 @@ void enviar_memoria(int dir_logica, int tamanio, int valor) //hay q adaptar valo
    eliminar_paquete(paq);
    recibir_codigo(socket_memoria);
    aux = recibir_paquete(socket_memoria);
+
+   // falta recibir el ok o la falla
    
 }
 
@@ -352,6 +355,8 @@ void resize(int tamanio){
    agregar_a_paquete(paq, &tamanio, sizeof(int));
    enviar_paquete(paq,socket_memoria);
    eliminar_paquete(paq);
+
+   // falta recibir el ok o la falla
 }
 
 // INSTRUCCIONES A INTERPRETAR

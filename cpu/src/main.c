@@ -57,11 +57,13 @@ int main(int argc, char* argv[]) {
 				a = dictionary_get(diccionario, arg[1]);
 				b = dictionary_get(diccionario, arg[2]);
 				a* = leer_memoria(*b, sizeof(*a));
+				//
 			break;
 			case MOV_OUT:
 				a = dictionary_get(diccionario, arg[1]);
 				b = dictionary_get(diccionario, arg[2]);
 				enviar_memoria(*a, sizeof(*b), *b);
+				//
 			break;
 			case SUM:
 				a = dictionary_get(diccionario, arg[1]);
@@ -82,10 +84,12 @@ int main(int argc, char* argv[]) {
 			break;
 			case RESIZE:
 				resize(atoi(arg[1]));
+				//
 			break;
 			case COPY_STRING:
 				char* aux = leer_memoria(reg.reg_cpu_uso_general.SI, arg[1]);
 				enviar_memoria(reg.reg_cpu_uso_general.DI, arg[1], aux);
+				//
 			break;
 			case WAIT:
 			break;

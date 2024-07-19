@@ -18,29 +18,43 @@ void enviar_handshake_e_identificacion(char* nombre, t_io_type_code tipo_interfa
 	eliminar_paquete(paquete);
 }
 
-void manejar_rta_handshake(handshake_code rta_handshake, const char* nombre_servidor) {
+void enviar_handshake_a_memoria(char* nombre, int socket) {
+	t_paquete* paquete = crear_paquete(HANDSHAKE);
+
+    handshake_code handshake_codigo = INTERFAZ;
+	agregar_a_paquete(paquete, &handshake_codigo, sizeof(handshake_code));
+    int tamanio_nombre = strlen(nombre) + 1;
+    agregar_a_paquete(paquete, nombre, tamanio_nombre);
+
+	enviar_paquete(paquete, socket);
+
+	free(nombre);
+	eliminar_paquete(paquete);
+}
+
+bool manejar_rta_handshake(handshake_code rta_handshake, const char* nombre_servidor) {
+    bool exito_handshake = false;
 
 	switch (rta_handshake) {
 		case HANDSHAKE_OK:
 		log_debug(log_io, "Handshake aceptado. Conexion con %s establecida.", nombre_servidor);
+        exito_handshake = true;
 		break;
 		case HANDSHAKE_INVALIDO:
 		log_error(log_io, "Handshake invalido. Conexion con %s no establecida.", nombre_servidor);
-        avisar_y_cerrar_programa_por_error();
 		break;
 		case -1:
 		log_error(log_io, "op_code no esperado. Conexion con %s no establecida.", nombre_servidor);
-        avisar_y_cerrar_programa_por_error();
 		break;
 		case -2:
 		log_error(log_io, "al recibir handshake hubo un tamanio de buffer no esperado. Conexion con %s no establecida.", nombre_servidor);
-        avisar_y_cerrar_programa_por_error();
 		break;
 		default:
 		log_error(log_io, "error desconocido. Conexion con %s no establecida.", nombre_servidor);
-        avisar_y_cerrar_programa_por_error();
 		break;
 	}
+
+    return exito_handshake;
 }
 
 void iniciar_logger()

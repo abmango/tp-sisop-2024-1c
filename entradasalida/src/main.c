@@ -41,11 +41,13 @@ int main(int argc, char* argv[]) {
 
 	ip = config_get_string_value(config, "IP_KERNEL");
 	puerto = config_get_string_value(config, "PUERTO_KERNEL");
-	interfaz = config_get_string_value(config, "TIPO_INTERFAZ");
-
     conexion_kernel = crear_conexion(ip, puerto);
 
-	// averiguar si son los nombres q se van a recibir
+	interfaz = config_get_string_value(config, "TIPO_INTERFAZ");
+
+	// el handshake con el kernel capaz lo pongo aca mejor.
+	//--
+
 	if (strcmp(interfaz, "GENERICA") == 0) {
         interfaz_generica(nombre, config, conexion_kernel);
     }
@@ -59,7 +61,7 @@ int main(int argc, char* argv[]) {
         interfaz_dialFS(nombre, config, conexion_kernel);
     }
 	else printf("Interfaz desconocida");
-
+	
 
     terminar_programa(conexion_kernel, config);
 
@@ -126,12 +128,6 @@ void interfaz_stdin(char* nombre, t_config* config, int conexion_kernel)
 	char *data;
 	int bytes_totales_a_enviar, pid;
 
-	enviar_mensaje("Hola Kernel, como va. Soy IO interfaz STDIN.", conexion_kernel);
-
-	// inicia conexion Memoria
-	ip = config_get_string_value(config, "IP_MEMORIA");
-	puerto = config_get_string_value(config, "PUERTO_MEMORIA");
-
 	// se presenta a kernel
 	// paquete = crear_paquete(IO_IDENTIFICACION);
 	// agregar_a_paquete(paquete, nombre, strlen(nombre) + 1);
@@ -177,7 +173,7 @@ void interfaz_stdin(char* nombre, t_config* config, int conexion_kernel)
 			continue; // vuelve a inicio while
 		}
 
-		// como dir y size son int los carga directamente al  paquete
+		// como dir y size son int los carga directamente al paquete
 		agregar_dir_y_size_a_paquete(paquete, recibido, &bytes_totales_a_enviar);
 		list_clean(recibido); // 
 	
@@ -187,28 +183,44 @@ void interfaz_stdin(char* nombre, t_config* config, int conexion_kernel)
 		agregar_a_paquete(paquete, data, bytes_totales_a_enviar);
 		free(data); //libera leido
 
+		// carga datos para conexion Memoria
+		ip = config_get_string_value(config, "IP_MEMORIA");
+		puerto = config_get_string_value(config, "PUERTO_MEMORIA");
 		// Inicia Conexion temporal para mandar resultado
 		conexion_memoria = crear_conexion(ip, puerto);
 
-		enviar_mensaje("Hola Memoria, como va. Soy IO interfaz STDIN.", conexion_memoria);
-		
-		// envia el paquete q fue cargando
-		enviar_paquete(paquete,conexion_memoria);	
-		eliminar_paquete(paquete);	
+		enviar_handshake_a_memoria(nombre, conexion_memoria);
+		bool handshake_aceptado = manejar_rta_handshake(recibir_handshake(conexion_memoria), "Memoria");
 
-		operacion = recibir_codigo(conexion_memoria);
-		if(operacion == ACCESO_ESCRITURA){
-			logguear_operacion(pid, STDIN);
-			paquete = crear_paquete(IO_OPERACION);
-		}else{
-			printf("ERROR EN MEMORIA");
-			paquete = crear_paquete(MENSAJE_ERROR);
+		// En caso de handshake con Memoria fallido, libera la conexion, e informa del error a Kernel.
+		if(!handshake_aceptado) {
+			liberar_conexion(log_io, "Memoria", conexion_memoria);
+			eliminar_paquete(paquete);
+			crear_paquete(MENSAJE_ERROR);
+			enviar_paquete(paquete, conexion_kernel);
+			eliminar_paquete(paquete);
 		}
-		liberar_conexion(conexion_memoria); // cierra conexion
+		// En caso de handshake con Memoria exitoso sigue la ejecución normal.
+		else {
+			// envia el paquete q fue cargando
+			enviar_paquete(paquete, conexion_memoria);	
+			eliminar_paquete(paquete);	
 
-		// avisa a kernel que termino 
-		enviar_paquete(paquete, conexion_kernel);
-		eliminar_paquete(paquete);
+			operacion = recibir_codigo(conexion_memoria);
+			if(operacion == ACCESO_ESCRITURA){
+				logguear_operacion(pid, STDIN);
+				paquete = crear_paquete(IO_OPERACION);
+			}else{
+				printf("ERROR EN MEMORIA");
+				paquete = crear_paquete(MENSAJE_ERROR);
+			}
+
+			liberar_conexion(log_io, "Memoria", conexion_memoria); // cierra conexion
+
+			// avisa a kernel que termino 
+			enviar_paquete(paquete, conexion_kernel);
+			eliminar_paquete(paquete);
+		}
 
 		// espera nuevo paquete
 		operacion = recibir_codigo(conexion_kernel);
@@ -225,11 +237,6 @@ void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 	t_list *recibido;
 	char *data;
 	int bytes_totales_a_enviar, pid;
-	enviar_mensaje("Hola Kernel, como va. Soy IO interfaz STDOUT.", conexion_kernel);
-
-	// carga datos para conexion Memoria
-	ip = config_get_string_value(config, "IP_MEMORIA");
-	puerto = config_get_string_value(config, "PUERTO_MEMORIA");
 
 	// se presenta a kernel
 	// paquete = crear_paquete(INTERFAZ_STDOUT);
@@ -257,7 +264,7 @@ void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 		agregar_a_paquete(paquete, pid, sizeof(int));
 		free(data);
 
-		// revision si lo q resta en paquetes es par, sino error
+		// revision si lo que resta en paquetes es par, sino error
 		if ( (list_size(recibido)% 2) != 0 ){
 			eliminar_paquete(paquete);
 			paquete = crear_paquete(MENSAJE_ERROR);
@@ -279,37 +286,52 @@ void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 		agregar_dir_y_size_a_paquete(paquete, recibido, &bytes_totales_a_enviar);
 		list_clean(recibido); // 
 
+		// carga datos para conexion Memoria
+		ip = config_get_string_value(config, "IP_MEMORIA");
+		puerto = config_get_string_value(config, "PUERTO_MEMORIA");
 		// Inicia Conexion temporal para mandar resultado
 		conexion_memoria = crear_conexion(ip, puerto);
 
-		enviar_mensaje("Hola Memoria, como va. Soy IO interfaz STDOUT.", conexion_memoria);
-		
-		// envia el paquete cargado con direcciones
-		enviar_paquete(paquete, conexion_memoria);
-		eliminar_paquete(paquete);
-		
-		// se recibe directamente cod operacion + cadena con todo lo q habia en memoria
-		operacion = recibir_codigo(conexion_memoria);
-		if (operacion = ACCESO_LECTURA){
-			recibido = recibir_paquete(conexion_memoria);
-			paquete = crear_paquete(IO_OPERACION);
-			data = list_remove(recibido, 0);
+		enviar_handshake_a_memoria(nombre, conexion_memoria);
+		bool handshake_aceptado = manejar_rta_handshake(recibir_handshake(conexion_memoria), "Memoria");
 
-			// loguea y emite operacion
-			logguear_operacion(pid, STDOUT);
-			printf(data);
-
-			free(data);
-			list_clean(recibido);
-		} else {
-			paquete = crear_paquete(MENSAJE_ERROR);
+		// En caso de handshake con Memoria fallido, libera la conexion, e informa del error a Kernel.
+		if(!handshake_aceptado) {
+			liberar_conexion(log_io, "Memoria", conexion_memoria);
+			eliminar_paquete(paquete);
+			crear_paquete(MENSAJE_ERROR);
+			enviar_paquete(paquete, conexion_kernel);
+			eliminar_paquete(paquete);
 		}
-		
-		liberar_conexion(conexion_memoria); // cierra conexion
+		// En caso de handshake con Memoria exitoso sigue la ejecución normal.
+		else {
+			// envia el paquete cargado con direcciones
+			enviar_paquete(paquete, conexion_memoria);
+			eliminar_paquete(paquete);
+			
+			// se recibe directamente cod operacion + cadena con todo lo que habia en memoria
+			operacion = recibir_codigo(conexion_memoria);
+			if (operacion = ACCESO_LECTURA){
+				recibido = recibir_paquete(conexion_memoria);
+				paquete = crear_paquete(IO_OPERACION);
+				data = list_remove(recibido, 0);
 
-		// avisa a kernel que termino
-		enviar_paquete(paquete, conexion_kernel);
-		eliminar_paquete(paquete);
+				// loguea y emite operacion
+				logguear_operacion(pid, STDOUT);
+				printf(data);
+
+				free(data);
+				list_clean(recibido);
+			} else {
+				paquete = crear_paquete(MENSAJE_ERROR);
+			}
+			
+			liberar_conexion(log_io, nombre, conexion_memoria); // cierra conexión
+
+			// avisa a kernel que terminó
+			enviar_paquete(paquete, conexion_kernel);
+			eliminar_paquete(paquete);
+		}
 
 		// espera nuevo paquete
 		operacion = recibir_codigo(conexion_kernel);

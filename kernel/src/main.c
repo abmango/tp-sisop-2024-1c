@@ -51,8 +51,7 @@ int main(int argc, char* argv[]) {
 
 	while(1) {
 		int socket_io = esperar_cliente(socket_escucha);
-
-		t_io_blocked* io = recibir_handshake_y_datos_de_nueva_io(socket_io);
+		t_io_blocked* io = recibir_handshake_y_datos_de_nueva_io_y_responder(socket_io);
 
 		if (io != NULL) {
 			list_add(lista_io_blocked, io);

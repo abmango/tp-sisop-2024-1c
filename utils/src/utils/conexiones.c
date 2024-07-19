@@ -105,13 +105,15 @@ int esperar_cliente(int socket_servidor_fd)
 	return socket_cliente_fd;
 }
 
-void liberar_conexion(int socket_cliente)
+void liberar_conexion(t_log* log, char* nombre_conexion, int socket)
 {
-	int err = close(socket_cliente);
+	int err = close(socket);
 	if(err != 0)
 	{
-		imprimir_mensaje("error en funcion close()");
-		exit(3);
+		log_error(log, "error en funcion close() al intentar cerrar la conexion con %s.", nombre_conexion);
+	}
+	else {
+		log_debug(log, "La conexion con %s fue cerrada.", nombre_conexion);
 	}
 }
 
