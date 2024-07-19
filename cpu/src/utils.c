@@ -421,3 +421,55 @@ t_dictionary* crear_diccionario(t_contexto_de_ejecucion reg)
    dictionary_put(dicc, "DI", &(reg.reg_cpu_uso_general.DI));
    return dicc;
 }
+
+// TLB
+
+// Función para inicializar la TLB
+void init_tlb(int size) {
+    tlb = malloc(size * sizeof(tlb_entry));
+    for (int i = 0; i < size; ++i) {
+        tlb[i].valid = 0;  // Inicialmente, todas las entradas son inválidas
+    }
+}
+
+// Función para buscar en la TLB
+int tlb_lookup(unsigned int virtual_page, unsigned int *physical_page) {
+    for (int i = 0; i < tlb_size; ++i) {
+        if (tlb[i].valid && tlb[i].virtual_page == virtual_page) {
+            *physical_page = tlb[i].physical_page;
+            return 1;  // Éxito: entrada encontrada en la TLB
+        }
+    }
+    return 0;  // Fallo: entrada no encontrada en la TLB
+}
+
+// Función para actualizar la TLB
+void tlb_update(unsigned int virtual_page, unsigned int physical_page) {
+    // Simplemente reemplazamos la entrada más antigua (LRU podría ser mejor, pero es más complejo)
+    int oldest_index = 0;
+    for (int i = 0; i < tlb_size; ++i) {
+        if (!tlb[i].valid) {  // Encontramos una entrada no válida, la reutilizamos
+            oldest_index = i;
+            break;
+        }
+        if (tlb[i].valid && tlb[i].virtual_page == virtual_page) {
+            oldest_index = i;  // Encontramos una entrada válida que podemos reemplazar
+            break;
+        }
+        if (tlb[i].valid && tlb[i].virtual_page != virtual_page && i > oldest_index) {
+            oldest_index = i;  // Encontramos la entrada más antigua
+        }
+    }
+
+    // Actualizamos la entrada
+    tlb[oldest_index].virtual_page = virtual_page;
+    tlb[oldest_index].physical_page = physical_page;
+    tlb[oldest_index].valid = 1;
+}
+
+// Función para limpiar la TLB
+void tlb_flush() {
+    for (int i = 0; i < tlb_size; ++i) {
+        tlb[i].valid = 0;
+    }
+}
