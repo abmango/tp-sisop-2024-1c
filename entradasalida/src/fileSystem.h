@@ -23,6 +23,7 @@ void *espacio_bitmap; // para funcionamiento interno bitmap
 
 /* Funcionamiento interno FS */ // REVISAR TEMA CON CHAR* RECIBIDO (TEMA DIRECTORIOS)
 // https://github.com/sisoputnfrba/foro/issues/4005 >> carpeta /home/utnso/dialFS [PENDIENTE IMPLEMENTAR] (sino puede ahorrarse...)
+// ver obtener_ruta_config de utils
 // IMPLEMENTAR TIEMPO UNIDAD_TRABAJO, RETRASO_COMPRESION Y LOGS (obligatorios)
 // revisar si no conviene hacer una funcion que se encargue de cargar metadata (config) y hacer chequeos correspondientes (para q func internas reciban metadata directa)
 // chequear si se activa FLAG END FILE (xq no lo considere y puede causar problemas)
@@ -48,8 +49,9 @@ void eliminar_f (char *ruta_metadata);
 ///        (solo si hay espacio) y usa mover_f para reubicar archivos
 /// @param ruta_metadata Ruta al archivo metadata (procesada como sea requerido)
 /// @param nuevo_size    Nuevo tamaño del archivo en bytes
+/// @param pid           Solo para los logs de compactación
 /// @return False: Si no existe metadata o si no hay espacio para ampliar | True: si tuvo exito
-bool truncar_f (char *ruta_metadata, int nuevo_size);
+bool truncar_f (char *ruta_metadata, int nuevo_size, int pid);
 
 /// @brief Mueve bloque a bloque de un archivo a nueva posicion, actualiza metadata y bitmap
 /// @param metadata      puntero a metadata (ya cargado) 
@@ -108,7 +110,12 @@ void reservar_bloques (int bloq_ini, int cant_bloq);
 void actualizar_f_bitmap (void);
 
 /* Instrucciones de CPU (recibiran las operaciones y pediran operaciones de funcionamiento interno, manejara logs)*/
-// datos para log ==>> pid y "nombre"
+void fs_create (int conexion, t_list *parametros); /* PENDIENTE */
+void fs_delete (int conexion, t_list *parametros); /* PENDIENTE */
+void fs_truncate (int conexion, t_list *parametros); /* PENDIENTE */
+void fs_read (int conexion, t_list *parametros, char *ip_mem, char *puerto_mem); /* PENDIENTE */
+void fs_write (int conexion, t_list *parametros, char *ip_mem, char *puerto_mem); /* PENDIENTE */
+
 // FS_CREATE => crear archivo (reserva 1 bloque, crea archivo metadata) [pid, "nombre"] 
 // FS_DELETE => eliminar (marcar como libre) archivo [pid, "nombre"]
 // FS_TRUNCATE => Modifica tamaño reservado para el archivo (modifica bitmap y metadata) [pid, "nombre", nuevo_tamanio]

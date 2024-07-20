@@ -111,7 +111,7 @@ void eliminar_f (char *ruta_metadata){
         log_warning(log_io, "Error al borrar archivo");
 }
 
-bool truncar_f (char *ruta_metadata, int nuevo_size){
+bool truncar_f (char *ruta_metadata, int nuevo_size, int pid){
     uint bloque, cant_bloq;
     t_bloques_libres *libres;
 
@@ -142,7 +142,10 @@ bool truncar_f (char *ruta_metadata, int nuevo_size){
         
         if (libres->bloque == -1){
             // Pedimos compactar FS
+            log_info(log_io, "PID: <%i> - Inicio Compactación", pid);
             compactar_FS();
+            log_info(log_io, "PID: <%i> - Fin Compactación", pid);
+
             libres = bloques_libres(nuevo_size); // bbtenemos bloq
         }
         // movemos archivo a nuevo bloque libre
@@ -212,8 +215,8 @@ void compactar_FS (void){
         if (bitarray_test_bit(fs->bitmap, i)){
             fseek(fs->f_bloques, fs->tam_bloques * i, SEEK_SET);
             fread(data, fs->tam_bloques, 1, fs->f_bloques);
-
-            fwrite(data, new, 1, fs->f_bloques);
+        // fflush()
+            fwrite(data, fs->tam_bloques, 1, new);
             bitarray_set_bit(new_bitmap, i);
         }
     }
@@ -261,6 +264,9 @@ char * leer_f (char *ruta_metadata, int offset, int cant_bytes){ /* NO CONSIDERE
     // leo bloques restantes
     fread(data, fs->tam_bloques, aux, fs->f_bloques); // aux es cant bloques a leer
     config_destroy(metadata);
+
+    // Comparar strlen(data y cant_bytes) y recortar sobrante de ser necesario
+
     return data;
 }
 
@@ -386,3 +392,22 @@ void actualizar_f_bitmap (void){
 }
 
 // Funciones comunicación (posiblemente pasen al main de IO)
+void fs_create (int conexion, t_list *parametros){  /* PENDIENTE */
+
+}
+
+void fs_delete (int conexion, t_list *parametros){ /* PENDIENTE */
+
+}
+
+void fs_truncate (int conexion, t_list *parametros){ /* PENDIENTE */
+
+}
+
+void fs_read (int conexion, t_list *parametros, char *ip_mem, char *puerto_mem){ /* PENDIENTE (usar interfaces previas)*/
+
+}
+
+void fs_write (int conexion, t_list *parametros, char *ip_mem, char *puerto_mem){ /* PENDIENTE (usar interfaces previas) */
+
+}

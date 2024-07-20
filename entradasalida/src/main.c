@@ -64,6 +64,10 @@ int main(int argc, char* argv[]) {
 	
 
     terminar_programa(conexion_kernel, config);
+	// revisar, si hay doble free despues de terminar el programa esto es inncesario
+	free(ip);
+	free(puerto);
+	free(interfaz);
 
     return 0;
 }
@@ -80,13 +84,21 @@ void interfaz_generica(char* nombre, t_config* config, int conexion_kernel)
 	int pid;
 	op_code operacion;
 
+<<<<<<< HEAD
 	// handshake y se identifica ante kernel, dándole nombre y tipo de interfaz
 	enviar_handshake_e_identificacion(nombre, GENERICA, conexion_kernel);
 	manejar_rta_handshake(recibir_handshake(conexion_kernel), "KERNEL");
+=======
+	// un saludo amistoso
+	// enviar_mensaje("Hola Kernel, como va. Soy IO interfaz Generica.", conexion_kernel);// ya se cambio protocolo
+
+	// se identifica ante kernel, dándole nombre y tipo de interfaz
+	identificarse(nombre, GENERICA, conexion_kernel);
+>>>>>>> e951cfd (IO FS protocolo + logs, falta funciones fs_"op"...)
 
 	// Bucle hasta que kernel notifique cierre
 	operacion = recibir_codigo(conexion_kernel);
-	while (operacion != FIN_INTERFAZ){
+	while (operacion != FIN_INTERFAZ){ // revisar si no combiene que sea mientras IO_OPERACION (evitar codigos erroneos)
 		recibido = recibir_paquete(conexion_kernel);
 		// se asume que kernel no confunde id_interfaz, sino agregar if
 		// para elem 0 de la lista...
@@ -128,6 +140,15 @@ void interfaz_stdin(char* nombre, t_config* config, int conexion_kernel)
 	char *data;
 	int bytes_totales_a_enviar, pid;
 
+<<<<<<< HEAD
+=======
+	// enviar_mensaje("Hola Kernel, como va. Soy IO interfaz STDIN.", conexion_kernel); // ya se cambio protocolo
+
+	// inicia conexion Memoria
+	ip = config_get_string_value(config, "IP_MEMORIA");
+	puerto = config_get_string_value(config, "PUERTO_MEMORIA");
+
+>>>>>>> e951cfd (IO FS protocolo + logs, falta funciones fs_"op"...)
 	// se presenta a kernel
 	// paquete = crear_paquete(IO_IDENTIFICACION);
 	// agregar_a_paquete(paquete, nombre, strlen(nombre) + 1);
@@ -144,7 +165,7 @@ void interfaz_stdin(char* nombre, t_config* config, int conexion_kernel)
 
 	// Bucle hasta que kernel notifique cierre
 	operacion = recibir_codigo(conexion_kernel);
-	while (operacion != FIN_INTERFAZ){
+	while (operacion != FIN_INTERFAZ){// revisar si no combiene que sea mientras IO_OPERACION (evitar codigos erroneos)
 		bytes_totales_a_enviar = 0;
 		recibido = recibir_paquete(conexion_kernel);
 		
@@ -168,14 +189,14 @@ void interfaz_stdin(char* nombre, t_config* config, int conexion_kernel)
 				data = list_remove(recibido, 0);
 				free(data);
 			}
-			list_clean(recibido);
+			list_destroy(recibido);
 
 			continue; // vuelve a inicio while
 		}
 
 		// como dir y size son int los carga directamente al paquete
 		agregar_dir_y_size_a_paquete(paquete, recibido, &bytes_totales_a_enviar);
-		list_clean(recibido); // 
+		list_destroy(recibido); // 
 	
 		// Espera input de teclado (se podria agregar bucle)
 		data = readline("> ");
@@ -237,6 +258,14 @@ void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 	t_list *recibido;
 	char *data;
 	int bytes_totales_a_enviar, pid;
+<<<<<<< HEAD
+=======
+	// enviar_mensaje("Hola Kernel, como va. Soy IO interfaz STDOUT.", conexion_kernel); // ya se cambio protocolo
+
+	// carga datos para conexion Memoria
+	ip = config_get_string_value(config, "IP_MEMORIA");
+	puerto = config_get_string_value(config, "PUERTO_MEMORIA");
+>>>>>>> e951cfd (IO FS protocolo + logs, falta funciones fs_"op"...)
 
 	// se presenta a kernel
 	// paquete = crear_paquete(INTERFAZ_STDOUT);
@@ -253,7 +282,7 @@ void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 
 	// Bucle hasta que kernel notifique cierre
 	operacion = recibir_codigo(conexion_kernel);
-	while (operacion != FIN_INTERFAZ){
+	while (operacion != FIN_INTERFAZ){ // revisar si no combiene que sea mientras IO_OPERACION (evitar codigos erroneos)
 		bytes_totales_a_enviar = 0;
 		recibido = recibir_paquete(conexion_kernel);
 		
@@ -277,14 +306,14 @@ void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 				data = list_remove(recibido, 0);
 				free(data);
 			}
-			list_clean(recibido);
+			list_destroy(recibido);
 
 			continue; // vuelve a inicio while
 		}
 
 		// como dir y size son int los carga directamente al  paquete
 		agregar_dir_y_size_a_paquete(paquete, recibido, &bytes_totales_a_enviar);
-		list_clean(recibido); // 
+		list_destroy(recibido); // 
 
 		// carga datos para conexion Memoria
 		ip = config_get_string_value(config, "IP_MEMORIA");
@@ -295,6 +324,7 @@ void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 		enviar_handshake_a_memoria(nombre, conexion_memoria);
 		bool handshake_aceptado = manejar_rta_handshake(recibir_handshake(conexion_memoria), "Memoria");
 
+<<<<<<< HEAD
 		// En caso de handshake con Memoria fallido, libera la conexion, e informa del error a Kernel.
 		if(!handshake_aceptado) {
 			liberar_conexion(log_io, "Memoria", conexion_memoria);
@@ -302,6 +332,16 @@ void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 			crear_paquete(MENSAJE_ERROR);
 			enviar_paquete(paquete, conexion_kernel);
 			eliminar_paquete(paquete);
+=======
+			// loguea y emite operacion
+			logguear_operacion(pid, STDOUT);
+			printf(data);
+
+			free(data);
+			list_destroy(recibido);
+		} else {
+			paquete = crear_paquete(MENSAJE_ERROR);
+>>>>>>> e951cfd (IO FS protocolo + logs, falta funciones fs_"op"...)
 		}
 		// En caso de handshake con Memoria exitoso sigue la ejecución normal.
 		else {
@@ -336,26 +376,74 @@ void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 		// espera nuevo paquete
 		operacion = recibir_codigo(conexion_kernel);
 	}
+	// al finalizar modulo
+	free(ip);
+	free(puerto);
 }
 
 void interfaz_dialFS(char* nombre, t_config* config, int conexion_kernel)
 {
+	op_code operacion;
 	char* ip;
 	char* puerto;
-	int conexion_memoria = 1;
-
-	enviar_mensaje("Hola Kernel, como va. Soy IO interfaz DialFS.", conexion_kernel);
-
+	t_list *recibido;
+	void *aux;
+	int codigo_fs;
 	
+	// pasan a dentro de las funciones
+	// int conexion_memoria = 1;
+	// t_paquete *paquete;
+	
+	// Carga datos para conexion memoria
 	ip = config_get_string_value(config, "IP_MEMORIA");
 	puerto = config_get_string_value(config, "PUERTO_MEMORIA");
 
-	conexion_memoria = crear_conexion(ip, puerto);
+	identificarse(nombre, DIALFS, conexion_kernel);
 
-	enviar_mensaje("Hola Memoria, como va. Soy IO interfaz DialFS.", conexion_memoria);
-	
+	operacion = recibir_codigo(conexion_kernel);
+	while (operacion == IO_OPERACION)
+	{
+		recibido = recibir_paquete(conexion_kernel);
 
-	liberar_conexion(conexion_memoria);
+		aux = list_remove(recibido, 0); // remueve int para dial_fs_op_code
+		codigo_fs = *(int *)aux;
+
+		switch (codigo_fs)
+		{
+			case CREAR_F:
+				fs_create(conexion_kernel, recibido);
+				break;
+			case ELIMINAR_F:
+				fs_delete(conexion_kernel, recibido);
+				break;
+			case TRUNCAR_F:
+				fs_truncate(conexion_kernel, recibido);
+				break;
+			case LEER_F:
+				fs_read(conexion_kernel, recibido, ip, puerto);
+				break;
+			case ESCRIBIR_F:
+				fs_write(conexion_kernel, recibido, ip, puerto);
+				break;
+			default:
+				log_error(log_io, "Operación del FileSystem desconocida");
+				break;
+		}
+		// limpiando recibido
+		while (!list_is_empty(recibido)){
+			aux = list_remove(recibido, 0);
+			free(aux);
+		}
+		list_destroy(recibido);
+	}
+
+
+	// en funciones write y read
+	// conexion_memoria = crear_conexion(ip, puerto);
+	// enviar_mensaje("Hola Memoria, como va. Soy IO interfaz DialFS.", conexion_memoria);
+	// liberar_conexion(conexion_memoria);
+	free(ip);
+	free(puerto);
 }
 
 void terminar_programa(int socket, t_config* config)

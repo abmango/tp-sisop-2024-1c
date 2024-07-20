@@ -71,30 +71,60 @@ void logguear_operacion (int pid, t_io_type_code operacion)
     {
         case GENERICA:
             log_info(log_io,
-            "PID: <%i> - Operacion: <GENERICA>",
-            pid);
+            "PID: <%i> - Operacion: <GENERICA>", pid);
             break;
         case STDIN:
             log_info(log_io,
-            "PID: <%i> - Operacion: <STDIN>",
-            pid);
+            "PID: <%i> - Operacion: <STDIN>", pid);
             break;
         case STDOUT:
             log_info(log_io,
-            "PID: <%i> - Operacion: <STDOUT>",
-            pid);
+            "PID: <%i> - Operacion: <STDOUT>", pid);
+            break;
+        case DIALFS:
+            log_info(log_io,
+            "PID: <%i> - Operacion: <DIALFS>", pid);
             break;
         default:
             log_warning (log_io,
-            "PID: <%i> - Operacion: <DESCONOCIDA>",
-            pid);
+            "PID: <%i> - Operacion: <DESCONOCIDA>", pid);
             break;
     }
 }
 
-void logguear_DialFs (void)
+void logguear_DialFs (dial_fs_op_code operacion, int pid, char *nombre_f, int tamanio, int offset)
 {
-
+    switch (operacion)
+    {
+    case CREAR_F:
+        log_warning (log_io,
+            "PID: <%i> - Crear Archivo: <%s>",pid, nombre_f);
+        break;
+    case ELIMINAR_F:
+        log_warning (log_io,
+            "PID: <%i> - Eliminar Archivo: <%s>", pid, nombre_f);
+        break;
+    case TRUNCAR_F:
+        log_warning (log_io,
+            "PID: <%i> - Truncar Archivo: <%s> - Tamaño: <%i>", 
+            pid, nombre_f,tamanio);
+        break;
+    case LEER_F:
+        log_warning (log_io,
+            "PID: <%i> - Leer Archivo: <%s> - Tamaño a Leer: <%i> - Puntero a Archivo: <%i>", 
+            pid, nombre_f, tamanio, offset);
+        break;
+    case ESCRIBIR_F:
+        log_warning (log_io,
+            "PID: <%i> - Leer Archivo: <%s> - Tamaño a Escribir: <%i> - Puntero a Archivo: <%i>", 
+            pid, nombre_f, tamanio, offset);
+        break;
+    default:
+        log_warning (log_io,
+            "PID: <%i> - DialFS: <DESCONOCIDA>", pid);
+            break;
+        break;
+    }
 }
 
 void agregar_dir_y_size_a_paquete(t_paquete *paquete, t_list *lista, int *bytes)

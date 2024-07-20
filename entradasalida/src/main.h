@@ -9,6 +9,7 @@
 #include<readline/readline.h>
 
 #include "utils.h"
+#include "fileSystem.h"
 
 void paquete(int);
 void terminar_programa(int, t_config*);

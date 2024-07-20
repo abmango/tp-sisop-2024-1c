@@ -37,7 +37,7 @@ typedef enum
 	// INTERF_GEN, // duda, los codigos solo irian en kernel e IO??
 	// INTERF_STDIN,
 	// INTERF_STDOUT,
-	INTERF_DIALFS,
+	INTERF_DIALFS, // este no se usara eliminara
 	FIN_INTERFAZ,
 
 	// IO-MEMORIA y CPU-MEMORIA 
@@ -67,6 +67,14 @@ typedef enum
 	HANDSHAKE_OK,
 	HANDSHAKE_INVALIDO
 } handshake_code; // cod para agregar a los paquetes de HANDSHAKE.
+
+typedef enum {
+    CREAR_F,
+    ELIMINAR_F,
+    TRUNCAR_F,
+    LEER_F,
+    ESCRIBIR_F
+} dial_fs_op_code;
 
 typedef struct
 {

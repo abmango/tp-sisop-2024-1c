@@ -29,18 +29,22 @@ bool manejar_rta_handshake(handshake_code rta_handshake, const char* nombre_serv
 
 void iniciar_logger(void);
 
-/// @brief emite el log obligatorio (NO DIALFS)
+/// @brief emite el log obligatorio
 /// @param pid 
 /// @param operacion  
 void logguear_operacion (int pid, t_io_type_code operacion);
 
-// para recordar que hay q hacer los logs... posiblemente cuando se desarrollen las operaciones de dial
-// esta funcion no sea necesaria (osea log como memoria que lo hace cada funcion minima)
-void logguear_DialFs (void);
+/// @brief emite los logs obligatorios de las operaciones del dialFS (menos compatacion)
+/// @param operacion    distinguira que se emite y el formato
+/// @param pid          pid recibido por comunicación
+/// @param nombre_f     nombre del archivo recibido por comunicación
+/// @param tamanio      tamaño para truncar/leer/escribir
+/// @param offset       a donde se apunta para lectura/escritura
+void logguear_DialFs (dial_fs_op_code operacion,int pid, char *nombre_f, int tamanio, int offset);
 
 /// @brief descarga de la lista todos los pares direccion + size y los agrega al paquete en igual orden
-/// @param paquete ya iniciado y con pid
-/// @param lista lo unico que debe tener son los pares direccion + desplazamiento... sino envia cualquier cosa. hace list_remove() x cada elemento
-/// @param bytes referencia a var q lleva cuenta de los bytes a enviar a memoria
+/// @param paquete      ya iniciado y con pid
+/// @param lista        lo unico que debe tener son los pares direccion + desplazamiento... sino envia cualquier cosa. hace list_remove() x cada elemento
+/// @param bytes        referencia a var q lleva cuenta de los bytes a enviar a memoria
 void agregar_dir_y_size_a_paquete (t_paquete *paquete, t_list *lista, int *bytes);
 #endif /* UTILS_H_ */
