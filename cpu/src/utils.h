@@ -123,9 +123,12 @@ execute_op_code decode(char* instruc);
 
 // ACÁ VA TODO LO DE LA TLB
 typedef struct {
-    unsigned int virtual_page;   // Número de página virtual
-    unsigned int physical_page;  // Número de página física
-    int valid;                   // Indicador de validez de la entrada (0: no válida, 1: válida)
+    int valid;            // Indicador de validez de la entrada (0: no válida, 1: válida)
+    int pid;              // ID del proceso
+    unsigned int page;    // Número de página virtual
+    unsigned int frame;   // Número de marco físico correspondiente
+    int access_time;      // Para LRU: tiempo de último acceso
+    int fifo_counter;     // Para FIFO: contador para manejar el orden de llegada
 } tlb_entry;
 
 tlb_entry *tlb; // TLB como un arreglo de entradas
@@ -133,8 +136,9 @@ tlb_entry *tlb; // TLB como un arreglo de entradas
 int tlb_size = 16;  // Tamaño predeterminado de la TLB
 
 void init_tlb(int size);
-int tlb_lookup(unsigned int virtual_page, unsigned int *physical_page);
-void tlb_update(unsigned int virtual_page, unsigned int physical_page);
+int tlb_lookup(int pid, unsigned int virtual_page, unsigned int *physical_page);
+void tlb_update_fifo(int pid, unsigned int virtual_page, unsigned int physical_page);
+void tlb_update_lru(int pid, unsigned int virtual_page, unsigned int physical_page);
 void tlb_flush();
 
 #endif /* UTILS_H_ */

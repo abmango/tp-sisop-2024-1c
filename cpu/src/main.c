@@ -56,16 +56,15 @@ int main(int argc, char *argv[])
 		unsigned int physical_address;
 
 		// Buscar en la TLB
-		if (tlb_lookup(virtual_address, &physical_address))
-		{
-			printf("TLB Hit: Virtual address %u maps to physical address %u\n", virtual_address, physical_address);
-		}
-		else
-		{
-			printf("TLB Miss: Virtual address %u is not in TLB\n", virtual_address);
-			// Aquí iría la lógica para buscar en la tabla de páginas y actualizar la TLB si es necesario
-			// En este ejemplo, simplemente actualizamos la TLB con el mismo número de página virtual y física
-			tlb_update(virtual_address, virtual_address); // En un caso real, se reemplazaría por la página física real
+		if (tlb_lookup(pid, virtual_address, &physical_address)) {
+			printf("TLB Hit: PID %d, Virtual page %u maps to physical frame %u\n", pid, virtual_address, physical_address);
+		} else {
+			printf("TLB Miss: PID %d, Virtual page %u is not in TLB\n", pid, virtual_address);
+
+			// Lógica para buscar en la tabla de páginas y actualizar la TLB
+			// En este ejemplo, actualizamos la TLB con la misma página virtual y física
+			unsigned int physical_frame = virtual_address;  // En un caso real, esto sería la página física real
+			tlb_update_lru(pid, virtual_address, physical_frame);
 		}
 
 		instruccion = fetch(reg.PC, pid);

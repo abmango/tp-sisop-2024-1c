@@ -443,28 +443,48 @@ int tlb_lookup(unsigned int virtual_page, unsigned int *physical_page) {
     return 0;  // Fallo: entrada no encontrada en la TLB
 }
 
-// Función para actualizar la TLB
-void tlb_update(unsigned int virtual_page, unsigned int physical_page) {
-    // Simplemente reemplazamos la entrada más antigua (LRU podría ser mejor, pero es más complejo)
+// Algoritmos para actualizar la TLB
+
+void tlb_update_fifo(int pid, unsigned int virtual_page, unsigned int physical_page) {
+    // Encontrar la entrada más antigua (FIFO)
     int oldest_index = 0;
-    for (int i = 0; i < tlb_size; ++i) {
-        if (!tlb[i].valid) {  // Encontramos una entrada no válida, la reutilizamos
+    for (int i = 1; i < tlb_size; ++i) {
+        if (!tlb[i].valid) {
             oldest_index = i;
             break;
         }
-        if (tlb[i].valid && tlb[i].virtual_page == virtual_page) {
-            oldest_index = i;  // Encontramos una entrada válida que podemos reemplazar
-            break;
-        }
-        if (tlb[i].valid && tlb[i].virtual_page != virtual_page && i > oldest_index) {
-            oldest_index = i;  // Encontramos la entrada más antigua
+        if (tlb[i].fifo_counter < tlb[oldest_index].fifo_counter) {
+            oldest_index = i;
         }
     }
 
-    // Actualizamos la entrada
-    tlb[oldest_index].virtual_page = virtual_page;
-    tlb[oldest_index].physical_page = physical_page;
+    // Actualizar la entrada
     tlb[oldest_index].valid = 1;
+    tlb[oldest_index].pid = pid;
+    tlb[oldest_index].page = virtual_page;
+    tlb[oldest_index].frame = physical_page;
+    tlb[oldest_index].fifo_counter++;
+}
+
+void tlb_update_lru(int pid, unsigned int virtual_page, unsigned int physical_page) {
+    // Encontrar la entrada menos recientemente usada (LRU)
+    int least_recently_used = 0;
+    for (int i = 1; i < tlb_size; ++i) {
+        if (!tlb[i].valid) {
+            least_recently_used = i;
+            break;
+        }
+        if (tlb[i].access_time < tlb[least_recently_used].access_time) {
+            least_recently_used = i;
+        }
+    }
+
+    // Actualizar la entrada
+    tlb[least_recently_used].valid = 1;
+    tlb[least_recently_used].pid = pid;
+    tlb[least_recently_used].page = virtual_page;
+    tlb[least_recently_used].frame = physical_page;
+    tlb[least_recently_used].access_time = 0; // Se reinicia el tiempo de acceso
 }
 
 // Función para limpiar la TLB
