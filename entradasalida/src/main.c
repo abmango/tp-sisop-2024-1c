@@ -15,7 +15,7 @@ int main(int argc, char* argv[]) {
     char* ip;
 	char* puerto;
 	char* valor;
-	char* interfaz;
+	char* tipo_interfaz;
 	char* nombre;
 
     t_config* config;
@@ -42,32 +42,37 @@ int main(int argc, char* argv[]) {
 	ip = config_get_string_value(config, "IP_KERNEL");
 	puerto = config_get_string_value(config, "PUERTO_KERNEL");
     conexion_kernel = crear_conexion(ip, puerto);
-
-	interfaz = config_get_string_value(config, "TIPO_INTERFAZ");
-
-	// el handshake con el kernel capaz lo pongo aca mejor.
-	//--
-
-	if (strcmp(interfaz, "GENERICA") == 0) {
-        interfaz_generica(nombre, config, conexion_kernel);
-    }
-	else if (strcmp(interfaz, "STDIN") == 0) {
-        interfaz_stdin(nombre, config, conexion_kernel);
-    }
-	else if (strcmp(interfaz, "STDOUT") == 0) {
-        interfaz_stdout(nombre, config, conexion_kernel);
-    }
-	else if (strcmp(interfaz, "DIALFS") == 0) {
-        interfaz_dialFS(nombre, config, conexion_kernel);
-    }
-	else printf("Interfaz desconocida");
 	
 
+	t_dictionary* diccionario_interfaces = crear_e_inicializar_diccionario_interfaces();
+	tipo_interfaz = config_get_string_value(config, "TIPO_INTERFAZ");
+	t_io_type_code cod_tipo_interfaz = *dictionary_get(diccionario_interfaces, tipo_interfaz);
+
+	// handshake y se identifica ante kernel, dándole nombre y tipo de interfaz
+	enviar_handshake_e_identificacion(nombre, cod_tipo_interfaz, conexion_kernel);
+	bool handshake_aceptado = manejar_rta_handshake(recibir_handshake(conexion_kernel), "KERNEL");
+
+	if(handshake_aceptado) {
+		switch (cod_tipo_interfaz)
+		{
+		case GENERICA:
+			interfaz_generica(nombre, config, conexion_kernel);
+			break;
+		case STDIN:
+			interfaz_stdin(nombre, config, conexion_kernel);
+			break;
+		case STDOUT:
+			interfaz_stdout(nombre, config, conexion_kernel);
+			break;
+		case DIALFS:
+			interfaz_dialFS(nombre, config, conexion_kernel);
+			break;
+		default:
+			log_error(log_io_gral, "Tipo de interfaz desconocido. Revisar archivo .config");
+		}
+	}
+
     terminar_programa(conexion_kernel, config);
-	// revisar, si hay doble free despues de terminar el programa esto es inncesario
-	free(ip);
-	free(puerto);
-	free(interfaz);
 
     return 0;
 }
@@ -82,19 +87,7 @@ void interfaz_generica(char* nombre, t_config* config, int conexion_kernel)
 	int tiempo;
 	unsigned int tiempo_en_microsegs;
 	int pid;
-	op_code operacion;
-
-<<<<<<< HEAD
-	// handshake y se identifica ante kernel, dándole nombre y tipo de interfaz
-	enviar_handshake_e_identificacion(nombre, GENERICA, conexion_kernel);
-	manejar_rta_handshake(recibir_handshake(conexion_kernel), "KERNEL");
-=======
-	// un saludo amistoso
-	// enviar_mensaje("Hola Kernel, como va. Soy IO interfaz Generica.", conexion_kernel);// ya se cambio protocolo
-
-	// se identifica ante kernel, dándole nombre y tipo de interfaz
-	identificarse(nombre, GENERICA, conexion_kernel);
->>>>>>> e951cfd (IO FS protocolo + logs, falta funciones fs_"op"...)
+	op_code operacion;	
 
 	// Bucle hasta que kernel notifique cierre
 	operacion = recibir_codigo(conexion_kernel);
@@ -139,23 +132,6 @@ void interfaz_stdin(char* nombre, t_config* config, int conexion_kernel)
 	t_list *recibido;
 	char *data;
 	int bytes_totales_a_enviar, pid;
-
-<<<<<<< HEAD
-=======
-	// enviar_mensaje("Hola Kernel, como va. Soy IO interfaz STDIN.", conexion_kernel); // ya se cambio protocolo
-
-	// inicia conexion Memoria
-	ip = config_get_string_value(config, "IP_MEMORIA");
-	puerto = config_get_string_value(config, "PUERTO_MEMORIA");
-
->>>>>>> e951cfd (IO FS protocolo + logs, falta funciones fs_"op"...)
-	// se presenta a kernel
-	// paquete = crear_paquete(IO_IDENTIFICACION);
-	// agregar_a_paquete(paquete, nombre, strlen(nombre) + 1);
-	// agregar_a_paquete(paquete, STDIN);
-	// enviar_paquete(paquete, conexion_kernel);
-	// eliminar_paquete(paquete);
-	enviar_handshake_e_identificacion(nombre, STDIN, conexion_kernel);
 	
 	/* NO ES NECESARIO POR CAMBIO PROTOCOLO */ 
 	// operacion = recibir_codigo(conexion_kernel);
@@ -213,7 +189,7 @@ void interfaz_stdin(char* nombre, t_config* config, int conexion_kernel)
 		enviar_handshake_a_memoria(nombre, conexion_memoria);
 		bool handshake_aceptado = manejar_rta_handshake(recibir_handshake(conexion_memoria), "Memoria");
 
-		// En caso de handshake con Memoria fallido, libera la conexion, e informa del error a Kernel.
+		// Handshake con Memoria fallido. Libera la conexion, e informa del error a Kernel.
 		if(!handshake_aceptado) {
 			liberar_conexion(log_io, "Memoria", conexion_memoria);
 			eliminar_paquete(paquete);
@@ -221,7 +197,7 @@ void interfaz_stdin(char* nombre, t_config* config, int conexion_kernel)
 			enviar_paquete(paquete, conexion_kernel);
 			eliminar_paquete(paquete);
 		}
-		// En caso de handshake con Memoria exitoso sigue la ejecución normal.
+		// Handshake con Memoria exitoso. Sigue la ejecución normal.
 		else {
 			// envia el paquete q fue cargando
 			enviar_paquete(paquete, conexion_memoria);	
@@ -258,20 +234,6 @@ void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 	t_list *recibido;
 	char *data;
 	int bytes_totales_a_enviar, pid;
-<<<<<<< HEAD
-=======
-	// enviar_mensaje("Hola Kernel, como va. Soy IO interfaz STDOUT.", conexion_kernel); // ya se cambio protocolo
-
-	// carga datos para conexion Memoria
-	ip = config_get_string_value(config, "IP_MEMORIA");
-	puerto = config_get_string_value(config, "PUERTO_MEMORIA");
->>>>>>> e951cfd (IO FS protocolo + logs, falta funciones fs_"op"...)
-
-	// se presenta a kernel
-	// paquete = crear_paquete(INTERFAZ_STDOUT);
-	// enviar_paquete(paquete, conexion_kernel);
-	// eliminar_paquete(paquete);
-	enviar_handshake_e_identificacion(nombre, STDOUT, conexion_kernel);
 	
 	// Kernel Asigna id a interfaz (para futuros intercambios)
 	// se espera un paquete q solo tiene el id 
@@ -324,26 +286,15 @@ void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 		enviar_handshake_a_memoria(nombre, conexion_memoria);
 		bool handshake_aceptado = manejar_rta_handshake(recibir_handshake(conexion_memoria), "Memoria");
 
-<<<<<<< HEAD
-		// En caso de handshake con Memoria fallido, libera la conexion, e informa del error a Kernel.
+		// Handshake con Memoria fallido. Libera la conexion, e informa del error a Kernel.
 		if(!handshake_aceptado) {
 			liberar_conexion(log_io, "Memoria", conexion_memoria);
 			eliminar_paquete(paquete);
 			crear_paquete(MENSAJE_ERROR);
 			enviar_paquete(paquete, conexion_kernel);
-			eliminar_paquete(paquete);
-=======
-			// loguea y emite operacion
-			logguear_operacion(pid, STDOUT);
-			printf(data);
-
-			free(data);
-			list_destroy(recibido);
-		} else {
-			paquete = crear_paquete(MENSAJE_ERROR);
->>>>>>> e951cfd (IO FS protocolo + logs, falta funciones fs_"op"...)
+			eliminar_paquete(paquete);			
 		}
-		// En caso de handshake con Memoria exitoso sigue la ejecución normal.
+		// Handshake con Memoria exitoso. Sigue la ejecución normal.
 		else {
 			// envia el paquete cargado con direcciones
 			enviar_paquete(paquete, conexion_memoria);
@@ -361,7 +312,7 @@ void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 				printf(data);
 
 				free(data);
-				list_clean(recibido);
+				list_destroy(recibido);
 			} else {
 				paquete = crear_paquete(MENSAJE_ERROR);
 			}
@@ -452,4 +403,25 @@ void terminar_programa(int socket, t_config* config)
 	 // con las funciones de las commons y del TP mencionadas en el enunciado /
 	liberar_conexion(socket);
 	config_destroy(config);
+}
+
+t_dictionary *crear_e_inicializar_diccionario_interfaces(void)
+{
+    t_dictionary *diccionario = *dictionary_create();
+    t_io_type_code *nuevo_tipo_interfaz;
+    
+    nuevo_tipo_interfaz = malloc(sizeof(t_io_type_code));
+    *nuevo_tipo_interfaz = GENERICA;
+    dictionary_put(diccionario, "GENERICA", nuevo_tipo_interfaz);
+    nuevo_tipo_interfaz = malloc(sizeof(t_io_type_code));
+    *nuevo_tipo_interfaz = STDIN;
+    dictionary_put(diccionario, "STDIN", nuevo_tipo_interfaz);
+    nuevo_tipo_interfaz = malloc(sizeof(t_io_type_code));
+    *nuevo_tipo_interfaz = STDOUT;
+    dictionary_put(diccionario, "STDOUT", nuevo_tipo_interfaz);
+    nuevo_tipo_interfaz = malloc(sizeof(t_io_type_code));
+    *nuevo_tipo_interfaz = DIALFS;
+    dictionary_put(diccionario, "DIALFS", nuevo_tipo_interfaz);
+
+    return diccionario;
 }

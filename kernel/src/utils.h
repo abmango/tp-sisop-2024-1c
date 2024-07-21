@@ -54,6 +54,10 @@ extern int socket_memoria;
 extern int socket_cpu_dispatch;
 extern int socket_cpu_interrupt;
 
+extern t_log* log_kernel_oblig; // logger para los logs obligatorios
+extern t_log* log_kernel_gral; // logger para los logs nuestros. Loguear con criterio de niveles.
+
+// a quitar luego
 extern t_log* logger; // Logger para todo (por ahora) del kernel
 
 // ====  Semáforos globales:  ===============================================

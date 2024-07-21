@@ -16,8 +16,11 @@
 #include <utils/conexiones.h>
 
 //////////////////////////////////
-// lo declaro global aunque solo se va a usar en utils x si quieren hacer logs de prueba
-extern t_log *log_io; 
+extern t_log *log_io_oblig; // logger para los logs obligatorios
+extern t_log *log_io_gral; // logger para los logs nuestros. Loguear con criterio de niveles.
+
+// a eliminar luego. // lo declaro global aunque solo se va a usar en utils x si quieren hacer logs de prueba
+extern t_log *log_io;
 
 //////////////////////////////////
 

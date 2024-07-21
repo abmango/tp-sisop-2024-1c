@@ -46,12 +46,13 @@ bool recibir_y_manejar_handshake_conexiones_temp(int socket, char** nombre_modul
         break;
         default:
         enviar_handshake(HANDSHAKE_INVALIDO, socket);
-        log_warning(log_memoria_gral, "Handshake invalido.");
+        log_warning(log_memoria_gral, "Handshake invalido. Se esperaba KERNEL o INTERFAZ.");
         liberar_conexion(log_memoria_gral, "DESCONOCIDO", socket);
         break;
     }
 
     list_destroy_and_destroy_elements(datos_handshake, (void*)free);
+    
     return exito_handshake;
 }
 

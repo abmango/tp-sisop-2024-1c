@@ -1,5 +1,8 @@
 #include "utils.h"
 
+t_log *log_io_oblig;
+t_log *log_io_gral;
+
 t_log *log_io;
 
 //////////////////////////
@@ -37,20 +40,20 @@ bool manejar_rta_handshake(handshake_code rta_handshake, const char* nombre_serv
 
 	switch (rta_handshake) {
 		case HANDSHAKE_OK:
-		log_debug(log_io, "Handshake aceptado. Conexion con %s establecida.", nombre_servidor);
+		log_debug(log_io_gral, "Handshake con %s fue aceptado.", nombre_servidor);
         exito_handshake = true;
 		break;
 		case HANDSHAKE_INVALIDO:
-		log_error(log_io, "Handshake invalido. Conexion con %s no establecida.", nombre_servidor);
+		log_error(log_io_gral, "Handshake con %s fue rechazado por ser invalido.", nombre_servidor);
 		break;
 		case -1:
-		log_error(log_io, "op_code no esperado. Conexion con %s no establecida.", nombre_servidor);
+		log_error(log_io_gral, "op_code no esperado de %s. Se esperaba HANDSHAKE.", nombre_servidor);
 		break;
 		case -2:
-		log_error(log_io, "al recibir handshake hubo un tamanio de buffer no esperado. Conexion con %s no establecida.", nombre_servidor);
+		log_error(log_io_gral, "al recibir la rta al handshake de %s hubo un tamanio de buffer no esperado.", nombre_servidor);
 		break;
 		default:
-		log_error(log_io, "error desconocido. Conexion con %s no establecida.", nombre_servidor);
+		log_error(log_io_gral, "error desconocido al recibir la rta al handshake de %s.", nombre_servidor);
 		break;
 	}
 

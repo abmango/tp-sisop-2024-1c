@@ -75,26 +75,30 @@ t_io_blocked* recibir_handshake_y_datos_de_nueva_io_y_responder(int socket) {
 
 	if(recibir_codigo(socket) != HANDSHAKE) {
 		log_warning(logger, "op_code no esperado. se rechazo la conexion con la interfaz.");
+		liberar_conexion(log_kernel_gral, "Interfaz DESCONOCIDA", socket);
 		return NULL;
 	}
 
-	t_list* datos_identificatorios_io = recibir_paquete(socket);
+	t_list* datos_handshake = recibir_paquete(socket);
 
-	if (*(list_get(datos_identificatorios_io, 0)) != INTERFAZ) {
-		log_warning(logger, "handshake invalido. se rechazo la conexion con la interfaz.");
+	handshake_code handshake_codigo = *(list_get(datos_handshake, 0));
+	if (handshake_codigo != INTERFAZ) {
 		enviar_handshake(HANDSHAKE_INVALIDO, socket);
+		log_warning(log_kernel_gral, "Handshake invalido. Se esperaba INTERFAZ.");
+		liberar_conexion(log_kernel_gral, "DESCONOCIDO", socket);
 		return NULL;
 	}
-
-	enviar_handshake(HANDSHAKE_OK, socket);
 
 	t_io_blocked* io_blocked = malloc(sizeof(t_io_blocked));
-	io_blocked->nombre = string_duplicate(list_get(datos_identificatorios_io, 1));
-	io_blocked->tipo = *(list_get(datos_identificatorios_io, 2));
+	io_blocked->nombre = string_duplicate(list_get(datos_handshake, 1));
+	io_blocked->tipo = *(list_get(datos_handshake, 2));
 	io_blocked->socket = socket;
 	io_blocked->cola_blocked = list_create();
 
-	list_destroy_and_destroy_elements(datos_identificatorios_io, (void*)free);
+	enviar_handshake(HANDSHAKE_OK, socket);
+	log_debug(log_kernel_gral, "Handshake con %s aceptado.", io_blocked->nombre);
+
+	list_destroy_and_destroy_elements(datos_handshake, (void*)free);
 
 	return io_blocked;
 }
