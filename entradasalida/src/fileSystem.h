@@ -30,11 +30,8 @@ void *espacio_bitmap; // para funcionamiento interno bitmap
 
 /// @brief Inicializa el FileSystem, carga datos de funcionamiento en su estructura, inicia/carga bitmap y abre/crea 
 ///        archivos segun sea necesario
-/// @param t_bloq        Tamaño de los bloques del FS (tomado de config)
-/// @param c_bloq        Cantidad de bloques del FS (tomado de config)
-/// @param unidad_trabj  Tiempo que consume cada operacion (tomado de config)
-/// @param ret_comp      Tiempo que consume para cada compresion (tomado de config)
-void iniciar_FS (int t_bloq, int c_bloq, int unidad_trabj, int ret_comp);
+/// @param config   Para obtener lo necesario para iniciar el FS
+void iniciar_FS (t_config *config);
 
 /// @brief abre/crea archivo metadata, de ser necesario buscar bloque disponible / coteja datos preexistentes con bitmap
 /// @param ruta_metadata Ruta al archivo metadata (procesada como sea requerido)

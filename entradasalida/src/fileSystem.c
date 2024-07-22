@@ -4,14 +4,19 @@ t_file_system *fs;
 int unidad_trabajo = 0,
     retraso_compresion = 0;
 uint aux_bitmap = 0; // almacena la siguiente posicion a la ultima posicion libre [podria utilizarse metodo "static" en la funcion de busqueda]
+char *PATH_BASE;
 
-// revisar tema de si conviene crear una carpeta donde guardar los archivos de metadata
+// revisar tema de si conviene crear una carpeta donde guardar los archivos de metadata => ver PATH_BASE_DIALFS
 
-void iniciar_FS (int t_bloq, int c_bloq, int unidad_trabj, int ret_comp){
-    fs->tam_bloques = t_bloq;
-    fs->cant_bloques = c_bloq;
-    unidad_trabajo = unidad_trabj;
-    retraso_compresion = ret_comp;
+
+void iniciar_FS (t_config *config){ /* EN PROCESO DE MODIFICACION (PATH_BASE)*/
+    /* obteniendo componentes del FileSystem */
+    fs->tam_bloques = config_get_int_value(config, "BLOCK_SIZE");
+    fs->cant_bloques = config_get_int_value(config, "BLOCK_COUNT");
+    PATH_BASE = config_get_string_value(config, "PATH_BASE_DIALFS"); 
+    // conversion para usleep
+    unidad_trabajo = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO")*MILISEG_A_MICROSEG;
+    retraso_compresion = config_get_int_value(config, "RETRASO_COMPACTACION")*MILISEG_A_MICROSEG;
 
     // verificar si es correcto - crear archivo con tam_tot
     int aux = (fs->tam_bloques * fs->cant_bloques) - 1; // tamaño en bytes 0-->tam_tot-1 

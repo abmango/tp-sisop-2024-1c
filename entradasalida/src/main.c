@@ -349,10 +349,13 @@ void interfaz_dialFS(char* nombre, t_config* config, int conexion_kernel)
 	ip = config_get_string_value(config, "IP_MEMORIA");
 	puerto = config_get_string_value(config, "PUERTO_MEMORIA");
 
+	// iniciando el FS
+	iniciar_FS(config);
+
 	identificarse(nombre, DIALFS, conexion_kernel);
 
 	operacion = recibir_codigo(conexion_kernel);
-	while (operacion == IO_OPERACION)
+	while (operacion != FIN_INTERFAZ)
 	{
 		recibido = recibir_paquete(conexion_kernel);
 
