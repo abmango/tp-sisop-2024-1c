@@ -20,8 +20,14 @@ int main(int argc, char* argv[]) {
 	char** recursos_instancias = config_get_array_value(config, "INSTANCIAS_RECURSOS");
 	recursos_del_sistema = crear_lista_de_recursos(recursos_nombres, recursos_instancias);
 
-	pthread_mutex_init(&mutex_colas, NULL);
-	pthread_mutex_unlock(&mutex_colas);
+	sem_init(&sem_procesos_new, 0, 0);
+	pthread_mutex_init(&mutex_grado_multiprogramacion, NULL);
+	pthread_mutex_init(&mutex_procesos_activos, NULL);
+	pthread_mutex_init(&mutex_cola_new, NULL);
+	pthread_mutex_init(&mutex_cola_ready, NULL);
+	pthread_mutex_init(&mutex_cola_ready_plus, NULL);
+	pthread_mutex_init(&mutex_proceso_exec, NULL);
+	pthread_mutex_init(&mutex_cola_exit, NULL);
 	sem_init(&sem_procesos_ready, 0, 0);
 	sem_init(&sem_procesos_exit, 0, 0);
 

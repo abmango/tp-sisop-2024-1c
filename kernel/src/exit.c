@@ -15,7 +15,6 @@ void* rutina_exit(void* puntero_null) {
 
         // Me conecto con Memoria
         int socket_memoria = crear_conexion(ip_memoria, puerto_memoria);
-        
         // Envio y recibo contestacion de handshake.
         enviar_handshake_a_memoria(socket_memoria);
         bool handshake_memoria_exitoso = recibir_y_manejar_rta_handshake(log_kernel_gral, "Memoria", socket_memoria);

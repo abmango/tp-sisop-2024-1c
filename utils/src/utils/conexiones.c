@@ -185,6 +185,36 @@ handshake_code recibir_handshake(int socket)
 	return handshake_codigo;
 }
 
+bool recibir_y_verificar_cod_respuesta_empaquetado(t_log* logger, op_code cod_esperado, char* nombre_conexion, int socket) {
+	bool respuesta_exitosa = false;
+
+	int cod_recibido = recibir_codigo(socket);
+	t_list* lista = recibir_paquete(socket);
+	if(cod_recibido != -1 && list_size(lista) > 0) {
+		cod_recibido = -2;
+	}
+
+	switch (cod_recibido) {
+		case cod_esperado:
+		respuesta_exitosa = true;
+		log_trace(logger, "Respuesta de %s recibida: EXITO", nombre_conexion);
+		break;
+		case -1:
+		log_error(logger, "No se pudo recibir la respuesta de %s.", nombre_conexion);
+		break;
+		case -2:
+		log_error(logger, "Se esperaba solo un codigo de respuesta por parte de %s. Pero se recibieron mas cosas.", nombre_conexion);
+		break;
+		default:
+		log_trace(logger, "Respuesta de %s recibida: ERROR", nombre_conexion);
+		break;
+	}
+
+	list_destroy_and_destroy_elements(lista, (void*)free);
+
+	return respuesta_exitosa;
+}
+
 void* recibir_buffer(int* size, int socket)
 {
 	void* buffer;
@@ -217,7 +247,7 @@ void recibir_mensaje(int socket_cliente)
 	free(buffer);
 }
 
-t_list* recibir_paquete(int socket_cliente)
+t_list* recibir_paquete(int socket)
 {
 	int size;
 	int desplazamiento = 0;
@@ -225,7 +255,7 @@ t_list* recibir_paquete(int socket_cliente)
 	t_list* valores = list_create();
 	int tamanio;
 
-	buffer = recibir_buffer(&size, socket_cliente);
+	buffer = recibir_buffer(&size, socket);
 	while(desplazamiento < size)
 	{
 		memcpy(&tamanio, buffer + desplazamiento, sizeof(int));
@@ -310,14 +340,16 @@ void agregar_estatico_a_paquete(t_paquete* paquete, void* valor, int tamanio)
 	paquete->buffer->size += tamanio;
 }
 
-void enviar_paquete(t_paquete* paquete, int socket)
+int enviar_paquete(t_paquete* paquete, int socket)
 {
 	int bytes = paquete->buffer->size + 2*sizeof(int);
 	void* a_enviar = serializar_paquete(paquete, bytes);
 
-	send(socket, a_enviar, bytes, 0);
+	int bytes = send(socket, a_enviar, bytes, 0);
 
 	free(a_enviar);
+
+	return bytes;
 }
 
 void eliminar_paquete(t_paquete* paquete)

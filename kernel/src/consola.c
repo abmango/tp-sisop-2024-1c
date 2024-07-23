@@ -70,37 +70,41 @@ void op_proceso_estado() {
 
 void op_iniciar_proceso(char* path, char* ip_mem, char* puerto_mem) {
 
+    t_pcb* nuevo_pcb = crear_pcb();
+
     // Me conecto con Memoria
 	int socket_memoria = crear_conexion(ip_mem, puerto_mem);
-
     // Envio y recibo contestacion de handshake.
     enviar_handshake_a_memoria(socket_memoria);
 	bool handshake_memoria_exitoso = recibir_y_manejar_rta_handshake(log_kernel_gral, "Memoria", socket_memoria);
-
-    // En caso de no ser exitoso, no hace nada.
+    // En caso de handshake fallido, aborta la operación.
     if (!handshake_memoria_exitoso) {
-
-        // acá va a ir un log de handshake fallido. Luego lo pongo.
-
-        liberar_conexion(log_kernel_gral, "Memoria", socket_memoria);
+        abortar_op_iniciar_proceso(nuevo_pcb, socket_memoria);
+        return;
     }
-    // En caso de ser exitoso, inicia el proceso.
-    else {
         
-        // acá va la orden para memoria. Luego la pongo.
-
-        t_pcb* nuevo_pcb = crear_pcb();
-        list_add(cola_new, nuevo_pcb);
-
-        t_paquete* paquete = crear_paquete(INICIAR_PROCESO);
-        int tamanio_path = strlen(path) + 1;
-        agregar_a_paquete(paquete, path, tamanio_path);
-        int tamanio_pcb = tamanio_de_pcb();
-        agregar_a_paquete(paquete, nuevo_pcb, tamanio_pcb);
-        enviar_paquete(paquete, socket_memoria);
-
-        eliminar_paquete(paquete);
+    bool exito = enviar_info_nuevo_proceso(nuevo_pcb->pid, path, socket_memoria);
+    // En caso de envio fallido, aborta la operación.
+    if(!exito) {
+        abortar_op_iniciar_proceso(nuevo_pcb, socket_memoria);
+        return;
     }
+
+    exito = recibir_y_verificar_cod_respuesta_empaquetado(log_kernel_gral, INICIAR_PROCESO, "Memoria", socket_memoria);
+    // En caso de recepción fallida o errónea, aborta la operación.
+    if(!exito) {
+        abortar_op_iniciar_proceso(nuevo_pcb, socket_memoria);
+        return;
+    }
+
+    // Pone al proceso recién creado en estado NEW
+    pthread_mutex_lock(&mutex_cola_new);
+    list_add(cola_new, nuevo_pcb);
+    log_info(log_kernel_oblig, "Se crea el proceso %d en NEW", nuevo_pcb->pid); // log Obligatorio
+    sem_post(&sem_procesos_new);
+    pthread_mutex_unlock(&mutex_cola_new);
+
+    liberar_conexion(log_kernel_gral, "Memoria", socket_memoria);
 
 }
 
@@ -121,4 +125,13 @@ void op_finalizar_proceso(int pid) {
     
     //liberar_recursos() - ¿acá o en buscar_y_finalizar()?
 
+}
+
+// ==========================================================================
+// ====  Abortar operaciones:  ==============================================
+// ==========================================================================
+void abortar_op_iniciar_proceso(t_pcb* pcb_a_abortar, int socket_memoria) {
+    destruir_pcb(pcb_a_abortar);
+    liberar_conexion(log_kernel_gral, "Memoria", socket_memoria);
+    log_warning(log_kernel_gral, "La operacion INICIAR_PROCESO fue abortada.")
 }

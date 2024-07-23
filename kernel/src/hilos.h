@@ -8,6 +8,7 @@
 #include "planificador.h"
 #include "quantum.h"
 #include "exit.h"
+#include "new.h"
 #include "atenderMemoria.h"
 #include "atenderIO.h"
 

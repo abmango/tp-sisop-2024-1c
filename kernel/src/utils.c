@@ -31,9 +31,13 @@ t_log* logger = NULL;
 // ====  Semáforos globales:  ===============================================
 // ==========================================================================
 // -- -- -- -- -- -- -- --
-// --IMPORTANTE-- al hacer lock o wait de estos semáforos donde haga falta, hacerlo en este orden, para minimizar riesgo de deadlocks.
+// --IMPORTANTE-- Al hacer lock o wait consecutivos de estos semáforos, hacerlo en este orden, para
+//                minimizar riesgo de deadlocks. Y hacer el unlock o post en orden inverso (LIFO).
 // -- -- -- -- -- -- -- --
 // ==========================================================================
+sem_t sem_procesos_new;
+pthread_mutex_t mutex_grado_multiprogramacion;
+pthread_mutex_t mutex_procesos_activos;
 pthread_mutex_t mutex_cola_new;
 pthread_mutex_t mutex_cola_ready;
 pthread_mutex_t mutex_cola_ready_plus;
@@ -266,6 +270,27 @@ t_contexto_de_ejecucion deserializar_contexto_de_ejecucion(void* buffer, int* de
 	*desplazamiento += sizeof(uint32_t);
 
 	return contexto;
+}
+
+bool enviar_info_nuevo_proceso(int pid, char* path, int socket_memoria) {
+	bool exito_envio = false;
+
+	t_paquete* paquete = crear_paquete(INICIAR_PROCESO);
+	agregar_a_paquete(paquete, &pid, sizeof(int));
+	int tamanio_path = strlen(path) + 1;
+	agregar_a_paquete(paquete, path, tamanio_path);
+	int bytes = enviar_paquete(paquete, socket_memoria);
+	eliminar_paquete(paquete);
+
+	if (bytes == -1) {
+		log_error(log_kernel_gral, "No se pudo enviar a Memoria la info de nuevo proceso PID: %d.", pid);
+	}
+	else {
+		exito_envio = true;
+		log_trace(log_kernel_gral, "Info de nuevo proceso PID: %d enviada a Memoria correctamente. %d bytes enviados.", pid, bytes);
+	}
+
+	return exito_envio;
 }
 
 void enviar_contexto_de_ejecucion(t_contexto_de_ejecucion contexto_de_ejecucion, int socket) {

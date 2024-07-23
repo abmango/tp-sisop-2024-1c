@@ -69,9 +69,13 @@ extern t_log* logger; // Logger para todo (por ahora) del kernel
 // ====  Semáforos globales:  ===============================================
 // ==========================================================================
 // -- -- -- -- -- -- -- --
-// --IMPORTANTE-- al hacer lock o wait de estos semáforos donde haga falta, hacerlo en este orden, para minimizar riesgo de deadlocks.
+// --IMPORTANTE-- Al hacer lock o wait consecutivos de estos semáforos, hacerlo en este orden, para
+//                minimizar riesgo de deadlocks. Y hacer el unlock o post en orden inverso (LIFO).
 // -- -- -- -- -- -- -- --
 // ==========================================================================
+extern sem_t sem_procesos_new; // Cantidad de procesos en estado NEW
+extern pthread_mutex_t mutex_grado_multiprogramacion;
+extern pthread_mutex_t mutex_procesos_activos;
 extern pthread_mutex_t mutex_cola_new; 
 extern pthread_mutex_t mutex_cola_ready;
 extern pthread_mutex_t mutex_cola_ready_plus;
@@ -108,6 +112,9 @@ void actualizar_contexto_de_ejecucion_de_pcb(t_contexto_de_ejecucion nuevo_conte
 t_desalojo deserializar_desalojo(void* buffer, int* desplazamiento);
 // deserializa el t_contexto_de_ejecucion del buffer y desplazamiento dados.
 t_contexto_de_ejecucion deserializar_contexto_de_ejecucion(void* buffer, int* desplazamiento);
+
+
+bool enviar_info_nuevo_proceso(int pid, char* path, int socket_memoria);
 
 void enviar_contexto_de_ejecucion(t_contexto_de_ejecucion contexto_de_ejecucion, int socket);
 
