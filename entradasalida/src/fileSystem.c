@@ -10,6 +10,8 @@ char *PATH_BASE;
 
 
 void iniciar_FS (t_config *config){ /* EN PROCESO DE MODIFICACION (PATH_BASE)*/
+    char *ruta_aux = string_new();
+
     /* obteniendo componentes del FileSystem */
     fs->tam_bloques = config_get_int_value(config, "BLOCK_SIZE");
     fs->cant_bloques = config_get_int_value(config, "BLOCK_COUNT");
@@ -18,13 +20,18 @@ void iniciar_FS (t_config *config){ /* EN PROCESO DE MODIFICACION (PATH_BASE)*/
     unidad_trabajo = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO")*MILISEG_A_MICROSEG;
     retraso_compresion = config_get_int_value(config, "RETRASO_COMPACTACION")*MILISEG_A_MICROSEG;
 
+    ruta_aux = string_append(ruta_aux,PATH_BASE);
+
     // verificar si es correcto - crear archivo con tam_tot
+    ruta_aux = string_append(ruta_aux, "bloques.dat");
     int aux = (fs->tam_bloques * fs->cant_bloques) - 1; // tamaño en bytes 0-->tam_tot-1 
-    fs->f_bloques = fopen("bloques.dat", "rb+"); // busca si ya existe, sino devuelve false
+    fs->f_bloques = fopen(ruta_aux, "rb+"); // busca si ya existe, sino devuelve false
     if (!fs->f_bloques){
-        fs->f_bloques = fopen("bloques.dat", "wb+"); // abre para lectura-escritura en binario
+        fs->f_bloques = fopen(ruta_aux, "wb+"); // abre para lectura-escritura en binario
         ftruncate(fs->f_bloques, aux); // solo linux
     }
+
+    ruta_aux = string_substring_until(ruta_aux,string_length(PATH_BASE)); // me quedo nueva mente con path base
 
     // crear bitarray para bitmap
     aux = fs->cant_bloques / 8; // convertir bytes a bites
@@ -34,10 +41,11 @@ void iniciar_FS (t_config *config){ /* EN PROCESO DE MODIFICACION (PATH_BASE)*/
     fs->bitmap = bitarray_create_with_mode(espacio_bitmap, aux, LSB_FIRST);
 
     // crear archivo f_bitmap
-    fs->f_bitmap = fopen("bitmap.dat", "rb+");
+    ruta_aux = string_append(ruta_aux, "bitmap.dat");
+    fs->f_bitmap = fopen(ruta_aux, "rb+");
     if (!fs->f_bitmap)
     { // si no existe lo creamos
-        fs->f_bitmap = fopen("bitmap.dat", "wb+");
+        fs->f_bitmap = fopen(ruta_aux, "wb+");
         fwrite(bitarray_get_max_bit(fs->bitmap), sizeof(size_t), 1, fs->f_bitmap); // almacena el tamaño bitmap (para si se abre archivo desp comprobar)
         actualizar_f_bitmap();
     } 
@@ -48,13 +56,14 @@ void iniciar_FS (t_config *config){ /* EN PROCESO DE MODIFICACION (PATH_BASE)*/
         // verificar si el tamaño del bitmap en archivo es diferente al bitmap q intentamos crear
         if (tam_bitmap_prev != aux){
             fclose(fs->f_bitmap);
-            fs->f_bitmap = fopen("bitmap.dat", "wb+"); // lo sobreescribimos
+            fs->f_bitmap = fopen(ruta_aux, "wb+"); // lo sobreescribimos
             fwrite(bitarray_get_max_bit(fs->bitmap), sizeof(size_t), 1, fs->f_bitmap); 
             actualizar_f_bitmap();
         } else {
             fgets(fs->bitmap->bitarray, aux, fs->f_bitmap); // tomamos el bitmap almacenado
         }
     }
+    free(ruta_aux);
 }
 
 bool crear_f (char *ruta_metadata){
@@ -95,14 +104,14 @@ bool crear_f (char *ruta_metadata){
     return true;
 } 
 
-void eliminar_f (char *ruta_metadata){
+bool eliminar_f (char *ruta_metadata){
     uint bloque, cant_bloq;
 
     // obtener bloque inicial y cant bloques
     t_config *metadata = config_create(ruta_metadata);
     if (! metadata){
         log_warning(log_io, "archivo metadata no existe");
-        return;
+        return false;
     }
     bloque = config_get_int_value(metadata, "BLOQUE");
     cant_bloq = config_get_int_value(metadata, "SIZE");
@@ -112,16 +121,18 @@ void eliminar_f (char *ruta_metadata){
 
     // cortar conexion y borrar archivo 
     config_destroy(metadata);
-    if (remove(ruta_metadata)) // si devuelve != 0 hubo error
+    if (remove(ruta_metadata)) {// si devuelve != 0 hubo error
         log_warning(log_io, "Error al borrar archivo");
+        return false;
+    }
+    return true;
 }
 
-bool truncar_f (char *ruta_metadata, int nuevo_size, int pid){
+bool truncar_f (t_config *metadata, int nuevo_size, int pid){
     uint bloque, cant_bloq;
     t_bloques_libres *libres;
 
     // obtener bloque inicial y cant bloques
-    t_config *metadata = config_create(ruta_metadata);
     if (! metadata){
         log_warning(log_io, "archivo metadata no existe");
         return false;
@@ -160,7 +171,6 @@ bool truncar_f (char *ruta_metadata, int nuevo_size, int pid){
     }
     
     config_save(metadata);
-    config_destroy(metadata);
     return true; 
 }
 
@@ -241,13 +251,11 @@ void compactar_FS (void){
     actualizar_f_bitmap();
 }
 
-char * leer_f (char *ruta_metadata, int offset, int cant_bytes){ /* NO CONSIDERE QUE PASA SI NO SE LEE EL ULTIMO BLOQUE COMPLETO */
-    t_config *metadata;
+char * leer_f (t_config *metadata, int offset, int cant_bytes){ 
     char *data = NULL;
-    int aux;
+    // int aux;
 
     // verificamos que este dentro del size del archivo
-    metadata = config_create(ruta_metadata);
     if (!metadata || calcular_bloques(offset + cant_bytes) > config_get_int_value(metadata, "SIZE"))
     { // Si no existe la metadata Ó los bloques a leer (deplazamiento dentro file + cant) sobrepasan el tamaño del file...
         log_warning(log_io, "Error al leer archivo, archivo inexistente ó leyendo fuera del archivo");
@@ -255,34 +263,33 @@ char * leer_f (char *ruta_metadata, int offset, int cant_bytes){ /* NO CONSIDERE
     } 
 
     int bloq_ini = config_get_int_value(metadata, "BLOQUE");
-    data = malloc(calcular_bloques(cant_bytes));
+    data = malloc(cant_bytes);
     fseek(fs->f_bloques, bloq_ini + offset, SEEK_SET); // posiciono en archivo
 
-    // si offset apunta a bloque empezado lo consumo y obtengo bloques a leer restantes
-    aux = offset % fs->tam_bloques; // el resto es el offset dentro del bloque q quiere leer
-    if (aux != 0) {
-        fread(data, aux, 1, fs->f_bloques); // leo el bloque con offset
-        aux = calcular_bloques(cant_bytes) - 1; // cuento bloques restantes a leer
-    } else
-        aux = calcular_bloques(cant_bytes);
+    // // si offset apunta a bloque empezado lo consumo y obtengo bloques a leer restantes
+    // aux = offset % fs->tam_bloques; // el resto es el offset dentro del bloque q quiere leer
+    // if (aux != 0) {
+    //     fread(data, aux, 1, fs->f_bloques); // leo el bloque con offset
+    //     aux = calcular_bloques(cant_bytes) - 1; // cuento bloques restantes a leer
+    // } else
+    //     aux = calcular_bloques(cant_bytes);
     
-    // leo bloques restantes
-    fread(data, fs->tam_bloques, aux, fs->f_bloques); // aux es cant bloques a leer
-    config_destroy(metadata);
+    // // leo bloques restantes
+    // fread(data, fs->tam_bloques, aux, fs->f_bloques); // aux es cant bloques a leer
 
-    // Comparar strlen(data y cant_bytes) y recortar sobrante de ser necesario
+    /* Como ya comprobamos que este dentro de los bloques del archivo podemos hacer read completo */
+    // ahorramos el tener q considerar offsets internos en bloques
+    fread(data, fs->tam_bloques, cant_bytes, fs->f_bloques);
 
     return data;
 }
 
-bool escribir_f (char *ruta_metadata, int offset, int cant_bytes, char *data){ /* PENDIENTE */
-    t_config *metadata;
+bool escribir_f (t_config *metadata, int offset, int cant_bytes, char *data){ /* PENDIENTE */
     int aux;
     char *data_temp;
     bool temp = false;
 
     // verificamos que este dentro del size del archivo
-    metadata = config_create(ruta_metadata);
     if (!metadata || calcular_bloques(offset + cant_bytes) > config_get_int_value(metadata, "SIZE"))
     { // Si no existe la metadata Ó los bloques a leer (deplazamiento dentro file + cant) sobrepasan el tamaño del file...
         log_warning(log_io, "Error al leer archivo, archivo inexistente ó leyendo fuera del archivo");
@@ -308,7 +315,7 @@ bool escribir_f (char *ruta_metadata, int offset, int cant_bytes, char *data){ /
 
     if (temp) // si data_temp recibio espacio hay q liberarlo
         free(data_temp);
-    config_destroy(metadata);
+    
     return true;
 }
 
@@ -396,17 +403,108 @@ void actualizar_f_bitmap (void){
     fputs(fs->bitmap->bitarray, fs->f_bitmap); // sobrescribo
 }
 
+char *obtener_path_absoluto(char *ruta){
+    char *aux = string_new();
+    string_append(aux, PATH_BASE);
+    string_append(aux, "/");
+    string_append(aux, ruta);
+    return aux;
+}
+
+t_config *obtener_metadata(char *ruta){
+    t_config *new;
+    char *temp;
+
+    temp = obtener_path_absoluto(ruta);
+    string_append(temp, ".config");
+
+    new = config_create(temp);
+    if (! new)
+        log_warning(log_io, "archivo metadata no existe");
+
+    return new;
+}
+
 // Funciones comunicación (posiblemente pasen al main de IO)
-void fs_create (int conexion, t_list *parametros){  /* PENDIENTE */
 
+void fs_create (int conexion, t_list *parametros){  
+    void *data;
+    int pid;
+    char *ruta_metadata;
+    t_paquete *paquete;
+    bool resultado;
+
+    data = list_get(parametros, 0);
+    pid = *(int*)data;
+    data = list_get(parametros, 1);
+
+    ruta_metadata = obtener_path_absoluto((char *)data); // revisar (de ultima el "(char *)" no deberia ser necesario ya q void y char es son lo mismo)
+
+    logguear_DialFs(CREAR_F, pid,(char *)data, 0,0);
+
+    resultado = crear_f(ruta_metadata);
+    if (! resultado)
+        paquete = crear_paquete(MENSAJE_ERROR);
+    else
+        paquete = crear_paquete(IO_OPERACION);
+    
+    enviar_paquete(paquete, conexion);
+    eliminar_paquete(paquete);
 }
 
-void fs_delete (int conexion, t_list *parametros){ /* PENDIENTE */
+void fs_delete (int conexion, t_list *parametros){
+    void *data;
+    int pid;
+    char *ruta_metadata;
+    t_paquete *paquete;
+    bool resultado;
 
+    data = list_get(parametros, 0);
+    pid = *(int*)data;
+    data = list_get(parametros, 1);
+
+    ruta_metadata = obtener_path_absoluto((char *)data); // revisar (de ultima el "(char *)" no deberia ser necesario ya q void y char es son lo mismo)
+
+    logguear_DialFs(ELIMINAR_F, pid,(char *)data, 0,0);
+
+    resultado = eliminar_f(ruta_metadata);
+    if (! resultado)
+        paquete = crear_paquete(MENSAJE_ERROR);
+    else
+        paquete = crear_paquete(IO_OPERACION);
+    
+    enviar_paquete(paquete, conexion);
+    eliminar_paquete(paquete);
 }
 
-void fs_truncate (int conexion, t_list *parametros){ /* PENDIENTE */
+void fs_truncate (int conexion, t_list *parametros){
+    void *data;
+    int pid, nuevo_size;
+    char *ruta_metadata;
+    t_paquete *paquete;
+    bool resultado;
 
+    data = list_get(parametros, 0);
+    pid = *(int*)data;
+    data = list_get(parametros, 2);
+    nuevo_size = *(int*)data;
+    data = list_get(parametros, 1);
+
+    ruta_metadata = obtener_path_absoluto((char *)data); // revisar (de ultima el "(char *)" no deberia ser necesario ya q void y char es son lo mismo)
+
+    logguear_DialFs(TRUNCAR_F, pid,(char *)data, nuevo_size, 0);
+
+    t_config * metadata = obtener_metadata(ruta_metadata);
+
+    resultado = truncar_f(metadata, nuevo_size, pid);
+    if (! resultado)
+        paquete = crear_paquete(MENSAJE_ERROR);
+    else
+        paquete = crear_paquete(IO_OPERACION);
+    
+    enviar_paquete(paquete, conexion);
+    eliminar_paquete(paquete);
+    config_destroy(metadata);
 }
 
 void fs_read (int conexion, t_list *parametros, char *ip_mem, char *puerto_mem){ /* PENDIENTE (usar interfaces previas)*/

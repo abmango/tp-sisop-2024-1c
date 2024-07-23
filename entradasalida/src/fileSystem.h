@@ -40,15 +40,16 @@ bool crear_f (char *ruta_metadata);
 
 /// @brief Libera los bloques reservados, y borra el archivo de metadata (emite un log warnings si algo sale mal)
 /// @param ruta_metadata Ruta al archivo metadata (procesada como sea requerido)
-void eliminar_f (char *ruta_metadata);
+/// @return False: si archivo no existe o hubo error al removerlo (sistema) | True: si se pudo eliminar correctamente el archivo
+bool eliminar_f (char *ruta_metadata);
 
 /// @brief modifica bitmap y archivo metadata segun nuevo_size, de ser necesario puede disparar una compactación del FS 
 ///        (solo si hay espacio) y usa mover_f para reubicar archivos
-/// @param ruta_metadata Ruta al archivo metadata (procesada como sea requerido)
+/// @param metadata      Referencia a la estructura config ya abierta de la metadata
 /// @param nuevo_size    Nuevo tamaño del archivo en bytes
 /// @param pid           Solo para los logs de compactación
 /// @return False: Si no existe metadata o si no hay espacio para ampliar | True: si tuvo exito
-bool truncar_f (char *ruta_metadata, int nuevo_size, int pid);
+bool truncar_f (t_config *metadata, int nuevo_size, int pid);
 
 /// @brief Mueve bloque a bloque de un archivo a nueva posicion, actualiza metadata y bitmap
 /// @param metadata      puntero a metadata (ya cargado) 
@@ -61,19 +62,19 @@ void mover_f (t_config *metadata, int bloq_new);
 void compactar_FS (void);
 
 /// @brief Lee de un archivo data y la agrega a un string (comprueba caso inicio en mitad bloque)
-/// @param ruta_metadata Ruta al archivo metadata (procesada como sea requerido)
+/// @param metadata      Referencia a la estructura config ya abierta de la metadata
 /// @param offset        Posicion del archivo desde donde se inicia lectura (puede no ser inicio de bloque)
 /// @param cant_bytes    Cantidad de bytes a leer del archivo
 /// @return String con todos los bytes leidos del archivo
-char * leer_f (char *ruta_metadata, int offset, int cant_bytes); /* NO CONSIDERE QUE PASA SI NO SE LEE EL ULTIMO BLOQUE COMPLETO */
+char * leer_f (t_config *metadata, int offset, int cant_bytes);
 
 /// @brief Escribe en el archivo del string recibido (comprueba caso inicio en mitad bloque);
-/// @param ruta_metadata Ruta al archivo metadata (procesada como sea requerido)
+/// @param metadata      Referencia a la estructura config ya abierta de la metadata
 /// @param offset        Posicion del archivo desde donde se inicia lectura (puede no ser inicio de bloque)
 /// @param cant_bytes    Cantidad de bytes a leer del archivo
 /// @param data          String con datos a guardar en archivo
 /// @return True: si la escritura fue exitosa | False: si error archivo metadata o data sobrepasa espacio reservado
-bool escribir_f (char *ruta_metadata, int offset, int cant_bytes, char *data); /* NO CONSIDERE QUE PASA SI NO SE ESCRIBE EL ULTIMO BLOQUE COMPLETO (en teoria no es problema)*/ 
+bool escribir_f (t_config *metadata, int offset, int cant_bytes, char *data); /* NO CONSIDERE QUE PASA SI NO SE ESCRIBE EL ULTIMO BLOQUE COMPLETO (en teoria no es problema)*/ 
 
 /// @brief Cierra los archivos abiertos (bloques y bitmap) y elimina bitmap en cargado (y libera su mem)
 /// @param  
@@ -106,10 +107,20 @@ void reservar_bloques (int bloq_ini, int cant_bloq);
 /// @param  
 void actualizar_f_bitmap (void);
 
+/// @brief Utilizando PATH_BASE tomado del archivo config, lo agrega a la ruta recibida
+/// @param ruta     ruta relativa/nombre de un archivo
+/// @return     Retorna PATH_BASE + "/" + ruta
+char *obtener_path_absoluto(char *ruta);
+
+/// @brief Realiza operaciones para usar libreria config y abre el archivo
+/// @param ruta     Ruta recibida sin procesar
+/// @return         Retorna referencia a estructura config (si existe), sino retorna NULL 
+t_config *obtener_metadata(char *ruta);
+
 /* Instrucciones de CPU (recibiran las operaciones y pediran operaciones de funcionamiento interno, manejara logs)*/
-void fs_create (int conexion, t_list *parametros); /* PENDIENTE */
-void fs_delete (int conexion, t_list *parametros); /* PENDIENTE */
-void fs_truncate (int conexion, t_list *parametros); /* PENDIENTE */
+void fs_create (int conexion, t_list *parametros);
+void fs_delete (int conexion, t_list *parametros);
+void fs_truncate (int conexion, t_list *parametros);
 void fs_read (int conexion, t_list *parametros, char *ip_mem, char *puerto_mem); /* PENDIENTE */
 void fs_write (int conexion, t_list *parametros, char *ip_mem, char *puerto_mem); /* PENDIENTE */
 
