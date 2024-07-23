@@ -1,37 +1,58 @@
 #include "utils.h"
 
+// ==========================================================================
 // ====  Variables globales:  ===============================================
 // ==========================================================================
-int socket_kernel_dispatch = 1;
+int socket_escucha_dispatch = 1;
+int socket_escucha_interrupt = 1;
+
 int socket_memoria = 1;
+int socket_kernel_dispatch = 1;
 int socket_kernel_interrupt = 1;
+
 t_interrupt_code interrupcion = NADA;
 
+t_log* log_cpu_oblig;
+t_log* log_cpu_gral;
+t_log* logger = NULL;
+
+// ==========================================================================
+// ====  Semáforos globales:  ===============================================
+// ==========================================================================
 pthread_mutex_t mutex_interrupt;
 
-t_log* logger = NULL;
 // ==========================================================================
 // ==========================================================================
 
-void manejar_rta_handshake(handshake_code rta_handshake, const char* nombre_servidor) {
+bool recibir_y_manejar_handshake_kernel(int socket) {
+    bool exito_handshake = false;
 
-	switch (rta_handshake) {
-		case HANDSHAKE_OK:
-		log_debug(logger, "Handshake aceptado. Conexion con %s establecida.", nombre_servidor);
-		break;
-		case HANDSHAKE_INVALIDO:
-		log_error(logger, "Handshake invalido. Conexion con %s no establecida.", nombre_servidor);
-		break;
-		case -1:
-		log_error(logger, "op_code no esperado. Conexion con %s no establecida.", nombre_servidor);
-		break;
-		case -2:
-		log_error(logger, "al recibir handshake hubo un tamanio de buffer no esperado. Conexion con %s no establecida.", nombre_servidor);
-		break;
-		default:
-		log_error(logger, "error desconocido. Conexion con %s no establecida.", nombre_servidor);
-		break;
-	}
+    handshake_code handshake_codigo = recibir_handshake(socket);
+
+    switch (handshake_codigo) {
+        case KERNEL_D:
+        exito_handshake = true;
+        enviar_handshake(HANDSHAKE_OK, socket);
+        log_debug(log_cpu_gral, "Handshake con Kernel en puerto Dispatch aceptado.");
+        break;
+        case KERNEL_I:
+        exito_handshake = true;
+        enviar_handshake(HANDSHAKE_OK, socket);
+        log_debug(log_cpu_gral, "Handshake con Kernel en puerto Interrupt aceptado.");
+        break;
+        case -1:
+        log_error(log_cpu_gral, "op_code no esperado. Se esperaba un handshake.");
+        break;
+        case -2:
+        log_error(log_cpu_gral, "al recibir handshake hubo un tamanio de buffer no esperado.");
+        break;
+        default:
+        enviar_handshake(HANDSHAKE_INVALIDO, socket);
+        log_error(log_cpu_gral, "Handshake invalido. Se esperaba KERNEL_D o KERNEL_I.");
+        break;
+    }
+    
+    return exito_handshake;
 }
 
 //unifique pedir_io con desalojar para tener una funcion general
@@ -422,7 +443,22 @@ t_dictionary* crear_diccionario(t_contexto_de_ejecucion reg)
    return dicc;
 }
 
-// TLB
+void terminar_programa(t_config *config)
+{
+	// Y por ultimo, hay que liberar lo que utilizamos (conexion, log y config)
+	// con las funciones de las commons y del TP mencionadas en el enunciado /
+	liberar_conexion(log_cpu_gral, "Memoria", socket_memoria);
+	liberar_conexion(log_cpu_gral, "Kernel del puerto Dispatch", socket_kernel_dispatch);
+	liberar_conexion(log_cpu_gral, "Kernel del puerto Interrupt", socket_kernel_interrupt);
+	liberar_conexion(log_cpu_gral, "Mi propio servidor escucha del puerto Dispatch", socket_escucha_dispatch);
+	liberar_conexion(log_cpu_gral, "Mi propio servidor escucha del puerto Interrupt", socket_escucha_interrupt);
+	log_destroy(log_cpu_oblig);
+	log_destroy(log_cpu_gral);
+	config_destroy(config);
+}
+
+// ====  TLB:  ==============================================================
+// ==========================================================================
 
 // Función para inicializar la TLB
 void init_tlb(int size) {

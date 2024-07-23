@@ -14,24 +14,29 @@ int main(int argc, char* argv[]) {
 	config = iniciar_config("default");
 	iniciar_logger();
 
+	pthread_mutex_init(&mutex_procesos_cargados, NULL);
+	procesos_cargados = list_create();
+
 	memoria = inicializar_memoria(config_get_int_value(config, "TAM_MEMORIA"), config_get_int_value(config, "TAM_PAGINA"));
 
 	char* puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
     socket_escucha = iniciar_servidor(puerto);
 
-	pthread_mutex_init(&mutex_procesos_cargados, NULL);
-	procesos_cargados = list_create();
-
 	int socket_cpu = esperar_cliente(socket_escucha);
-	// handshake aqui
-	recibir_mensaje(socket_cpu); // el CPU se presenta
+
+	// En caso de handshake fallido con cpu, termina la ejecucion del módulo.
+	bool handshake_cpu_aceptado = recibir_y_manejar_handshake_cpu(socket_cpu);
+	if (!handshake_cpu_aceptado) {
+		terminar_programa(socket_cpu);
+		return EXIT_FAILURE;
+	}
 
 	error = pthread_create(&hilo_recepcion, NULL, rutina_recepcion, NULL);
 	if (error != 0) {
 		log_error(log_memoria, "Error al crear hilo_recepcion");
 	}
 
-	// implementar servidor para atender a cpu bucle hasta fin_programa = true; (asigna cuando cpu se desconecta)
+	// atiende al cpu en bucle, hasta fin_programa = true; (se asigna cuando cpu se desconecta)
 	atender_cpu(socket_cpu);
 
 	pthread_join(hilo_recepcion, NULL); // el main va a bloquearse hasta que termine el hilo
@@ -40,6 +45,8 @@ int main(int argc, char* argv[]) {
 	list_destroy(procesos_cargados);
 	pthread_mutex_destroy(&mutex_procesos_cargados);
 	liberar_memoria();
+
+	terminar_programa(socket_cpu);
 
 	return EXIT_SUCCESS;
 }
@@ -219,9 +226,6 @@ void atender_cpu(int socket)
 	while (!fin_programa) { // INSTRUCCIONES - PEDIDO_PAGINA 
 		operacion = recibir_codigo(socket);
 		switch (operacion) {
-		case MENSAJE: // lo mantengo solo por si lo usaban para testeo... ideal seria borrarlo
-			recibir_mensaje(socket);
-			break;
 		case PAQUETE_TEMPORAL: // lo mantengo solo por si lo usaban para testeo... ideal seria borrarlo
 			recibido = recibir_paquete(socket);
 			imprimir_mensaje("Me llegaron los siguientes valores:");
@@ -384,11 +388,11 @@ void atender_cpu(int socket)
 			break;
 
 		case -1:
-			imprimir_mensaje("el cpu se desconecto.");
+			log_debug(log_memoria_gral, "el cpu se desconecto.");
 			fin_programa = true;
 			break;
 		default:
-			imprimir_mensaje("Operacion desconocida. No quieras meter la pata");
+			log_warning(log_memoria_gral, "Operacion desconocida recibida de cpu. No quieras meter la pata");
 			break;
 		}
 	}
@@ -398,10 +402,14 @@ void iterator(char* value) {
 	printf("%s", value);
 }
 
-void terminar_programa()
+void terminar_programa(int socket_cpu)
 {
 	// Y por ultimo, hay que liberar lo que utilizamos (conexion, log y config) 
 	 // con las funciones de las commons y del TP mencionadas en el enunciado /
+	liberar_conexion(log_memoria_gral, "CPU", socket_cpu);
+	liberar_conexion(log_memoria_gral, "Mi propio Servidor Escucha", socket_escucha);
+	log_destroy(log_memoria_oblig);
+	log_destroy(log_memoria_gral);
 	config_destroy(config);
 }
 

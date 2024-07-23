@@ -1,6 +1,6 @@
 #include "utils.h"
 
-
+// ==========================================================================
 // ====  Variables globales:  ===============================================
 // ==========================================================================
 int grado_multiprogramacion;
@@ -17,23 +17,30 @@ t_list* cola_exit = NULL;
 
 t_list* recursos_del_sistema = NULL;
 
-pthread_mutex_t mutex_colas;
+int socket_cpu_dispatch = 1;
+int socket_cpu_interrupt = 1;
+//int socket_memoria = 1;
+
+t_config *config = NULL;
+
+t_log* log_kernel_oblig = NULL;
+t_log* log_kernel_gral = NULL;
+t_log* logger = NULL;
+
+// ==========================================================================
+// ====  Semáforos globales:  ===============================================
+// ==========================================================================
+// -- -- -- -- -- -- -- --
+// --IMPORTANTE-- al hacer lock o wait de estos semáforos donde haga falta, hacerlo en este orden, para minimizar riesgo de deadlocks.
+// -- -- -- -- -- -- -- --
+// ==========================================================================
 pthread_mutex_t mutex_cola_new;
 pthread_mutex_t mutex_cola_ready;
 pthread_mutex_t mutex_cola_ready_plus;
 pthread_mutex_t mutex_proceso_exec;
 pthread_mutex_t mutex_cola_exit;
-
 sem_t sem_procesos_ready;
 sem_t sem_procesos_exit;
-
-int socket_memoria = 1;
-int socket_cpu_dispatch = 1;
-int socket_cpu_interrupt = 1;
-
-t_log* logger = NULL;
-// ==========================================================================
-// ==========================================================================
 
 void enviar_handshake_a_memoria(int socket) {
 	t_paquete* paquete = crear_paquete(HANDSHAKE);
@@ -54,19 +61,19 @@ void manejar_rta_handshake(handshake_code rta_handshake, const char* nombre_serv
 
 	switch (rta_handshake) {
 		case HANDSHAKE_OK:
-		log_debug(logger, "Handshake aceptado. Conexion con %s establecida.", nombre_servidor);
+		log_debug(logger, "Handshake con %s fue aceptado.", nombre_servidor);
 		break;
 		case HANDSHAKE_INVALIDO:
-		log_error(logger, "Handshake invalido. Conexion con %s no establecida.", nombre_servidor);
+		log_error(logger, "Handshake con %s fue rechazado por ser invalido.", nombre_servidor);
 		break;
 		case -1:
-		log_error(logger, "op_code no esperado. Conexion con %s no establecida.", nombre_servidor);
+		log_error(logger, "op_code no esperado de %s. Se esperaba HANDSHAKE.", nombre_servidor);
 		break;
 		case -2:
-		log_error(logger, "al recibir handshake hubo un tamanio de buffer no esperado. Conexion con %s no establecida.", nombre_servidor);
+		log_error(logger, "al recibir la rta al handshake de %s hubo un tamanio de buffer no esperado.", nombre_servidor);
 		break;
 		default:
-		log_error(logger, "error desconocido. Conexion con %s no establecida.", nombre_servidor);
+		log_error(logger, "error desconocido al recibir la rta al handshake de %s.", nombre_servidor);
 		break;
 	}
 }
@@ -183,7 +190,7 @@ void buscar_y_finalizar_proceso(int pid) {
 		
 	}
 	else {
-		// un log de que ese proceso ya no existe más.
+		log_error(log_kernel_gral, "El proceso %d ya habia finalizado. No se puede finalizar.", pid);
 	}
 
 }

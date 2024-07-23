@@ -1,5 +1,8 @@
 #include "main.h"
 
+// Recientemente puse la config como variable global, luego tengo que modif todas las
+// funciones donde la pasaba como argumento, pues ahora no hace falta.
+
 int main(int argc, char* argv[]) {
 	
 	cola_new = list_create();
@@ -9,7 +12,7 @@ int main(int argc, char* argv[]) {
 	lista_recurso_blocked = list_create();
 	cola_exit = list_create();
 
-	t_config* config = iniciar_config("default");
+	config = iniciar_config("default");
 	
 	grado_multiprogramacion = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");
 
@@ -29,22 +32,28 @@ int main(int argc, char* argv[]) {
     char* ip;
 	char* puerto;
 	
-	ip = config_get_string_value(config, "IP_MEMORIA");
-	puerto = config_get_string_value(config, "PUERTO_MEMORIA");
-	socket_memoria = crear_conexion(ip, puerto);
-    enviar_handshake(KERNEL, socket_memoria);
-	manejar_rta_handshake(recibir_handshake(socket_memoria), "MEMORIA");
-	
+	// Me conecto con CPU puerto Dispatch
 	ip = config_get_string_value(config, "IP_CPU");
 	puerto = config_get_string_value(config, "PUERTO_CPU_DISPATCH");
     socket_cpu_dispatch = crear_conexion(ip, puerto);
-    enviar_handshake(KERNEL, socket_cpu_dispatch);
-	manejar_rta_handshake(recibir_handshake(socket_cpu_dispatch), "CPU DISPATCH");
+	// Envio y recibo contestacion de handshake. En caso de no ser exitoso, termina la ejecucion del módulo.
+    enviar_handshake(KERNEL_D, socket_cpu_dispatch);
+	bool handshake_cpu_dispatch_exitoso = recibir_y_manejar_rta_handshake(log_kernel_gral, "CPU puerto Dispatch", socket_cpu_dispatch);
+	if (!handshake_cpu_dispatch_exitoso) {
+		terminar_programa(config);
+		return EXIT_FAILURE;
+	}
 
+	// Me conecto con CPU puerto Interrupt
 	puerto = config_get_string_value(config, "PUERTO_CPU_INTERRUPT");
 	socket_cpu_interrupt = crear_conexion(ip, puerto);
-    enviar_handshake(KERNEL, socket_cpu_interrupt);
-	manejar_rta_handshake(recibir_handshake(socket_cpu_interrupt), "CPU INTERRUPT");
+	// Envio y recibo contestacion de handshake. En caso de no ser exitoso, termina la ejecucion del módulo.
+    enviar_handshake(KERNEL_I, socket_cpu_interrupt);
+	bool handshake_cpu_interrupt_exitoso = recibir_y_manejar_rta_handshake(log_kernel_gral, "CPU puerto Interrupt", socket_cpu_interrupt);
+	if (!handshake_cpu_interrupt_exitoso) {
+		terminar_programa(config);
+		return EXIT_FAILURE;
+	}
 
 	puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
 	int socket_escucha = iniciar_servidor(puerto);
@@ -85,11 +94,13 @@ void iterator(char* value) {
 	printf("%s", value);
 }
 
-void terminar_programa(int socket_memoria, int socket_cpu, t_config* config)
+void terminar_programa(t_config* config)
 {
 	// Y por ultimo, hay que liberar lo que utilizamos (conexiones, log y config)
 	 // con las funciones de las commons y del TP mencionadas en el enunciado /
-	liberar_conexion(socket_memoria);
-	liberar_conexion(socket_cpu);
+	liberar_conexion(log_kernel_gral, "CPU Dispatch", socket_cpu_dispatch);
+	liberar_conexion(log_kernel_gral, "CPU Interrupt", socket_cpu_interrupt);
+	log_destroy(log_kernel_oblig);
+	log_destroy(log_kernel_gral);
 	config_destroy(config);
 }

@@ -23,7 +23,7 @@ void* rutina_ejecucion(void *nada);
 void atender_cpu(int socket);
 
 void iterator(char* value);
-void terminar_programa();
+void terminar_programa(int socket_cpu);
 void iniciar_logger();
 
 #endif /* SERVER_H_ */

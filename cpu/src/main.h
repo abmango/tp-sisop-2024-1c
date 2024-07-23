@@ -16,6 +16,5 @@ void iterator(char* value);
 //t_config* iniciar_config(void);
 
 void paquete(int);
-void terminar_programa(int socket_memoria, t_config* config);
 
 #endif 

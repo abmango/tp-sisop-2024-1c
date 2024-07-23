@@ -58,6 +58,8 @@ typedef enum
 	// Módulo cliente
 
 	KERNEL,
+	KERNEL_D, // solo para cpu
+	KERNEL_I, // solo para cpu
 	CPU,
 	MEMORIA,
 	INTERFAZ,
@@ -97,7 +99,7 @@ int esperar_cliente(int);
 void liberar_conexion(t_log* log, char* nombre_conexion, int socket);
 
 //////////////////////////////////////////////
-
+bool recibir_y_manejar_rta_handshake(t_log* logger, const char* nombre_servidor, int socket);
 void enviar_handshake(handshake_code handshake_codigo, int socket);
 handshake_code recibir_handshake(int socket);
 

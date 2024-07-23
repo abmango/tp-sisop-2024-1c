@@ -18,16 +18,29 @@
 #include <utils/conexiones.h>
 #include <pthread.h>
 
+// ==========================================================================
 // ====  Variables globales:  ===============================================
 // ==========================================================================
-extern int socket_kernel_dispatch;
+extern int socket_escucha_dispatch;
+extern int socket_escucha_interrupt;
+
 extern int socket_memoria;
+extern int socket_kernel_dispatch;
 extern int socket_kernel_interrupt;
+
 extern t_interrupt_code interrupcion;
 
+extern t_log* log_cpu_oblig; // logger para los logs obligatorios
+extern t_log* log_cpu_gral; // logger para los logs nuestros. Loguear con criterio de niveles.
+
+// a quitar luego
+extern t_log* logger;
+
+// ==========================================================================
+// ====  Semáforos globales:  ===============================================
+// ==========================================================================
 extern pthread_mutex_t mutex_interrupt;
 
-extern t_log* logger; // Logger para todo (por ahora) del cpu
 // ==========================================================================
 // ==========================================================================
 
@@ -102,7 +115,7 @@ void JNZ (uint32_t PC, uint32_t direccionInstruccion);
 
 ////////////////////////////////////
 
-void manejar_rta_handshake(handshake_code rta_handshake, const char* nombre_servidor);
+bool recibir_y_manejar_handshake_kernel(int socket);
 
 void desalojar(t_contexto_de_ejecucion ce, motivo_desalojo_code motiv, char** arg);
 t_contexto_de_ejecucion recibir_contexto_ejecucion(void);
@@ -121,7 +134,10 @@ void* interrupt(void);
 
 execute_op_code decode(char* instruc);
 
-// ACÁ VA TODO LO DE LA TLB
+void terminar_programa(t_config *config);
+
+// ====  Todo lo de la TLB:  ================================================
+// ==========================================================================
 typedef struct {
     int valid;            // Indicador de validez de la entrada (0: no válida, 1: válida)
     int pid;              // ID del proceso

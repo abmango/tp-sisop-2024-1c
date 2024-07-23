@@ -22,7 +22,7 @@ void* rutina_consola(t_parametros_consola* parametros);
 ////////////////////////////////////////////////////
 
 void op_ejecutar_script();
-void op_iniciar_proceso(char* path);
+void op_iniciar_proceso(char* path, char* ip_mem, char* puerto_mem);
 void op_finalizar_proceso(int pid);
 void op_detener_planificacion();
 void op_iniciar_planificacion();

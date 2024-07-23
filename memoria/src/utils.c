@@ -56,6 +56,35 @@ bool recibir_y_manejar_handshake_conexiones_temp(int socket, char** nombre_modul
     return exito_handshake;
 }
 
+bool recibir_y_manejar_handshake_cpu(int socket) {
+    bool exito_handshake = false;
+
+    handshake_code handshake_codigo = recibir_handshake(socket);
+
+    switch (handshake_codigo) {
+        case CPU:
+        exito_handshake = true;
+        enviar_handshake(HANDSHAKE_OK, socket);
+        log_debug(log_memoria_gral, "Handshake con CPU aceptado.");
+        break;
+        case -1:
+        log_error(log_memoria_gral, "op_code no esperado. Se esperaba un handshake.");
+        liberar_conexion(log_memoria_gral, "CPU", socket);
+        break;
+        case -2:
+        log_error(log_memoria_gral, "al recibir handshake hubo un tamanio de buffer no esperado.");
+        liberar_conexion(log_memoria_gral, "CPU", socket);
+        break;
+        default:
+        enviar_handshake(HANDSHAKE_INVALIDO, socket);
+        log_error(log_memoria_gral, "Handshake invalido. Se esperaba CPU.");
+        liberar_conexion(log_memoria_gral, "CPU", socket);
+        break;
+    }
+    
+    return exito_handshake;
+}
+
 MemoriaPaginada* inicializar_memoria(int tamano_memoria, int tamano_pagina) {
     // Verificar que el tamaño de la memoria sea un múltiplo del tamaño de página
     if (tamano_memoria % tamano_pagina != 0) {

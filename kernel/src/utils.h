@@ -34,6 +34,7 @@ typedef struct
     t_list* cola_blocked; // Es una lista de t_pcb*
 } t_recurso_blocked;
 
+// ==========================================================================
 // ====  Variables globales:  ===============================================
 // ==========================================================================
 extern int grado_multiprogramacion; // Viene del archivo config
@@ -50,9 +51,13 @@ extern t_list* cola_exit; // Estado EXIT. Es una lista de t_pcb*
 
 extern t_list* recursos_del_sistema; // Recursos, con sus instancias disponibles actualmente. Es una lista de t_recurso*
 
-extern int socket_memoria;
 extern int socket_cpu_dispatch;
 extern int socket_cpu_interrupt;
+
+// Este lo quito, dado que las conexiones con memoria son temporales, asi me resulta más seguro.
+// extern int socket_memoria;
+
+extern t_config *config;
 
 extern t_log* log_kernel_oblig; // logger para los logs obligatorios
 extern t_log* log_kernel_gral; // logger para los logs nuestros. Loguear con criterio de niveles.
@@ -60,7 +65,9 @@ extern t_log* log_kernel_gral; // logger para los logs nuestros. Loguear con cri
 // a quitar luego
 extern t_log* logger; // Logger para todo (por ahora) del kernel
 
+// ==========================================================================
 // ====  Semáforos globales:  ===============================================
+// ==========================================================================
 // -- -- -- -- -- -- -- --
 // --IMPORTANTE-- al hacer lock o wait de estos semáforos donde haga falta, hacerlo en este orden, para minimizar riesgo de deadlocks.
 // -- -- -- -- -- -- -- --
@@ -72,6 +79,8 @@ extern pthread_mutex_t mutex_proceso_exec;
 extern pthread_mutex_t mutex_cola_exit;
 extern sem_t sem_procesos_ready; // Cantidad de procesos en estado READY. incluye procesos tanto en cola_ready como en cola_ready_plus
 extern sem_t sem_procesos_exit; // Cantidad de procesos en estado EXIT
+
+// este ya no va más
 // extern pthread_mutex_t mutex_colas;
 // ==========================================================================
 // ==========================================================================

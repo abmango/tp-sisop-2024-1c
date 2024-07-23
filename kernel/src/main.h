@@ -16,6 +16,6 @@
 
 t_list* crear_lista_de_recursos(char* array_nombres[], char* array_instancias[]);
 void iterator(char* value);
-void terminar_programa(int socket_memoria, int socket_cpu, t_config* config);
+void terminar_programa(t_config* config);
 
 #endif

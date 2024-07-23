@@ -20,19 +20,44 @@ int main(int argc, char *argv[])
 
 	logger = log_create("cpu.log", "CPU", true, LOG_LEVEL_DEBUG);
 
+	// Me conecto con Memoria
 	char *ip = config_get_string_value(config, "IP_MEMORIA");
 	char *puerto = config_get_string_value(config, "PUERTO_MEMORIA");
 	socket_memoria = crear_conexion(ip, puerto);
+	// Envio y recibo contestacion de handshake. En caso de no ser exitoso, termina la ejecucion del módulo.
 	enviar_handshake(CPU, socket_memoria);
-	manejar_rta_handshake(recibir_handshake(socket_memoria), "MEMORIA");
+	bool handshake_memoria_exitoso = recibir_y_manejar_rta_handshake(log_cpu_gral, "Memoria", socket_memoria);
+	if (!handshake_memoria_exitoso) {
+		terminar_programa(config);
+		return EXIT_FAILURE;
+	}
 
+	// Inicio servidor de escucha en puerto Dispatch
 	puerto = config_get_string_value(config, "PUERTO_ESCUCHA_DISPATCH");
-	int socket_escucha = iniciar_servidor(puerto);
+	socket_escucha_dispatch = iniciar_servidor(puerto);
 
-	int socket_kernel_dispatch = esperar_cliente(socket_escucha);
-	int socket_kernel_interrupt = esperar_cliente(socket_escucha);
-	close(socket_escucha);
-	recibir_mensaje(socket_kernel_dispatch); // el Kernel se presenta
+	// Inicio servidor de escucha en puerto Interrupt
+	puerto = config_get_string_value(config, "PUERTO_ESCUCHA_INTERRUPT");
+	socket_escucha_interrupt = iniciar_servidor(puerto);
+
+
+	// Espero que se conecte el Kernel en puerto Dispatch
+	int socket_kernel_dispatch = esperar_cliente(socket_escucha_dispatch);
+	// Recibo y contesto handshake. En caso de no ser aceptado, termina la ejecucion del módulo.
+	bool handshake_kernel_dispatch_aceptado = recibir_y_manejar_handshake_kernel(socket_kernel_dispatch);
+	if (!handshake_kernel_dispatch_aceptado) {
+		terminar_programa(config);
+		return EXIT_FAILURE;
+	}
+
+	// Espero que se conecte el Kernel en puerto Interrupt
+	int socket_kernel_interrupt = esperar_cliente(socket_escucha_interrupt);
+	// Recibo y contesto handshake. En caso de no ser aceptado, termina la ejecucion del módulo.
+	bool handshake_kernel_interrupt_aceptado = recibir_y_manejar_handshake_kernel(socket_kernel_interrupt);
+	if (!handshake_kernel_interrupt_aceptado) {
+		terminar_programa(config);
+		return EXIT_FAILURE;
+	}
 
 	pthread_t interrupciones;
 	pthread_create(&interrupciones, NULL, (void *)interrupt, NULL); // hilo pendiente de escuchar las interrupciones
@@ -152,19 +177,6 @@ int main(int argc, char *argv[])
 	free(tlb);
 
 	return EXIT_SUCCESS;
-}
-
-void terminar_programa(int socket_memoria, t_config *config)
-{
-	// Y por ultimo, hay que liberar lo que utilizamos (conexion, log y config)
-	// con las funciones de las commons y del TP mencionadas en el enunciado /
-	int err = close(socket_memoria);
-	if (err != 0)
-	{
-		imprimir_mensaje("error en funcion close()");
-		exit(3);
-	}
-	config_destroy(config);
 }
 
 void iterator(char *value)
