@@ -508,7 +508,7 @@ void fs_truncate (int conexion, t_list *parametros){
 }
 
 void fs_read (int conexion, t_list *parametros, char *ip_mem, char *puerto_mem){ /* PENDIENTE (usar interfaces previas)*/
-
+    
 }
 
 void fs_write (int conexion, t_list *parametros, char *ip_mem, char *puerto_mem){ /* PENDIENTE (usar interfaces previas) */
