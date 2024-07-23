@@ -359,7 +359,7 @@ void interfaz_dialFS(char* nombre, t_config* config, int conexion_kernel)
 	{
 		recibido = recibir_paquete(conexion_kernel);
 
-		aux = list_remove(recibido, 0); // remueve int para dial_fs_op_code
+		aux = list_remove(recibido, 0); // remueve int para dial_fs_op_code (queda solo lo que se necesita para FS y comunicacion de ser necesaria)
 		codigo_fs = *(int *)aux;
 
 		switch (codigo_fs)
