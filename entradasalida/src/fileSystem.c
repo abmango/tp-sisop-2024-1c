@@ -5,11 +5,13 @@ int unidad_trabajo = 0,
     retraso_compresion = 0;
 uint aux_bitmap = 0; // almacena la siguiente posicion a la ultima posicion libre [podria utilizarse metodo "static" en la funcion de busqueda]
 char *PATH_BASE;
+char *nombre_interfaz_FS;
 
 // revisar tema de si conviene crear una carpeta donde guardar los archivos de metadata => ver PATH_BASE_DIALFS
 
 
-void iniciar_FS (t_config *config){ /* EN PROCESO DE MODIFICACION (PATH_BASE)*/
+void iniciar_FS (t_config *config, char *nombre){ /* EN PROCESO DE MODIFICACION (PATH_BASE)*/
+    nombre_interfaz_FS = nombre;
     char *ruta_aux = string_new();
 
     /* obteniendo componentes del FileSystem */
@@ -507,10 +509,218 @@ void fs_truncate (int conexion, t_list *parametros){
     config_destroy(metadata);
 }
 
+// lee de archivo y escribe en memoria
 void fs_read (int conexion, t_list *parametros, char *ip_mem, char *puerto_mem){ /* PENDIENTE (usar interfaces previas)*/
+    void *data;
+    void *nombre;
+    int pid, offset, cant_bytes;
+    char *ruta_metadata;
+    t_paquete *paquete;
+    t_config *metadata;
+    int conexion_memoria = 1;
+    int operacion;
     
+    // parametros = int, char*,int, bucle (int-int)
+
+    // creamos paquete para memoria (pid + bucle dir-size)
+    paquete = crear_paquete(ACCESO_ESCRITURA);
+    data = list_remove(parametros, 0);
+    pid = *(int*)data;
+    free(data);
+    agregar_a_paquete(paquete, &pid, sizeof(int));
+
+    data = list_remove(parametros, 1);
+    offset = pid = *(int*)data;
+    free(data);
+
+    data = list_remove(parametros, 0);  // parametros solo tiene bucle para memoria
+    nombre = data;
+
+    // revisar si lo q resta en parametros son "pares" int-int
+    if ( (list_size(parametros) % 2) != 0 ){
+        eliminar_paquete(paquete); // limpiamos el paquete q iba a memoria
+        paquete = crear_paquete(MENSAJE_ERROR);
+        enviar_paquete(paquete, conexion); // mandamos error a kernel
+        eliminar_paquete(paquete);
+        free(data);
+        return; // volvemos a interfaz
+    }
+
+    // agregamos a paquete memoria y calculamos cant_bytes a leer
+    agregar_dir_y_size_a_paquete(paquete, parametros, &cant_bytes);
+
+    // obtenemos metadata
+    ruta_metadata = obtener_path_absoluto((char *)data);
+    metadata = obtener_metadata(ruta_metadata);
+
+    // si no hay metadata implica error
+    if ( ! metadata ){
+        eliminar_paquete(paquete); // limpiamos el paquete q iba a memoria
+        paquete = crear_paquete(MENSAJE_ERROR);
+        enviar_paquete(paquete, conexion); // mandamos error a kernel
+        eliminar_paquete(paquete);
+        free(data);
+        return; // volvemos a interfaz
+    }
+
+    // leemos archivo y agregamos a paquete
+    data = leer_f(metadata, offset, cant_bytes);
+    agregar_a_paquete(paquete, data; cant_bytes);
+
+    /* comunicamos memoria */
+    conexion_memoria = crear_conexion(ip_mem, puerto_mem);
+
+    enviar_handshake_a_memoria(nombre_interfaz_FS, conexion_memoria);
+	bool handshake_aceptado = manejar_rta_handshake(recibir_handshake(conexion_memoria), "Memoria");
+
+    // Handshake con Memoria fallido. Libera la conexion, e informa del error a Kernel.
+	if(!handshake_aceptado) {
+		liberar_conexion(log_io, "Memoria", conexion_memoria);
+		eliminar_paquete(paquete);
+		crear_paquete(MENSAJE_ERROR);
+		enviar_paquete(paquete, conexion);
+		eliminar_paquete(paquete);
+        free(data);
+        free(nombre);
+        free(ruta_metadata);
+        config_destroy(metadata);
+        return;
+	}
+
+    // envia el paquete q fue cargando
+	enviar_paquete(paquete, conexion_memoria);	
+	eliminar_paquete(paquete);	
+    // recibe respuesta de memoria
+    operacion = recibir_codigo(conexion_memoria);
+	if(operacion == ACCESO_ESCRITURA){
+		logguear_DialFs(LEER_F, pid, nombre);
+		paquete = crear_paquete(IO_OPERACION);
+	}else{
+		printf("ERROR EN MEMORIA");
+		paquete = crear_paquete(MENSAJE_ERROR);
+	}
+
+	liberar_conexion(log_io, "Memoria", conexion_memoria); // cierra conexion
+
+	// avisa a kernel que termino 
+	enviar_paquete(paquete, conexion);
+	eliminar_paquete(paquete);
+
+    free(data);
+    free(nombre);
+    free(ruta_metadata);
+    config_destroy(metadata);
 }
 
+// Pide a memoria y escribe en archivo
 void fs_write (int conexion, t_list *parametros, char *ip_mem, char *puerto_mem){ /* PENDIENTE (usar interfaces previas) */
+    void *data;
+    void *nombre;
+    int pid, offset, cant_bytes;
+    char *ruta_metadata;
+    t_paquete *paquete;
+    t_config *metadata;
+    int conexion_memoria = 1;
+    int operacion;
+    t_list *recibido;
+    bool resultado;
+    
+    // parametros = int, char*,int, bucle (int-int)
 
+    // creamos paquete para memoria (pid + bucle dir-size)
+    paquete = crear_paquete(ACCESO_LECTURA);
+    data = list_remove(parametros, 0);
+    pid = *(int*)data;
+    free(data);
+    agregar_a_paquete(paquete, &pid, sizeof(int));
+
+    data = list_remove(parametros, 1);
+    offset = pid = *(int*)data;
+    free(data);
+
+    data = list_remove(parametros, 0);  // parametros solo tiene bucle para memoria
+    nombre = data;
+
+    // revisar si lo q resta en parametros son "pares" int-int
+    if ( (list_size(parametros) % 2) != 0 ){
+        eliminar_paquete(paquete); // limpiamos el paquete q iba a memoria
+        paquete = crear_paquete(MENSAJE_ERROR);
+        enviar_paquete(paquete, conexion); // mandamos error a kernel
+        eliminar_paquete(paquete);
+        free(data);
+        return; // volvemos a interfaz
+    }
+
+    // agregamos a paquete memoria y calculamos cant_bytes a escribir
+    agregar_dir_y_size_a_paquete(paquete, parametros, &cant_bytes);
+
+    // obtenemos metadata
+    ruta_metadata = obtener_path_absoluto((char *)data);
+    metadata = obtener_metadata(ruta_metadata);
+
+    // si no hay metadata implica error
+    if ( ! metadata ){
+        eliminar_paquete(paquete); // limpiamos el paquete q iba a memoria
+        paquete = crear_paquete(MENSAJE_ERROR);
+        enviar_paquete(paquete, conexion); // mandamos error a kernel
+        eliminar_paquete(paquete);
+        free(data);
+        return; // volvemos a interfaz
+    }
+
+    /* comunicamos memoria */
+    conexion_memoria = crear_conexion(ip_mem, puerto_mem);
+
+    enviar_handshake_a_memoria(nombre_interfaz_FS, conexion_memoria);
+	bool handshake_aceptado = manejar_rta_handshake(recibir_handshake(conexion_memoria), "Memoria");
+
+    // Handshake con Memoria fallido. Libera la conexion, e informa del error a Kernel.
+	if(!handshake_aceptado) {
+		liberar_conexion(log_io, "Memoria", conexion_memoria);
+		eliminar_paquete(paquete);
+		crear_paquete(MENSAJE_ERROR);
+		enviar_paquete(paquete, conexion);
+		eliminar_paquete(paquete);
+        free(nombre);
+        free(ruta_metadata);
+        config_destroy(metadata);
+        return;
+	}
+
+    // envia el paquete q fue cargando
+	enviar_paquete(paquete, conexion_memoria);	
+	eliminar_paquete(paquete);	
+    // recibe respuesta de memoria
+
+    /*** PENDIENTE X AQUI ***/
+    operacion = recibir_codigo(conexion_memoria);
+	if(operacion == ACCESO_LECTURA){
+        recibido = recibir_paquete(conexion_memoria);
+		paquete = crear_paquete(IO_OPERACION);
+        data = list_remove(recibido, 0);
+
+        // agrega a archivo y loggea
+        resultado = escribir_f(metadata, offset, cant_bytes, (char*)data);
+
+        if (!resultado){
+		    logguear_DialFs(ESCRIBIR_F, pid, nombre);
+            eliminar_paquete(paquete);
+            crear_paquete(MENSAJE_ERROR);
+        
+        }
+	}else{
+		printf("ERROR EN MEMORIA");
+		paquete = crear_paquete(MENSAJE_ERROR);
+	}
+
+	liberar_conexion(log_io, "Memoria", conexion_memoria); // cierra conexion
+
+	// avisa a kernel que termino 
+	enviar_paquete(paquete, conexion);
+	eliminar_paquete(paquete);
+
+    free(data);
+    free(nombre);
+    free(ruta_metadata);
+    config_destroy(metadata);
 }

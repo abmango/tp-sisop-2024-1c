@@ -149,7 +149,7 @@ void interfaz_stdin(char* nombre, t_config* config, int conexion_kernel)
 		paquete = crear_paquete(ACCESO_ESCRITURA);
 		data = list_remove(recibido, 0);
 		pid = *(int*)data;
-		agregar_a_paquete(paquete, pid, sizeof(int));
+		agregar_a_paquete(paquete, &pid, sizeof(int));
 		free(data);
 
 		// revision si lo q resta en paquetes es par, sino error
@@ -252,7 +252,7 @@ void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 		paquete = crear_paquete(ACCESO_LECTURA);
 		data = list_remove(recibido, 0);
 		pid = *(int*)data;
-		agregar_a_paquete(paquete, pid, sizeof(int));
+		agregar_a_paquete(paquete, &pid, sizeof(int));
 		free(data);
 
 		// revision si lo que resta en paquetes es par, sino error
@@ -350,7 +350,7 @@ void interfaz_dialFS(char* nombre, t_config* config, int conexion_kernel)
 	puerto = config_get_string_value(config, "PUERTO_MEMORIA");
 
 	// iniciando el FS
-	iniciar_FS(config);
+	iniciar_FS(config, nombre);
 
 	identificarse(nombre, DIALFS, conexion_kernel);
 

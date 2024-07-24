@@ -31,7 +31,7 @@ void *espacio_bitmap; // para funcionamiento interno bitmap
 /// @brief Inicializa el FileSystem, carga datos de funcionamiento en su estructura, inicia/carga bitmap y abre/crea 
 ///        archivos segun sea necesario
 /// @param config   Para obtener lo necesario para iniciar el FS
-void iniciar_FS (t_config *config);
+void iniciar_FS (t_config *config, char *nombre);
 
 /// @brief abre/crea archivo metadata, de ser necesario buscar bloque disponible / coteja datos preexistentes con bitmap
 /// @param ruta_metadata Ruta al archivo metadata (procesada como sea requerido)
