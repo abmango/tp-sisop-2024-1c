@@ -75,7 +75,8 @@ int main(int argc, char *argv[])
 	char *instruccion;
 	while (1)
 	{
-
+		/*Esto hay que ver cómo logramos loggearlo correctamente.
+		
 		// Ejemplo de uso de la TLB (prueba)
 		unsigned int virtual_address = 123;
 		unsigned int physical_address;
@@ -90,7 +91,7 @@ int main(int argc, char *argv[])
 			// En este ejemplo, actualizamos la TLB con la misma página virtual y física
 			unsigned int physical_frame = virtual_address;  // En un caso real, esto sería la página física real
 			tlb_update_lru(pid, virtual_address, physical_frame);
-		}
+		}*/
 
 		instruccion = fetch(reg.PC, pid);
 		char **arg = string_split(instruccion, " ");
