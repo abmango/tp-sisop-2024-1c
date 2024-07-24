@@ -29,6 +29,4 @@ void* rutina_new(void* puntero_null) {
 
     }
 
-
-
 }

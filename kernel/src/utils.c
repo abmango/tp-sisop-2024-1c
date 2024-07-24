@@ -46,7 +46,10 @@ pthread_mutex_t mutex_cola_exit;
 sem_t sem_procesos_ready;
 sem_t sem_procesos_exit;
 
-void enviar_handshake_a_memoria(int socket) {
+bool enviar_handshake_a_memoria(int socket) {
+
+	bool exito_envio = false;
+
 	t_paquete* paquete = crear_paquete(HANDSHAKE);
 
     handshake_code handshake_codigo = KERNEL;
@@ -55,10 +58,20 @@ void enviar_handshake_a_memoria(int socket) {
     int tamanio_nombre = strlen(nombre) + 1;
     agregar_a_paquete(paquete, nombre, tamanio_nombre);
 
-	enviar_paquete(paquete, socket);
+	int bytes = enviar_paquete(paquete, socket);
 
 	free(nombre);
 	eliminar_paquete(paquete);
+
+	if (bytes == -1) {
+		log_error(log_kernel_gral, "No se pudo enviar el handshake a Memoria.");
+	}
+	else {
+		exito_envio = true;
+		log_trace(log_kernel_gral, "Handshake enviado a Memoria correctamente. %d bytes enviados.", bytes);
+	}
+
+	return exito_envio;
 }
 
 void manejar_rta_handshake(handshake_code rta_handshake, const char* nombre_servidor) {

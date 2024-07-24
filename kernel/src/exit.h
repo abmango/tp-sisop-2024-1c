@@ -3,5 +3,8 @@
 
 #include "utils.h"
 
+void* rutina_exit(void* puntero_null);
+
+
 
 #endif

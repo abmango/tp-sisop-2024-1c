@@ -89,7 +89,7 @@ extern sem_t sem_procesos_exit; // Cantidad de procesos en estado EXIT
 // ==========================================================================
 // ==========================================================================
 
-void enviar_handshake_a_memoria(int socket);
+bool enviar_handshake_a_memoria(int socket);
 
 void manejar_rta_handshake(handshake_code rta_handshake, const char* nombre_servidor);
 

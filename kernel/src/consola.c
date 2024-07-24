@@ -75,15 +75,18 @@ void op_iniciar_proceso(char* path, char* ip_mem, char* puerto_mem) {
     // Me conecto con Memoria
 	int socket_memoria = crear_conexion(ip_mem, puerto_mem);
     // Envio y recibo contestacion de handshake.
-    enviar_handshake_a_memoria(socket_memoria);
-	bool handshake_memoria_exitoso = recibir_y_manejar_rta_handshake(log_kernel_gral, "Memoria", socket_memoria);
+    bool exito = enviar_handshake_a_memoria(socket_memoria);
+    if(exito) {
+        exito = recibir_y_manejar_rta_handshake(log_kernel_gral, "Memoria", socket_memoria);
+    }
+
     // En caso de handshake fallido, aborta la operación.
-    if (!handshake_memoria_exitoso) {
+    if(!exito) {
         abortar_op_iniciar_proceso(nuevo_pcb, socket_memoria);
         return;
     }
         
-    bool exito = enviar_info_nuevo_proceso(nuevo_pcb->pid, path, socket_memoria);
+    exito = enviar_info_nuevo_proceso(nuevo_pcb->pid, path, socket_memoria);
     // En caso de envio fallido, aborta la operación.
     if(!exito) {
         abortar_op_iniciar_proceso(nuevo_pcb, socket_memoria);
