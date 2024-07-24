@@ -74,6 +74,8 @@ extern t_log* logger; // Logger para todo (por ahora) del kernel
 // -- -- -- -- -- -- -- --
 // ==========================================================================
 extern sem_t sem_procesos_new; // Cantidad de procesos en estado NEW
+extern sem_t sem_procesos_ready; // Cantidad de procesos en estado READY. incluye procesos tanto en cola_ready como en cola_ready_plus
+extern sem_t sem_procesos_exit; // Cantidad de procesos en estado EXIT
 extern pthread_mutex_t mutex_grado_multiprogramacion;
 extern pthread_mutex_t mutex_procesos_activos;
 extern pthread_mutex_t mutex_cola_new; 
@@ -81,8 +83,6 @@ extern pthread_mutex_t mutex_cola_ready;
 extern pthread_mutex_t mutex_cola_ready_plus;
 extern pthread_mutex_t mutex_proceso_exec;
 extern pthread_mutex_t mutex_cola_exit;
-extern sem_t sem_procesos_ready; // Cantidad de procesos en estado READY. incluye procesos tanto en cola_ready como en cola_ready_plus
-extern sem_t sem_procesos_exit; // Cantidad de procesos en estado EXIT
 
 // este ya no va más
 // extern pthread_mutex_t mutex_colas;
@@ -98,7 +98,11 @@ t_io_blocked* recibir_handshake_y_datos_de_nueva_io_y_responder(int socket);
 
 // FUNCIONES PARA PCB/PROCESOS:
 t_pcb* crear_pcb();
+
+/// @brief Libera los recursos retenidos que el proceso tenga, y destruye el pcb
+/// @param pcb : puntero a pcb del proceso
 void destruir_pcb(t_pcb* pcb);
+
 void enviar_pcb(t_pcb* pcb, int conexion);
 void buscar_y_finalizar_proceso(int pid);
 bool proceso_esta_en_ejecucion(int pid);
@@ -113,12 +117,20 @@ t_desalojo deserializar_desalojo(void* buffer, int* desplazamiento);
 // deserializa el t_contexto_de_ejecucion del buffer y desplazamiento dados.
 t_contexto_de_ejecucion deserializar_contexto_de_ejecucion(void* buffer, int* desplazamiento);
 
+// COMUNICACIONES CON MEMORIA
 
 bool enviar_info_nuevo_proceso(int pid, char* path, int socket_memoria);
+
+bool enviar_info_fin_proceso(int pid, int socket_memoria);
+
+
+// COMUNICACIONES CON CPU
 
 void enviar_contexto_de_ejecucion(t_contexto_de_ejecucion contexto_de_ejecucion, int socket);
 
 void enviar_orden_de_interrupcion(t_interrupt_code interrupt_code);
+
+///////////////////////
 
 void* serializar_pcb(t_pcb* pcb, int bytes);
 void* serializar_lista_de_recursos_ocupados(t_list* lista_de_recursos_ocupados, int bytes);

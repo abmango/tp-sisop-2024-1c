@@ -55,20 +55,22 @@ void* rutina_recepcion(void *nada)
 {
 	pthread_t hilo_ejecucion;
 	int error;
+	int aux_socket_cliente_temp;
 	pthread_mutex_init(&mutex_socket_cliente_temp, NULL);
+
 	while (!fin_programa) {
+		// acá hice una pequenia modif. para que pueda esperar_cliente() más rápido.
+		aux_socket_cliente_temp = esperar_cliente(socket_escucha);
 		pthread_mutex_lock(&mutex_socket_cliente_temp);
-		socket_cliente_temp = esperar_cliente(socket_escucha);
+		socket_cliente_temp = aux_socket_cliente_temp;
 		// el unlock lo hace el hilo_ejecucion
-		
-		// el handshake lo hice en rutina_ejecucion() por necesidades de implementación
 
 		error = pthread_create(&hilo_ejecucion, NULL, rutina_ejecucion, NULL);
 		if (error != 0) {
-			log_error(log_memoria, "Error al crear hilo_ejecucion");
+			log_error(log_memoria_gral, "Error al crear hilo_ejecucion");
 		}
 		else {
-			pthread_detach(hilo_ejecucion);			
+			pthread_detach(hilo_ejecucion);
 		}
 
 		// sleep(1); // para que hilo_ejecucion tenga tiempo a tomar socket... en teoria el mutex deberia bastar

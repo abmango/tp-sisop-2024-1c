@@ -36,6 +36,8 @@ t_log* logger = NULL;
 // -- -- -- -- -- -- -- --
 // ==========================================================================
 sem_t sem_procesos_new;
+sem_t sem_procesos_ready;
+sem_t sem_procesos_exit;
 pthread_mutex_t mutex_grado_multiprogramacion;
 pthread_mutex_t mutex_procesos_activos;
 pthread_mutex_t mutex_cola_new;
@@ -43,8 +45,9 @@ pthread_mutex_t mutex_cola_ready;
 pthread_mutex_t mutex_cola_ready_plus;
 pthread_mutex_t mutex_proceso_exec;
 pthread_mutex_t mutex_cola_exit;
-sem_t sem_procesos_ready;
-sem_t sem_procesos_exit;
+
+// ==========================================================================
+// ==========================================================================
 
 bool enviar_handshake_a_memoria(int socket) {
 
@@ -301,6 +304,25 @@ bool enviar_info_nuevo_proceso(int pid, char* path, int socket_memoria) {
 	else {
 		exito_envio = true;
 		log_trace(log_kernel_gral, "Info de nuevo proceso PID: %d enviada a Memoria correctamente. %d bytes enviados.", pid, bytes);
+	}
+
+	return exito_envio;
+}
+
+bool enviar_info_fin_proceso(int pid, int socket_memoria) {
+	bool exito_envio = false;
+
+	t_paquete* paquete = crear_paquete(FINALIZAR_PROCESO);
+	agregar_a_paquete(paquete, &pid, sizeof(int));
+	int bytes = enviar_paquete(paquete, socket_memoria);
+	eliminar_paquete(paquete);
+
+	if (bytes == -1) {
+		log_error(log_kernel_gral, "No se pudo enviar a Memoria la info de fin de proceso PID: %d.", pid);
+	}
+	else {
+		exito_envio = true;
+		log_trace(log_kernel_gral, "Info de fin de proceso PID: %d enviada a Memoria correctamente. %d bytes enviados.", pid, bytes);
 	}
 
 	return exito_envio;
