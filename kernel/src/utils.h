@@ -99,9 +99,13 @@ t_io_blocked* recibir_handshake_y_datos_de_nueva_io_y_responder(int socket);
 // FUNCIONES PARA PCB/PROCESOS:
 t_pcb* crear_pcb();
 
-/// @brief Libera los recursos retenidos que el proceso tenga, y destruye el pcb
+/// @brief Destruye el pcb. Antes de usar esta función hay que asegurarse que el proceso haya liberado los recursos retenidos
 /// @param pcb : puntero a pcb del proceso
 void destruir_pcb(t_pcb* pcb);
+
+/// @brief Libera los recursos retenidos por el proceso.
+/// @param pcb : puntero a pcb del proceso
+void liberar_recursos_retenidos(t_pcb* pcb)
 
 void enviar_pcb(t_pcb* pcb, int conexion);
 void buscar_y_finalizar_proceso(int pid);

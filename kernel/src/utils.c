@@ -151,8 +151,11 @@ t_pcb* crear_pcb() {
 }
 
 void destruir_pcb(t_pcb* pcb) {
-	list_destroy_and_destroy_elements(pcb->recursos_ocupados, (void*)destruir_recurso_ocupado);
 	free(pcb);
+}
+
+void liberar_recursos_retenidos(t_pcb* pcb) {
+	list_destroy_and_destroy_elements(pcb->recursos_ocupados, (void*)destruir_recurso_ocupado);
 }
 
 void enviar_pcb(t_pcb* pcb, int conexion) {
