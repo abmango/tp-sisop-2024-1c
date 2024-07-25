@@ -61,26 +61,19 @@ void desalojar(t_contexto_de_ejecucion reg, motivo_desalojo_code opcode, char** 
    t_desalojo desalojo;
    desalojo.contexto = reg;
    desalojo.motiv = opcode;
-   void* buffer = serializar_desalojo(desalojo);
-   int desplazamiento = tamanio_de_desalojo();
+   void* buffer_desalojo = serializar_desalojo(desalojo);
+   t_paquete* paq = crear_paquete(DESALOJO);
+   agregar_a_paquete(paq, buffer_desalojo, tamanio_de_desalojo());
+   // int desplazamiento = tamanio_de_desalojo();
    switch(opcode){
       case WAIT:
-         realloc(buffer, tamanio_de_contexto_de_desalojo() + strlen(arg[1]) + 1);
-         int tamanio_argumento = strlen(arg[1]) + 1;
-         memcpy(buffer + desplazamiento, &tamanio_argumento, sizeof(int));
-         desplazamiento += sizeof(int);
-         memcpy(buffer + desplazamiento, arg[1], tamanio_argumento);
-      break;
       case SIGNAL:
-         realloc(buffer, tamanio_de_contexto_de_desalojo() + strlen(arg[1]) + 1);
          int tamanio_argumento = strlen(arg[1]) + 1;
-         memcpy(buffer + desplazamiento, &tamanio_argumento, sizeof(int));
-         desplazamiento += sizeof(int);
-         memcpy(buffer + desplazamiento, arg[1], tamanio_argumento);
+         agregar_a_paquete(paq, arg[1], tamanio_argumento);
       break;
       //en los casos de io falta hacer pasar la dir logica a una fisica a traves de mmu;
       case IO_GEN_SLEEP:
-         realloc(buffer, tamanio_de_contexto_de_desalojo() + strlen(arg[1]) + 1 + sizeof(int));
+         realloc(buffer_desalojo, tamanio_de_contexto_de_desalojo() + strlen(arg[1]) + 1 + sizeof(int));
          int tamanio_argumento = strlen(arg[1]) + 1;
          memcpy(buffer + desplazamiento, &tamanio_argumento, sizeof(int));
          desplazamiento += sizeof(int);
@@ -90,7 +83,7 @@ void desalojar(t_contexto_de_ejecucion reg, motivo_desalojo_code opcode, char** 
          memcpy(buffer + desplazamiento, &aux, sizeof(int));
       break;
       case IO_STDIN_READ:
-         realloc(buffer, tamanio_de_contexto_de_desalojo() + strlen(arg[1]) + 1 + 2*sizeof(int));
+         realloc(buffer_desalojo, tamanio_de_contexto_de_desalojo() + strlen(arg[1]) + 1 + 2*sizeof(int));
          int tamanio_argumento = strlen(arg[1]) + 1;
          memcpy(buffer + desplazamiento, &tamanio_argumento, sizeof(int));
          desplazamiento += sizeof(int);
@@ -103,7 +96,7 @@ void desalojar(t_contexto_de_ejecucion reg, motivo_desalojo_code opcode, char** 
          memcpy(buffer + desplazamiento, &aux, sizeof(int));
       break;
       case IO_STDOUT_WRITE:
-         realloc(buffer, tamanio_de_contexto_de_desalojo() + strlen(arg[1]) + 1 + 2*sizeof(int));
+         realloc(buffer_desalojo, tamanio_de_contexto_de_desalojo() + strlen(arg[1]) + 1 + 2*sizeof(int));
          int tamanio_argumento = strlen(arg[1]) + 1;
          memcpy(buffer + desplazamiento, &tamanio_argumento, sizeof(int));
          desplazamiento += sizeof(int);
@@ -115,14 +108,22 @@ void desalojar(t_contexto_de_ejecucion reg, motivo_desalojo_code opcode, char** 
          aux = atoi(arg[3]);
          memcpy(buffer + desplazamiento, &aux, sizeof(int));
       break;
+      case IO_FS_CREATE:
+      case IO_FS_DELETE:
+         int tamanio_argumento = strlen(arg[1]) + 1;
+         agregar_a_paquete(paq, arg[1], tamanio_argumento);
+         tamanio_argumento = strlen(arg[2]) + 1;
+         agregar_a_paquete(paq, arg[2], tamanio_argumento);
+      break;
       default:
       break;
    }
-   t_paquete* paq = crear_paquete(DESALOJO);
-   agregar_a_paquete(paq, buffer);
-   enviar_paquete(paq);
+
+   enviar_paquete(paq); // FALTA EL SOCKET
+
+   free(buffer_desalojo);
    eliminar_paquete(paq);
-   free(buffer);
+   
    interrupcion = NADA; // limpio interrupciones para no usarlas en el proximo pid
 }
 
@@ -229,18 +230,17 @@ t_contexto_de_ejecucion deserializar_contexto_ejecucion(void* buffer)
 
 void* serializar_desalojo(t_desalojo desalojo)
 {
-   void* magic = malloc(sizeof(t_desalojo));
+   void* magic = malloc(tamanio_de_desalojo());
 	int desplazamiento = 0;
 
-   memcpy(magic + desplazamiento, &desalojo.motiv, sizeof(int));
-	desplazamiento += sizeof(int);
-	memcpy(magic + desplazamiento, &desalojo.contexto.PC, sizeof(uint32_t));
-	desplazamiento += sizeof(uint32_t);
-
+   memcpy(magic + desplazamiento, &(desalojo.motiv), sizeof(motivo_desalojo_code));
+	desplazamiento += sizeof(motivo_desalojo_code);
    void* aux = serializar_contexto_de_ejecucion(desalojo.contexto);
-   memccpy(magic + desplazamiento, aux, sizeof(t_contexto_de_ejecucion));
+   memcpy(magic + desplazamiento, aux, tamanio_de_contexto_de_ejecucion());
+   desplazamiento += tamanio_de_contexto_de_ejecucion();
 
    free(aux);
+
 	return magic;
 }
 
@@ -453,6 +453,10 @@ t_dictionary* crear_diccionario(t_contexto_de_ejecucion reg)
    dictionary_put(dicc, "SI", &(reg.reg_cpu_uso_general.SI));
    dictionary_put(dicc, "DI", &(reg.reg_cpu_uso_general.DI));
    return dicc;
+}
+
+int tamanio_de_desalojo(void) {
+    return 4*sizeof(uint8_t) + 7*sizeof(uint32_t) + sizeof(motivo_desalojo_code);
 }
 
 void terminar_programa(t_config *config)

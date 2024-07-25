@@ -8,7 +8,7 @@
 
 
 // esta se pasa al crear el hilo
-void* rutina_planificador(t_config* parametros);
+void* rutina_planificador(void* puntero_null);
 
 ////////////////////////////////////////////
 
@@ -20,7 +20,7 @@ void planific_corto_vrr(void); // DESARROLLANDO
 
 /////// Funciones auxiliares
 
-// Pone el siguiente proceso a ejecutar, si no hay procesos listos espera a senial de semaforo. Asume que no hay proceso en ejecucion.
+// Pone el siguiente proceso a ejecutar. Asume que no hay proceso en ejecucion.
 void ejecutar_sig_proceso(void);
 // Igual a ejecutar_sig_proceso(), pero para VRR, por lo que se fija primero en la cola_ready_plus
 void ejecutar_sig_proceso_vrr(void);

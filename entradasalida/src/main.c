@@ -91,7 +91,7 @@ void interfaz_generica(char* nombre, t_config* config, int conexion_kernel)
 
 	// Bucle hasta que kernel notifique cierre
 	operacion = recibir_codigo(conexion_kernel);
-	while (operacion != FIN_INTERFAZ){ // revisar si no combiene que sea mientras IO_OPERACION (evitar codigos erroneos)
+	while (operacion == IO_OPERACION){
 		recibido = recibir_paquete(conexion_kernel);
 		// se asume que kernel no confunde id_interfaz, sino agregar if
 		// para elem 0 de la lista...
@@ -141,7 +141,7 @@ void interfaz_stdin(char* nombre, t_config* config, int conexion_kernel)
 
 	// Bucle hasta que kernel notifique cierre
 	operacion = recibir_codigo(conexion_kernel);
-	while (operacion != FIN_INTERFAZ){// revisar si no combiene que sea mientras IO_OPERACION (evitar codigos erroneos)
+	while (operacion == IO_OPERACION){
 		bytes_totales_a_enviar = 0;
 		recibido = recibir_paquete(conexion_kernel);
 		
@@ -244,7 +244,7 @@ void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 
 	// Bucle hasta que kernel notifique cierre
 	operacion = recibir_codigo(conexion_kernel);
-	while (operacion != FIN_INTERFAZ){ // revisar si no combiene que sea mientras IO_OPERACION (evitar codigos erroneos)
+	while (operacion == IO_OPERACION){
 		bytes_totales_a_enviar = 0;
 		recibido = recibir_paquete(conexion_kernel);
 		

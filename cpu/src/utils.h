@@ -88,12 +88,12 @@ typedef struct{
 } t_mmu;
 
 
-void SET (void* registro, void* elemento);
+// void SET (void* registro, void* elemento);
 // void MOV_IN (Registro Datos, Registro Dirección);
 // void MOV_OUT (Registro Dirección, Registro Datos);
-void SUM (void* registro1, void* registro2);
-void SUB (void* registro1, void* registro2);
-void JNZ (uint32_t PC, uint32_t direccionInstruccion);
+// void SUM (void* registro1, void* registro2);
+// void SUB (void* registro1, void* registro2);
+// void JNZ (uint32_t PC, uint32_t direccionInstruccion);
 // JNZ [registro] / [literal] JNZ AX 4
 // void RESIZE (Tamaño);
 // void COPY_STRING (Tamaño);
@@ -119,13 +119,12 @@ bool recibir_y_manejar_handshake_kernel(int socket);
 
 void desalojar(t_contexto_de_ejecucion ce, motivo_desalojo_code motiv, char** arg);
 t_contexto_de_ejecucion recibir_contexto_ejecucion(void);
-t_contexto_de_ejecucion deserializar_contexto_ejecucion(void* buffer);
+t_contexto_de_ejecucion deserializar_contexto_ejecucion(void* buffer); // EN DESARROLLO
 void* serializar_desalojo(t_desalojo desalojo);
 char* fetch(uint32_t PC, int pid);
 int leer_memoria(int dir_logica, int tamanio);
 void check_interrupt(t_contexto_de_ejecucion reg);
 void pedir_io(t_contexto_de_ejecucion reg, motivo_desalojo_code opcode, char** arg);
-t_dictionary* crear_diccionario(t_contexto_de_ejecucion reg);
 t_list* mmu(int dir_logica, int tamanio);
 void enviar_memoria(int direccion, int tamanio, int valor);
 void resize(int tamanio);
@@ -133,6 +132,10 @@ void resize(int tamanio);
 void* interrupt(void);
 
 execute_op_code decode(char* instruc);
+
+t_dictionary* crear_diccionario(t_contexto_de_ejecucion reg);
+
+int tamanio_de_desalojo(void);
 
 void terminar_programa(t_config *config);
 

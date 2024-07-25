@@ -39,9 +39,9 @@ t_log* logger = NULL;
 sem_t sem_procesos_new;
 sem_t sem_procesos_ready;
 sem_t sem_procesos_exit;
+pthread_mutex_t mutex_proceso_exec;
 pthread_mutex_t mutex_grado_multiprogramacion;
 pthread_mutex_t mutex_procesos_activos;
-pthread_mutex_t mutex_proceso_exec;
 pthread_mutex_t mutex_cola_new;
 pthread_mutex_t mutex_cola_ready;
 pthread_mutex_t mutex_cola_ready_plus;
@@ -189,8 +189,9 @@ void buscar_y_finalizar_proceso(int pid) {
 	}
 
 	t_pcb* proceso = NULL;
+	bool estaba_activo = false;
+	bool estaba_ejecutando_io = false;
 	char* estado_donde_estaba = NULL;
-	bool estaba_en_ejec = false;
 
 	//////////////////////////////////////////////////////////////////////////////////
 	// Para cada caso (if) faltan los logs y lo de liberar cosas.
@@ -201,25 +202,29 @@ void buscar_y_finalizar_proceso(int pid) {
 	}
 	else if (list_any_satisfy(cola_ready, (void*)_es_el_proceso_buscado)) {
 		proceso = list_remove_by_condition(cola_ready, (void*)_es_el_proceso_buscado);
+		estaba_activo = true;
 		estado_donde_estaba = string_from_format("READY");
 	}
 	else if (list_any_satisfy(cola_ready_plus, (void*)_es_el_proceso_buscado)) {
 		proceso = list_remove_by_condition(cola_ready_plus, (void*)_es_el_proceso_buscado);
+		estaba_activo = true;
 		estado_donde_estaba = string_from_format("READY");
 	}
 	else if (list_any_satisfy(lista_io_blocked, (void*)_io_blocked_contiene_al_proceso_buscado)) {
 		t_io_blocked* io_blocked = list_find(lista_io_blocked, (void*)_io_blocked_contiene_al_proceso_buscado);
 		proceso = list_find(io_blocked->cola_blocked, (void*)_es_el_proceso_buscado);
 		if(proceso == list_get(io_blocked->cola_blocked, 0)) {
-			estaba_en_ejec = true;
+			estaba_ejecutando_io = true;
 			pthread_mutex_lock(&(proceso->mutex_uso_de_io));
 		}
 		proceso = list_remove_by_condition(io_blocked->cola_blocked, (void*)_es_el_proceso_buscado);
+		estaba_activo = true;
 		estado_donde_estaba = string_from_format("BLOCKED");
 	}
 	else if (list_any_satisfy(lista_recurso_blocked, (void*)_recurso_blocked_contiene_al_proceso_buscado)) {
 		t_recurso_blocked* recurso_blocked = list_find(lista_recurso_blocked, (void*)_recurso_blocked_contiene_al_proceso_buscado);
 		proceso = list_remove_by_condition(recurso_blocked->cola_blocked, (void*)_es_el_proceso_buscado);
+		estaba_activo = true;
 		estado_donde_estaba = string_from_format("BLOCKED");
 	}
 	//////////////////////////////////////////////////////////////////////////////////
@@ -228,10 +233,14 @@ void buscar_y_finalizar_proceso(int pid) {
 	if (proceso != NULL) {
 		pthread_mutex_lock(&mutex_cola_exit);
 		list_add(cola_exit, proceso);
+		if(estaba_activo) {
+			procesos_activos--;
+		}
+		sem_post(&sem_procesos_exit);
 		log_info(log_kernel_oblig, "Finaliza el proceso %d - Motivo: INTERRUPTED_BY_USER", proceso->pid); // log Obligatorio
 		log_info(log_kernel_oblig, "PID: %d - Estado Anterior: %s - Estado Actual: EXIT", proceso->pid, estado_donde_estaba); // log Obligatorio
 		pthread_mutex_unlock(&mutex_cola_exit);
-		if(estaba_en_ejec) {
+		if(estaba_ejecutando_io) {
 			pthread_mutex_unlock(&(proceso->mutex_uso_de_io));
 		}
 
@@ -245,7 +254,12 @@ void buscar_y_finalizar_proceso(int pid) {
 }
 
 bool proceso_esta_en_ejecucion(int pid) {
-    return proceso_exec->pid == pid;
+	if (proceso_exec != NULL) {
+		return proceso_exec->pid == pid;
+	}
+    else {
+		return false;
+	}
 }
 
 void destruir_recurso_ocupado(t_recurso_ocupado* recurso_ocupado) {
@@ -278,12 +292,13 @@ void actualizar_contexto_de_ejecucion_de_pcb(t_contexto_de_ejecucion nuevo_conte
 	pcb->reg_cpu_uso_general = nuevo_contexto_de_ejecucion.reg_cpu_uso_general;
 }
 
-t_desalojo deserializar_desalojo(void* buffer, int* desplazamiento) {
+t_desalojo deserializar_desalojo(void* buffer) {
 	t_desalojo desalojo;
+	int desplazamiento = 0;
 
-	memcpy(&(desalojo.motiv), buffer + *desplazamiento, sizeof(motivo_desalojo_code));
-	*desplazamiento += sizeof(motivo_desalojo_code);
-	desalojo.contexto = deserializar_contexto_de_ejecucion(buffer, desplazamiento);
+	memcpy(&(desalojo.motiv), buffer + desplazamiento, sizeof(motivo_desalojo_code));
+	desplazamiento += sizeof(motivo_desalojo_code);
+	desalojo.contexto = deserializar_contexto_de_ejecucion(buffer, &desplazamiento);
 
 	return desalojo;
 }

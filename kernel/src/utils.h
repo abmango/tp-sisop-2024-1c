@@ -109,9 +109,9 @@ extern t_log* logger; // Logger para todo (por ahora) del kernel
 extern sem_t sem_procesos_new; // Cantidad de procesos en estado NEW
 extern sem_t sem_procesos_ready; // Cantidad de procesos en estado READY. incluye procesos tanto en cola_ready como en cola_ready_plus
 extern sem_t sem_procesos_exit; // Cantidad de procesos en estado EXIT
+extern pthread_mutex_t mutex_proceso_exec;
 extern pthread_mutex_t mutex_grado_multiprogramacion;
 extern pthread_mutex_t mutex_procesos_activos;
-extern pthread_mutex_t mutex_proceso_exec;
 extern pthread_mutex_t mutex_cola_new; 
 extern pthread_mutex_t mutex_cola_ready;
 extern pthread_mutex_t mutex_cola_ready_plus;
@@ -143,9 +143,9 @@ void destruir_pcb(t_pcb* pcb);
 
 /// @brief Libera los recursos retenidos por el proceso.
 /// @param pcb : puntero a pcb del proceso.
-void liberar_recursos_retenidos(t_pcb* pcb)
+void liberar_recursos_retenidos(t_pcb* pcb);
 
-void enviar_pcb(t_pcb* pcb, int conexion);
+// void enviar_pcb(t_pcb* pcb, int conexion);
 
 /// @brief Busca al proceso en NEW, READY Y BLOCKED. Si lo encuentra lo manda a EXIT. En caso de no encontrarlo, loguea un error.
 /// @param pid : pid del proceso a buscar y finalizar.
@@ -161,9 +161,9 @@ void destruir_recurso_ocupado(t_recurso_ocupado* recurso_ocupado);
 t_contexto_de_ejecucion contexto_de_ejecucion_de_pcb(t_pcb* pcb);
 void actualizar_contexto_de_ejecucion_de_pcb(t_contexto_de_ejecucion nuevo_contexto_de_ejecucion, t_pcb* pcb);
 
-// deserializa el t_desalojo del buffer y desplazamiento dados.
-t_desalojo deserializar_desalojo(void* buffer, int* desplazamiento);
-// deserializa el t_contexto_de_ejecucion del buffer y desplazamiento dados.
+// deserializa el t_desalojo del buffer dado.
+t_desalojo deserializar_desalojo(void* buffer);
+// funcion auxiliar de deserializar_desalojo()
 t_contexto_de_ejecucion deserializar_contexto_de_ejecucion(void* buffer, int* desplazamiento);
 
 // COMUNICACIONES CON MEMORIA

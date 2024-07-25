@@ -123,6 +123,7 @@ void op_finalizar_proceso(int pid) {
         enviar_orden_de_interrupcion(pid, FINALIZAR_PROCESO); // y luego lo maneja desde el planificador corto
     }
     else {
+        pthread_mutex_lock(&mutex_procesos_activos);
         pthread_mutex_lock(&mutex_cola_new);
         pthread_mutex_lock(&mutex_cola_ready);
         pthread_mutex_lock(&mutex_cola_ready_plus);
@@ -136,6 +137,7 @@ void op_finalizar_proceso(int pid) {
         pthread_mutex_unlock(&mutex_cola_ready_plus);
         pthread_mutex_unlock(&mutex_cola_ready);
         pthread_mutex_unlock(&mutex_cola_new);
+        pthread_mutex_unlock(&mutex_procesos_activos);
     }
     pthread_mutex_unlock(&mutex_proceso_exec);
 }
