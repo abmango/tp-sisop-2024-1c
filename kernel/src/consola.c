@@ -112,22 +112,32 @@ void op_iniciar_proceso(char* path, char* ip_mem, char* puerto_mem) {
 }
 
 void op_finalizar_proceso(int pid) {
-
-    // Faltan los mutex, para que mientras busque en las colas, éstas no se alteren.
-    bool proceso_en_ejecucion = proceso_esta_en_ejecucion(pid);
+    
     if (pid >= contador_pid) {
         log_error(log_kernel_gral, "El proceso %d no existe. No se puede finalizar.", pid);
+        return;
     }
-    else if (proceso_en_ejecucion) {
+
+    pthread_mutex_lock(&mutex_proceso_exec);
+    if (proceso_esta_en_ejecucion(pid)) {
         enviar_orden_de_interrupcion(pid, FINALIZAR_PROCESO); // y luego lo maneja desde el planificador corto
     }
     else {
-        buscar_y_finalizar_proceso(pid);
-        //
-    }
-    
-    //liberar_recursos() - ¿acá o en buscar_y_finalizar()?
+        pthread_mutex_lock(&mutex_cola_new);
+        pthread_mutex_lock(&mutex_cola_ready);
+        pthread_mutex_lock(&mutex_cola_ready_plus);
+        pthread_mutex_lock(&mutex_lista_io_blocked);
+        pthread_mutex_lock(&mutex_lista_recurso_blocked);
 
+        buscar_y_finalizar_proceso(pid);
+
+        pthread_mutex_unlock(&mutex_lista_recurso_blocked);
+        pthread_mutex_unlock(&mutex_lista_io_blocked);
+        pthread_mutex_unlock(&mutex_cola_ready_plus);
+        pthread_mutex_unlock(&mutex_cola_ready);
+        pthread_mutex_unlock(&mutex_cola_new);
+    }
+    pthread_mutex_unlock(&mutex_proceso_exec);
 }
 
 // ==========================================================================
@@ -136,5 +146,5 @@ void op_finalizar_proceso(int pid) {
 void abortar_op_iniciar_proceso(t_pcb* pcb_a_abortar, int socket_memoria) {
     destruir_pcb(pcb_a_abortar);
     liberar_conexion(log_kernel_gral, "Memoria", socket_memoria);
-    log_warning(log_kernel_gral, "La operacion INICIAR_PROCESO fue abortada.")
+    log_warning(log_kernel_gral, "La operacion INICIAR_PROCESO fue abortada.");
 }

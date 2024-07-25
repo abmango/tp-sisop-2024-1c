@@ -410,7 +410,7 @@ void terminar_programa(int socket, t_config* config)
 
 t_dictionary *crear_e_inicializar_diccionario_interfaces(void)
 {
-    t_dictionary *diccionario = *dictionary_create();
+    t_dictionary *diccionario = dictionary_create();
     t_io_type_code *nuevo_tipo_interfaz;
     
     nuevo_tipo_interfaz = malloc(sizeof(t_io_type_code));

@@ -17,8 +17,33 @@
 #include <commons/collections/dictionary.h>
 #include <utils/general.h>
 #include <utils/conexiones.h>
+#include <hilos.h>
 #include <pthread.h>
 #include <semaphore.h>
+
+typedef struct
+{
+    char* nombre;
+    sem_t sem_contador_instancias; // TAL VEZ CONVIENE int
+} t_recurso;
+
+typedef struct
+{
+    char* nombre;
+    int instancias;
+} t_recurso_ocupado;
+
+typedef struct
+{
+    int pid;
+    int quantum;
+    t_list* recursos_ocupados; // Es una lista de t_recurso_ocupado*
+    uint32_t PC;
+    t_reg_cpu_uso_general reg_cpu_uso_general;
+    // agrego esto, para poder esperar a que se termine de usar la IO, en caso de
+    // un pedido de finalizar_proceso por consola, a un proceso que esta usando una IO.
+    pthread_mutex_t mutex_uso_de_io;
+} t_pcb;
 
 typedef struct
 {
@@ -33,6 +58,13 @@ typedef struct
     char* nombre;
     t_list* cola_blocked; // Es una lista de t_pcb*
 } t_recurso_blocked;
+
+typedef enum
+{
+    FIFO,
+    RR,
+    VRR
+} algoritmo_corto_code;
 
 // ==========================================================================
 // ====  Variables globales:  ===============================================
@@ -58,6 +90,7 @@ extern int socket_cpu_interrupt;
 // extern int socket_memoria;
 
 extern t_config *config;
+extern int quantum_de_config;
 
 extern t_log* log_kernel_oblig; // logger para los logs obligatorios
 extern t_log* log_kernel_gral; // logger para los logs nuestros. Loguear con criterio de niveles.
@@ -78,10 +111,12 @@ extern sem_t sem_procesos_ready; // Cantidad de procesos en estado READY. incluy
 extern sem_t sem_procesos_exit; // Cantidad de procesos en estado EXIT
 extern pthread_mutex_t mutex_grado_multiprogramacion;
 extern pthread_mutex_t mutex_procesos_activos;
+extern pthread_mutex_t mutex_proceso_exec;
 extern pthread_mutex_t mutex_cola_new; 
 extern pthread_mutex_t mutex_cola_ready;
 extern pthread_mutex_t mutex_cola_ready_plus;
-extern pthread_mutex_t mutex_proceso_exec;
+extern pthread_mutex_t mutex_lista_io_blocked;
+extern pthread_mutex_t mutex_lista_recurso_blocked;
 extern pthread_mutex_t mutex_cola_exit;
 
 // este ya no va más
@@ -97,18 +132,28 @@ void manejar_rta_handshake(handshake_code rta_handshake, const char* nombre_serv
 t_io_blocked* recibir_handshake_y_datos_de_nueva_io_y_responder(int socket);
 
 // FUNCIONES PARA PCB/PROCESOS:
+
+/// @brief Crea un pcb (t_pcb) para un nuevo proceso, inicializando todos los campos.
+/// @return : retorna puntero al pcb creado.
 t_pcb* crear_pcb();
 
-/// @brief Destruye el pcb. Antes de usar esta función hay que asegurarse que el proceso haya liberado los recursos retenidos
-/// @param pcb : puntero a pcb del proceso
+/// @brief Destruye el pcb. Antes de usar esta función hay que asegurarse que el proceso haya liberado los recursos retenidos.
+/// @param pcb : puntero a pcb del proceso.
 void destruir_pcb(t_pcb* pcb);
 
 /// @brief Libera los recursos retenidos por el proceso.
-/// @param pcb : puntero a pcb del proceso
+/// @param pcb : puntero a pcb del proceso.
 void liberar_recursos_retenidos(t_pcb* pcb)
 
 void enviar_pcb(t_pcb* pcb, int conexion);
+
+/// @brief Busca al proceso en NEW, READY Y BLOCKED. Si lo encuentra lo manda a EXIT. En caso de no encontrarlo, loguea un error.
+/// @param pid : pid del proceso a buscar y finalizar.
 void buscar_y_finalizar_proceso(int pid);
+
+/// @brief Se fija si el proceso esta en EXEC.
+/// @param pid : pid del proceso a buscar y finalizar.
+/// @return    : retorna true si lo está, false si no lo está.
 bool proceso_esta_en_ejecucion(int pid);
 
 void destruir_recurso_ocupado(t_recurso_ocupado* recurso_ocupado);
@@ -141,6 +186,10 @@ void* serializar_lista_de_recursos_ocupados(t_list* lista_de_recursos_ocupados, 
 
 // FUNCIONES PARA IOs:
 void destruir_io(t_io_blocked* io); // DESARROLLANDO
+
+/// @brief Busca a la IO en la lista_io_blocked (que es la lista de IOs).
+/// @param nombre : nombre de la IO a buscar.
+/// @return       : retorna el puntero a la IO (de tipo t_io_blocked* ), o NULL si no la encuentra.
 t_io_blocked* encontrar_io(char* nombre);
 
 // FUNCIONES AUXILIARES PARA MANEJAR LAS LISTAS DE ESTADOS:

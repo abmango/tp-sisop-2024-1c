@@ -9,7 +9,7 @@ void* rutina_quantum(t_pcb *pcb) {
     return NULL;
 }
 
-void esperar_cpu_rr(t_pcb *pcb)
+void esperar_cpu_rr(t_pcb* pcb)
 {
     pthread_t hilo_quantum;
     pthread_create(&hilo_quantum, NULL, rutina_quantum, pcb);
@@ -18,7 +18,7 @@ void esperar_cpu_rr(t_pcb *pcb)
     pthread_cancel(hilo_quantum);
 }
 
-void esperar_cpu_vrr(t_pcb * pcb)
+void esperar_cpu_vrr(t_pcb* pcb)
 {
     timer = temporal_create();
     esperar_cpu_rr(pcb);
@@ -27,15 +27,13 @@ void esperar_cpu_vrr(t_pcb * pcb)
     temporal_destroy(timer);
 }
 
-void actualizar_vrr(t_pcb *pcb)
+void actualizar_quantum_vrr(t_pcb* pcb)
 {
     if(ms_transcurridos < pcb->quantum)
     {
         pcb->quantum -= ms_transcurridos;
-        // mandar proceso a ready+
-        list_add(cola_ready_plus, pcb);
-        return;
     }
-    // mandar a ready comun
-    list_add(cola_ready, pcb);
+    else {
+        pcb->quantum = 0;
+    }
 }

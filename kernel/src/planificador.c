@@ -75,12 +75,17 @@ void planific_corto_fifo(void) {
             t_io_blocked* io = encontrar_io(nombre_interfaz);
             if(io != NULL) {
                 enviar_paquete(paquete, io->socket);
-                // acá falta mandarlo a blocked.
-                list_add(lista_io_blocked, proceso_exec);
+
+                // lo manda a blocked.
+                list_add(io->cola_blocked, proceso_exec);
             }
             else {
-                log_error(logger, "Interfaz %s no encontrada", nombre_interfaz);
+                log_error(log_kernel_gral, "Interfaz %s no encontrada", nombre_interfaz);
+                pthread_mutex_lock(&mutex_cola_exit);
                 list_add(cola_exit, proceso_exec);
+                log_info(log_kernel_oblig, "Finaliza el proceso %d - Motivo: INVALID_INTERFACE", proceso_exec->pid); // log Obligatorio
+                log_info(log_kernel_oblig, "PID: %d - Estado Anterior: EXEC - Estado Actual: EXIT", proceso_exec->pid); // log Obligatorio
+                pthread_mutex_unlock(&mutex_cola_exit);
             }
             // Por cualquiera de los dos caminos, se libera la cola de ejecucion
             // proceso_exec = NULL;
@@ -461,6 +466,7 @@ void ejecutar_sig_proceso_vrr(void) {
 
     if (list_is_empty(cola_ready_plus)) { // En este caso la cola_ready_plus está vacía, entonces toma al proceso de la cola_ready
         proceso_exec = list_remove(cola_ready, 0);
+        proceso_exec->quantum = quantum_de_config;
     }
     else { // En este caso la cola_ready_plus NO está vacía, entonces toma al proceso de dicha cola
         proceso_exec = list_remove(cola_ready_plus, 0);

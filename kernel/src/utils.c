@@ -22,6 +22,7 @@ int socket_cpu_interrupt = 1;
 //int socket_memoria = 1;
 
 t_config *config = NULL;
+int quantum_de_config;
 
 t_log* log_kernel_oblig = NULL;
 t_log* log_kernel_gral = NULL;
@@ -40,10 +41,12 @@ sem_t sem_procesos_ready;
 sem_t sem_procesos_exit;
 pthread_mutex_t mutex_grado_multiprogramacion;
 pthread_mutex_t mutex_procesos_activos;
+pthread_mutex_t mutex_proceso_exec;
 pthread_mutex_t mutex_cola_new;
 pthread_mutex_t mutex_cola_ready;
 pthread_mutex_t mutex_cola_ready_plus;
-pthread_mutex_t mutex_proceso_exec;
+pthread_mutex_t mutex_lista_io_blocked;
+pthread_mutex_t mutex_lista_recurso_blocked;
 pthread_mutex_t mutex_cola_exit;
 
 // ==========================================================================
@@ -134,7 +137,7 @@ t_pcb* crear_pcb() {
 	t_pcb* pcb = malloc(sizeof(t_pcb));
 	pcb->pid = contador_pid;
     contador_pid++;
-    pcb->quantum = 0;
+    pcb->quantum = quantum_de_config;
 	pcb->recursos_ocupados = list_create();
     pcb->PC = 0;
     pcb->reg_cpu_uso_general.AX = 0;
@@ -147,6 +150,7 @@ t_pcb* crear_pcb() {
     pcb->reg_cpu_uso_general.EDX = 0;
     pcb->reg_cpu_uso_general.SI = 0;
     pcb->reg_cpu_uso_general.DI = 0;
+	pthread_mutex_init(&(pcb->uso_de_io), NULL);
 	return pcb;
 }
 
@@ -158,6 +162,7 @@ void liberar_recursos_retenidos(t_pcb* pcb) {
 	list_destroy_and_destroy_elements(pcb->recursos_ocupados, (void*)destruir_recurso_ocupado);
 }
 
+/*
 void enviar_pcb(t_pcb* pcb, int conexion) {
 	t_paquete* paquete = crear_paquete(PCB);
 	int tamanio = tamanio_de_pcb(pcb);
@@ -167,6 +172,7 @@ void enviar_pcb(t_pcb* pcb, int conexion) {
     free(buffer);
 	eliminar_paquete(paquete);
 }
+*/
 
 void buscar_y_finalizar_proceso(int pid) {
 
@@ -183,35 +189,55 @@ void buscar_y_finalizar_proceso(int pid) {
 	}
 
 	t_pcb* proceso = NULL;
+	char* estado_donde_estaba = NULL;
+	bool estaba_en_ejec = false;
 
 	//////////////////////////////////////////////////////////////////////////////////
 	// Para cada caso (if) faltan los logs y lo de liberar cosas.
 	//////////////////////////////////////////////////////////////////////////////////
 	if (list_any_satisfy(cola_new, (void*)_es_el_proceso_buscado)) {
 		proceso = list_remove_by_condition(cola_new, (void*)_es_el_proceso_buscado);
-
+		estado_donde_estaba = string_from_format("NEW");
 	}
 	else if (list_any_satisfy(cola_ready, (void*)_es_el_proceso_buscado)) {
 		proceso = list_remove_by_condition(cola_ready, (void*)_es_el_proceso_buscado);
-
+		estado_donde_estaba = string_from_format("READY");
+	}
+	else if (list_any_satisfy(cola_ready_plus, (void*)_es_el_proceso_buscado)) {
+		proceso = list_remove_by_condition(cola_ready_plus, (void*)_es_el_proceso_buscado);
+		estado_donde_estaba = string_from_format("READY");
 	}
 	else if (list_any_satisfy(lista_io_blocked, (void*)_io_blocked_contiene_al_proceso_buscado)) {
-		// acá debe haber un semáforo.
-		// Un wait que espere el signal de que la io terminó.
 		t_io_blocked* io_blocked = list_find(lista_io_blocked, (void*)_io_blocked_contiene_al_proceso_buscado);
+		proceso = list_find(io_blocked->cola_blocked, (void*)_es_el_proceso_buscado);
+		if(proceso == list_get(io_blocked->cola_blocked, 0)) {
+			estaba_en_ejec = true;
+			pthread_mutex_lock(&(proceso->mutex_uso_de_io));
+		}
 		proceso = list_remove_by_condition(io_blocked->cola_blocked, (void*)_es_el_proceso_buscado);
-
+		estado_donde_estaba = string_from_format("BLOCKED");
 	}
 	else if (list_any_satisfy(lista_recurso_blocked, (void*)_recurso_blocked_contiene_al_proceso_buscado)) {
 		t_recurso_blocked* recurso_blocked = list_find(lista_recurso_blocked, (void*)_recurso_blocked_contiene_al_proceso_buscado);
 		proceso = list_remove_by_condition(recurso_blocked->cola_blocked, (void*)_es_el_proceso_buscado);
+		estado_donde_estaba = string_from_format("BLOCKED");
 	}
 	//////////////////////////////////////////////////////////////////////////////////
 
+	// Si lo encontró, lo mando a EXIT
 	if (proceso != NULL) {
+		pthread_mutex_lock(&mutex_cola_exit);
 		list_add(cola_exit, proceso);
-		
+		log_info(log_kernel_oblig, "Finaliza el proceso %d - Motivo: INTERRUPTED_BY_USER", proceso->pid); // log Obligatorio
+		log_info(log_kernel_oblig, "PID: %d - Estado Anterior: %s - Estado Actual: EXIT", proceso->pid, estado_donde_estaba); // log Obligatorio
+		pthread_mutex_unlock(&mutex_cola_exit);
+		if(estaba_en_ejec) {
+			pthread_mutex_unlock(&(proceso->mutex_uso_de_io));
+		}
+
+		free(estado_donde_estaba);
 	}
+	// Si no lo encontró, solo loguea el error
 	else {
 		log_error(log_kernel_gral, "El proceso %d ya habia finalizado. No se puede finalizar.", pid);
 	}

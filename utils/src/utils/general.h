@@ -16,47 +16,6 @@
 // Esto nos permite ser más exactos en los tiempos de espera, y no tener que usar "div_t".
 #define MILISEG_A_MICROSEG 1000
 
-typedef struct
-{
-    uint8_t AX;
-    uint8_t BX;
-    uint8_t CX;
-    uint8_t DX;
-    uint32_t EAX;
-    uint32_t EBX;
-    uint32_t ECX;
-    uint32_t EDX;
-    uint32_t SI;
-    uint32_t DI;
-} t_reg_cpu_uso_general;
-
-typedef struct
-{
-    char* nombre;
-    sem_t sem_contador_instancias;
-} t_recurso;
-
-typedef struct
-{
-    char* nombre;
-    int instancias;
-} t_recurso_ocupado;
-
-typedef struct
-{
-    int pid;
-    int quantum;
-    t_list* recursos_ocupados; // Es una lista de t_recurso_ocupado*
-    uint32_t PC;
-    t_reg_cpu_uso_general reg_cpu_uso_general;
-} t_pcb;
-
-typedef struct
-{
-    uint32_t PC;
-    t_reg_cpu_uso_general reg_cpu_uso_general;
-} t_contexto_de_ejecucion;
-
 typedef enum
 {
 /* -------------------------------------------------------------------------------------------- */
@@ -100,6 +59,26 @@ typedef enum
     SIGNAL
 
 } motivo_desalojo_code;
+
+typedef struct
+{
+    uint8_t AX;
+    uint8_t BX;
+    uint8_t CX;
+    uint8_t DX;
+    uint32_t EAX;
+    uint32_t EBX;
+    uint32_t ECX;
+    uint32_t EDX;
+    uint32_t SI;
+    uint32_t DI;
+} t_reg_cpu_uso_general;
+
+typedef struct
+{
+    uint32_t PC;
+    t_reg_cpu_uso_general reg_cpu_uso_general;
+} t_contexto_de_ejecucion;
 
 typedef struct {
     t_contexto_de_ejecucion contexto;

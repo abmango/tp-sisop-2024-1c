@@ -13,6 +13,7 @@ int main(int argc, char* argv[]) {
 	cola_exit = list_create();
 
 	config = iniciar_config("default");
+	quantum_de_config = config_get_int_value(config, "QUANTUM");
 	
 	grado_multiprogramacion = config_get_int_value(config, "GRADO_MULTIPROGRAMACION");
 
@@ -61,21 +62,15 @@ int main(int argc, char* argv[]) {
 		return EXIT_FAILURE;
 	}
 
+	t_dictionary* diccionario_algoritmos_corto_plazo = crear_e_inicializar_diccionario_algoritmos_corto_plazo();
+	char* algoritmo_planificacion_corto = config_get_string_value(config, "ALGORITMO_PLANIFICACION");
+	algoritmo_corto_code cod_algoritmo_planif_corto = *dictionary_get(diccionario_algoritmos_corto_plazo, algoritmo_planificacion_corto);
+
 	puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
 	int socket_escucha = iniciar_servidor(puerto);
 
-	while(1) {
-		int socket_io = esperar_cliente(socket_escucha);
-		t_io_blocked* io = recibir_handshake_y_datos_de_nueva_io_y_responder(socket_io);
-
-		if (io != NULL) {
-			list_add(lista_io_blocked, io);
-
-			pthread_t* hilo_io = malloc(sizeof(pthread_t)); // acá no habría memory leak, pues al terminar el hilo detacheado, lo liberaría
-			pthread_create(hilo_io, NULL, rutina_atender_io, io);
-			pthread_detach(*hilo_io);
-		}
-	}
+	// Servidor en bucle que espera y atiende conexiones de nuevas interfaces.
+	escuchar_y_atender_nuevas_io(cod_algoritmo_planif_corto, socket_escucha);
 
 	return EXIT_SUCCESS;
 }
@@ -94,6 +89,55 @@ t_list* crear_lista_de_recursos(char* array_nombres[], char* array_instancias[])
 	}
 
 	return lista_recursos;
+}
+
+t_dictionary* crear_e_inicializar_diccionario_algoritmos_corto_plazo(void) {
+    t_dictionary* diccionario = dictionary_create();
+    algoritmo_corto_code* nuevo_algoritmo_corto;
+    
+    nuevo_algoritmo_corto = malloc(sizeof(algoritmo_corto_code));
+    *nuevo_algoritmo_corto = FIFO;
+    dictionary_put(diccionario, "FIFO", nuevo_algoritmo_corto);
+    nuevo_algoritmo_corto = malloc(sizeof(algoritmo_corto_code));
+    *nuevo_algoritmo_corto = RR;
+    dictionary_put(diccionario, "RR", nuevo_algoritmo_corto);
+    nuevo_algoritmo_corto = malloc(sizeof(algoritmo_corto_code));
+    *nuevo_algoritmo_corto = VRR;
+    dictionary_put(diccionario, "VRR", nuevo_algoritmo_corto);
+
+    return diccionario;
+}
+
+void escuchar_y_atender_nuevas_io(algoritmo_corto_code cod_algoritmo_planif, int socket_de_escucha) {
+	if (cod_algoritmo_planif == FIFO || cod_algoritmo_planif == FIFO) {
+		while(1) {
+			int socket_io = esperar_cliente(socket_de_escucha);
+			t_io_blocked* io = recibir_handshake_y_datos_de_nueva_io_y_responder(socket_io);
+
+			if (io != NULL) {
+				list_add(lista_io_blocked, io);
+
+				pthread_t* hilo_io = malloc(sizeof(pthread_t)); // acá no habría memory leak, pues al terminar el hilo detacheado, lo liberaría
+				pthread_create(hilo_io, NULL, rutina_atender_io, io);
+				pthread_detach(*hilo_io);
+			}
+		}
+	}
+	if (cod_algoritmo_planif == VRR) {
+		while(1) {
+			int socket_io = esperar_cliente(socket_de_escucha);
+			t_io_blocked* io = recibir_handshake_y_datos_de_nueva_io_y_responder(socket_io);
+
+			if (io != NULL) {
+				list_add(lista_io_blocked, io);
+
+				pthread_t* hilo_io = malloc(sizeof(pthread_t)); // acá no habría memory leak, pues al terminar el hilo detacheado, lo liberaría
+				pthread_create(hilo_io, NULL, rutina_atender_io_para_vrr, io);
+				pthread_detach(*hilo_io);
+			}
+		}
+	}
+
 }
 
 void iterator(char* value) {

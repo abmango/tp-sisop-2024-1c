@@ -35,12 +35,9 @@ void imprimir_entero(int num) {
     printf("%d\n", num);
 }
 
+/*
 int tamanio_de_pcb(t_pcb* pcb) {
     return 2*sizeof(int) + 4*sizeof(uint8_t) + 7*sizeof(uint32_t) + tamanio_de_lista_de_recursos_ocupados(pcb->recursos_ocupados);
-}
-
-int tamanio_de_contexto_de_ejecucion(void) {
-    return 4*sizeof(uint8_t) + 7*sizeof(uint32_t);
 }
 
 int tamanio_de_lista_de_recursos_ocupados(t_list* lista_de_recursos_ocupados) {
@@ -54,6 +51,11 @@ int tamanio_de_lista_de_recursos_ocupados(t_list* lista_de_recursos_ocupados) {
     list_iterate(lista_de_recursos_ocupados, (void*)_sumar_bytes_de_recurso);
 
     return bytes_recursos + sizeof(int);
+}
+*/
+
+int tamanio_de_contexto_de_ejecucion(void) {
+    return 4*sizeof(uint8_t) + 7*sizeof(uint32_t);
 }
 
 void* serializar_contexto_de_ejecucion(t_contexto_de_ejecucion contexto_de_ejecucion, int bytes) {
