@@ -120,7 +120,8 @@ void liberar_conexion(t_log* log, char* nombre_conexion, int socket)
 /////////////////////////////////////////////////////
 /////////////////////////////////////////////////////
 
-bool recibir_y_manejar_rta_handshake(t_log* logger, const char* nombre_servidor, int socket) {
+/* TIENE UN PROBLEMA SIMILAR, handshake_code no contiene valores negativos, deberiamos cambiar a int */
+bool recibir_y_manejar_rta_handshake(t_log* logger, const char* nombre_servidor, int socket) { 
    bool exito_handshake = false;
 
    handshake_code handshake_codigo = recibir_handshake(socket);

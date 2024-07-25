@@ -19,9 +19,21 @@
 #include <utils/general.h>
 //#define PUERTO "51689"
 
+// Lo pongo aca, xq sino la variable que use este type da problemas
+typedef struct {
+    void *espacio_usuario; // Espacio de memoria de usuario (contiguo)
+    int tamano_pagina; // Tamaño de página
+    int tamano_memoria; // Tamaño total de la memoria
+    t_bitarray *bitmap;
+    int cantidad_marcos;
+    int ultimo_frame_verificado;
+    // TablaPaginas *tablas_paginas; // Tablas de páginas
+    // int num_tablas; // Número de tablas de páginas
+} MemoriaPaginada;
+
 // ====  Variables globales:  ===============================================
 // ==========================================================================
-extern MemoriaPaginada *memoria;
+extern MemoriaPaginada *memoria; 
 extern bool fin_programa;
 
 extern t_list *procesos_cargados; // almacena referencia a todos los procesos cargados
@@ -66,17 +78,6 @@ typedef enum {
 //     pagina *paginas; // Arreglo de páginas
 //     int num_paginas; // Número de páginas en la tabla
 // } TablaPaginas;
-
-typedef struct {
-    void *espacio_usuario; // Espacio de memoria de usuario (contiguo)
-    int tamano_pagina; // Tamaño de página
-    int tamano_memoria; // Tamaño total de la memoria
-    t_bitarray *bitmap;
-    int cantidad_marcos;
-    int ultimo_frame_verificado;
-    // TablaPaginas *tablas_paginas; // Tablas de páginas
-    // int num_tablas; // Número de tablas de páginas
-} MemoriaPaginada;
 
 extern void *espacio_bitmap_no_tocar; // solo se usa al crear/destruir el bitmap
 extern MemoriaPaginada *memoria;
