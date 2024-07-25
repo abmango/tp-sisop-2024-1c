@@ -1,6 +1,7 @@
 #include <fileSystem.h>
 
 t_file_system *fs;
+void *espacio_bitmap; // para funcionamiento interno bitmap
 int unidad_trabajo = 0,
     retraso_compresion = 0;
 uint aux_bitmap = 0; // almacena la siguiente posicion a la ultima posicion libre [podria utilizarse metodo "static" en la funcion de busqueda]
@@ -13,6 +14,7 @@ char *nombre_interfaz_FS;
 void iniciar_FS (t_config *config, char *nombre){ /* EN PROCESO DE MODIFICACION (PATH_BASE)*/
     nombre_interfaz_FS = nombre;
     char *ruta_aux = string_new();
+    size_t size_aux;
 
     /* obteniendo componentes del FileSystem */
     fs->tam_bloques = config_get_int_value(config, "BLOCK_SIZE");
@@ -22,10 +24,10 @@ void iniciar_FS (t_config *config, char *nombre){ /* EN PROCESO DE MODIFICACION 
     unidad_trabajo = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO")*MILISEG_A_MICROSEG;
     retraso_compresion = config_get_int_value(config, "RETRASO_COMPACTACION")*MILISEG_A_MICROSEG;
 
-    ruta_aux = string_append(ruta_aux,PATH_BASE);
+    string_append(ruta_aux,PATH_BASE);
 
     // verificar si es correcto - crear archivo con tam_tot
-    ruta_aux = string_append(ruta_aux, "bloques.dat");
+    string_append(ruta_aux, "bloques.dat");
     int aux = (fs->tam_bloques * fs->cant_bloques) - 1; // tamaño en bytes 0-->tam_tot-1 
     fs->f_bloques = fopen(ruta_aux, "rb+"); // busca si ya existe, sino devuelve false
     if (!fs->f_bloques){
@@ -43,12 +45,13 @@ void iniciar_FS (t_config *config, char *nombre){ /* EN PROCESO DE MODIFICACION 
     fs->bitmap = bitarray_create_with_mode(espacio_bitmap, aux, LSB_FIRST);
 
     // crear archivo f_bitmap
-    ruta_aux = string_append(ruta_aux, "bitmap.dat");
+    string_append(ruta_aux, "bitmap.dat");
     fs->f_bitmap = fopen(ruta_aux, "rb+");
     if (!fs->f_bitmap)
     { // si no existe lo creamos
         fs->f_bitmap = fopen(ruta_aux, "wb+");
-        fwrite(bitarray_get_max_bit(fs->bitmap), sizeof(size_t), 1, fs->f_bitmap); // almacena el tamaño bitmap (para si se abre archivo desp comprobar)
+        size_aux = bitarray_get_max_bit(fs->bitmap);
+        fwrite(&size_aux, sizeof(size_t), 1, fs->f_bitmap); // almacena el tamaño bitmap (para si se abre archivo desp comprobar)
         actualizar_f_bitmap();
     } 
     else 
@@ -59,7 +62,8 @@ void iniciar_FS (t_config *config, char *nombre){ /* EN PROCESO DE MODIFICACION 
         if (tam_bitmap_prev != aux){
             fclose(fs->f_bitmap);
             fs->f_bitmap = fopen(ruta_aux, "wb+"); // lo sobreescribimos
-            fwrite(bitarray_get_max_bit(fs->bitmap), sizeof(size_t), 1, fs->f_bitmap); 
+            size_aux = bitarray_get_max_bit(fs->bitmap);
+            fwrite(&size_aux, sizeof(size_t), 1, fs->f_bitmap); 
             actualizar_f_bitmap();
         } else {
             fgets(fs->bitmap->bitarray, aux, fs->f_bitmap); // tomamos el bitmap almacenado
@@ -85,7 +89,7 @@ bool crear_f (char *ruta_metadata){
         metadata = config_create(ruta_metadata);
         
         bitarray_set_bit(fs->bitmap, libres->bloque);
-        config_set_value(metadata, "BLOQUE", libres->bloque);
+        config_set_value(metadata, "BLOQUE", &(libres->bloque));
         config_set_value(metadata, "SIZE", "1");
 
         log_info(log_io, "config creado");
@@ -147,7 +151,7 @@ bool truncar_f (t_config *metadata, int nuevo_size, int pid){
 
     if (nuevo_size < cant_bloq) 
     {
-        config_set_value(metadata, "SIZE", nuevo_size);
+        config_set_value(metadata, "SIZE", &nuevo_size);
         liberar_bloques(bloque + nuevo_size, cant_bloq-nuevo_size);
     } 
     else if (nuevo_size > cant_bloq) 
@@ -168,7 +172,7 @@ bool truncar_f (t_config *metadata, int nuevo_size, int pid){
         }
         // movemos archivo a nuevo bloque libre
         mover_f(metadata, libres->bloque);
-        config_set_value(metadata, "SIZE", nuevo_size);
+        config_set_value(metadata, "SIZE", string_itoa(nuevo_size));
         reservar_bloques(libres->bloque, nuevo_size);
     }
     
@@ -200,7 +204,7 @@ void mover_f (t_config *metadata, int bloq_new){
     }
 
     // modifica t_config y lo guarda
-    config_set_value(metadata, "BLOQUE", bloq_new);
+    config_set_value(metadata, "BLOQUE", string_itoa(bloq_new));
     config_save(metadata);
     free(data);
 }
@@ -228,7 +232,7 @@ void compactar_FS (void){
 
     fseek(fs->f_bloques, 0, SEEK_SET);
 
-    for (int i=0; i<fs->cant_bloq; i++){
+    for (int i=0; i < fs->cant_bloques; i++){
         if (bitarray_test_bit(fs->bitmap, i)){
             fseek(fs->f_bloques, fs->tam_bloques * i, SEEK_SET);
             fread(data, fs->tam_bloques, 1, fs->f_bloques);
@@ -346,7 +350,7 @@ t_bloques_libres * bloques_libres (int cant_bloques){
     bool resultado;
 
     libres->bloque = -1;
-    libres->no_contiguos 0;
+    libres->no_contiguos = 0;
 
     while (contador < cant_bloques)
     {
@@ -388,7 +392,7 @@ void liberar_bloques (int bloq_ini, int cant_bloq){
         bitarray_clean_bit(fs->bitmap, bloq_ini);
         bloq_ini++;
     }
-    actualizar_f_bitmap()
+    actualizar_f_bitmap();
 }
 
 void reservar_bloques (int bloq_ini, int cant_bloq){
@@ -397,7 +401,7 @@ void reservar_bloques (int bloq_ini, int cant_bloq){
         bitarray_set_bit(fs->bitmap, bloq_ini);
         bloq_ini++;
     }
-    actualizar_f_bitmap()
+    actualizar_f_bitmap();
 }
 
 void actualizar_f_bitmap (void){
@@ -565,7 +569,7 @@ void fs_read (int conexion, t_list *parametros, char *ip_mem, char *puerto_mem){
 
     // leemos archivo y agregamos a paquete
     data = leer_f(metadata, offset, cant_bytes);
-    agregar_a_paquete(paquete, data; cant_bytes);
+    agregar_a_paquete(paquete, data, cant_bytes);
 
     /* comunicamos memoria */
     conexion_memoria = crear_conexion(ip_mem, puerto_mem);
@@ -593,7 +597,7 @@ void fs_read (int conexion, t_list *parametros, char *ip_mem, char *puerto_mem){
     // recibe respuesta de memoria
     operacion = recibir_codigo(conexion_memoria);
 	if(operacion == ACCESO_ESCRITURA){
-		logguear_DialFs(LEER_F, pid, nombre);
+		logguear_DialFs(LEER_F, pid, nombre, cant_bytes, offset);
 		paquete = crear_paquete(IO_OPERACION);
 	}else{
 		printf("ERROR EN MEMORIA");
@@ -689,10 +693,9 @@ void fs_write (int conexion, t_list *parametros, char *ip_mem, char *puerto_mem)
 
     // envia el paquete q fue cargando
 	enviar_paquete(paquete, conexion_memoria);	
-	eliminar_paquete(paquete);	
-    // recibe respuesta de memoria
+	eliminar_paquete(paquete);
 
-    /*** PENDIENTE X AQUI ***/
+    // recibe respuesta de memoria con stream datos
     operacion = recibir_codigo(conexion_memoria);
 	if(operacion == ACCESO_LECTURA){
         recibido = recibir_paquete(conexion_memoria);
@@ -700,13 +703,13 @@ void fs_write (int conexion, t_list *parametros, char *ip_mem, char *puerto_mem)
         data = list_remove(recibido, 0);
 
         // agrega a archivo y loggea
+		logguear_DialFs(ESCRIBIR_F, pid, nombre, cant_bytes, offset);
         resultado = escribir_f(metadata, offset, cant_bytes, (char*)data);
 
         if (!resultado){
-		    logguear_DialFs(ESCRIBIR_F, pid, nombre);
+            log_error(log_io, "No se pudo escribir en el archivo");
             eliminar_paquete(paquete);
             crear_paquete(MENSAJE_ERROR);
-        
         }
 	}else{
 		printf("ERROR EN MEMORIA");

@@ -28,7 +28,8 @@ void enviar_handshake_e_identificacion(char* nombre, t_io_type_code tipo_interfa
 
 void enviar_handshake_a_memoria(char* nombre, int socket);
 
-bool manejar_rta_handshake(handshake_code rta_handshake, const char* nombre_servidor);
+// cambie de handshake_code a int xq un enum no tiene como valores validos los negativos
+bool manejar_rta_handshake(int rta_handshake, const char* nombre_servidor);
 
 void iniciar_logger(void);
 
