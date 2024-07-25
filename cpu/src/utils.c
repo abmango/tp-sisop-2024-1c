@@ -302,19 +302,31 @@ t_list* mmu(int dir_logica, int tamanio)
    int num_pag = floor(dir_logica/tamanio_pagina); // falta desarrollar floor()
    int desplazamiento = dir_logica - num_pag*tamanio_pagina;
 
-   t_paquete* paq = crear_paquete(PEDIDO_PAGINA);
-   agregar_a_paquete(paq, &pid, sizeof(int));
-   agregar_a_paquete(paq, &num_pag, sizeof(int));
-   enviar_paquete(paq, socket_memoria);
-   eliminar_paquete(paq);
+   int marco;
+   if (!tlb_lookup(pid, num_pag, &marco)) {
+      log_debug(log_cpu_gral, "TLB Miss: PID %d, Virtual page %u is not in TLB\n", pid, virtual_address);
+      t_paquete* paq = crear_paquete(PEDIDO_PAGINA);
+      agregar_a_paquete(paq, &pid, sizeof(int));
+      agregar_a_paquete(paq, &num_pag, sizeof(int));
+      enviar_paquete(paq, socket_memoria);
+      eliminar_paquete(paq);
 
-   t_list* aux = list_create();
-   recibir_codigo(socket_memoria);
-   aux = recibir_paquete(socket_memoria);
-   int *aux2 = list_get(aux,0);
-   int marco = *aux2;
-   free(aux2);
-   list_destroy(aux);
+      t_list* aux = list_create();
+      recibir_codigo(socket_memoria);
+      aux = recibir_paquete(socket_memoria);
+      int *aux2 = list_get(aux,0);
+      marco = *aux2;
+      free(aux2);
+      list_destroy(aux);
+
+      // Actualizar la TLB
+      tlb_update_fifo(pid, num_pag, marco); // O usar tlb_update_lru(pid, num_pag, marco);
+    }
+    else
+    {
+      log_debug(log_cpu_gral, "TLB Hit: PID = %d, Página Virtual = %d, Marco = %d\n", pid, num_pag, marco);
+    }
+
    int dir_fisica = marco*tamanio_pagina + desplazamiento;
 
    t_list* format = list_create();
@@ -469,7 +481,7 @@ void init_tlb(int size) {
 }
 
 // Función para buscar en la TLB
-int tlb_lookup(unsigned int virtual_page, unsigned int *physical_page) {
+int tlb_lookup(int virtual_page, int *physical_page) {
     for (int i = 0; i < tlb_size; ++i) {
         if (tlb[i].valid && tlb[i].virtual_page == virtual_page) {
             *physical_page = tlb[i].physical_page;
@@ -481,7 +493,7 @@ int tlb_lookup(unsigned int virtual_page, unsigned int *physical_page) {
 
 // Algoritmos para actualizar la TLB
 
-void tlb_update_fifo(int pid, unsigned int virtual_page, unsigned int physical_page) {
+void tlb_update_fifo(int pid, int virtual_page, int physical_page) {
     // Encontrar la entrada más antigua (FIFO)
     int oldest_index = 0;
     for (int i = 1; i < tlb_size; ++i) {
@@ -502,7 +514,7 @@ void tlb_update_fifo(int pid, unsigned int virtual_page, unsigned int physical_p
     tlb[oldest_index].fifo_counter++;
 }
 
-void tlb_update_lru(int pid, unsigned int virtual_page, unsigned int physical_page) {
+void tlb_update_lru(int pid, int virtual_page, int physical_page) {
     // Encontrar la entrada menos recientemente usada (LRU)
     int least_recently_used = 0;
     for (int i = 1; i < tlb_size; ++i) {
