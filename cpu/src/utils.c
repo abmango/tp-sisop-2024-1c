@@ -73,14 +73,11 @@ void desalojar(t_contexto_de_ejecucion reg, motivo_desalojo_code opcode, char** 
       break;
       //en los casos de io falta hacer pasar la dir logica a una fisica a traves de mmu;
       case IO_GEN_SLEEP:
-         realloc(buffer_desalojo, tamanio_de_contexto_de_desalojo() + strlen(arg[1]) + 1 + sizeof(int));
          int tamanio_argumento = strlen(arg[1]) + 1;
-         memcpy(buffer + desplazamiento, &tamanio_argumento, sizeof(int));
-         desplazamiento += sizeof(int);
-         memcpy(buffer + desplazamiento, arg[1], tamanio_argumento);
-         desplazamiento += tamanio_argumento;
-         int aux = atoi(arg[2]);
-         memcpy(buffer + desplazamiento, &aux, sizeof(int));
+         agregar_a_paquete(paq, arg[1], tamanio_argumento);
+         int unidades_de_trabajo = atoi(arg[2]);
+         agregar_a_paquete(paq, &unidades_de_trabajo, sizeof(int));
+
       break;
       case IO_STDIN_READ:
          realloc(buffer_desalojo, tamanio_de_contexto_de_desalojo() + strlen(arg[1]) + 1 + 2*sizeof(int));

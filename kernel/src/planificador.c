@@ -26,7 +26,6 @@ void planific_corto_fifo(void) {
     // void* buffer;
     int desplazamiento;
     int size_argument;
-
     // Lista con data del paquete recibido. El elemento 0 es el t_desalojo, el resto son argumentos.
     t_list* desalojo_y_argumentos = NULL;
 
@@ -91,12 +90,12 @@ void planific_corto_fifo(void) {
             break;
 
             case GEN_SLEEP:
+            char* nombre_interfaz = list_get(desalojo_y_argumentos, 1);
+            int unidades_de_trabajo = *list_get(desalojo_y_argumentos, 2);
+
             t_paquete* paquete = crear_paquete(IO_OPERACION);
             agregar_a_paquete(paquete, &(proceso_exec->pid), sizeof(int));
-            int unidades_de_trabajo = atoi(list_get(desalojo_y_argumentos, 2));
             agregar_a_paquete(paquete, &unidades_de_trabajo, sizeof(int));
-
-            char* nombre_interfaz = list_get(desalojo_y_argumentos, 1);
 
             pthread_mutex_lock(&lista_io_blocked);
             t_io_blocked* io = encontrar_io(nombre_interfaz);
@@ -121,9 +120,47 @@ void planific_corto_fifo(void) {
                 pthread_mutex_unlock(&mutex_procesos_activos);
             }
             pthread_mutex_unlock(&lista_io_blocked);
+
+            eliminar_paquete(paquete);;
             break;
 
             case STDIN_READ:
+            int cant_de_pares_direccion_tamanio = (list_size(desalojo_y_argumentos) - 2) / 2;
+            char* nombre_interfaz = list_get(desalojo_y_argumentos, 1);
+            int dir;
+            int tamanio;
+
+            t_paquete* paquete = crear_paquete(IO_OPERACION);
+            agregar_a_paquete(paquete, &(proceso_exec->pid), sizeof(int));
+            // DESARROLLANDO
+            for(cant_de_pares_direccion_tamanio; cant_de_pares_direccion_tamanio > 0; cant_de_pares_direccion_tamanio--) {
+                //
+            }
+
+            
+            pthread_mutex_lock(&lista_io_blocked);
+            t_io_blocked* io = encontrar_io(nombre_interfaz);
+            if(io != NULL) {
+                enviar_paquete(paquete, io->socket);
+                pthread_mutex_lock(&(proceso_exec->mutex_uso_de_io));
+                list_add(io->cola_blocked, proceso_exec);
+                log_info(log_kernel_oblig, "PID: %d - Bloqueado por: INTERFAZ", proceso_exec->pid); // log Obligatorio
+                log_info(log_kernel_oblig, "PID: %d - Estado Anterior: EXEC - Estado Actual: BLOCKED", proceso_exec->pid); // log Obligatorio
+            }
+            else {
+                log_error(log_kernel_gral, "Interfaz %s no encontrada", nombre_interfaz);
+                pthread_mutex_lock(&mutex_procesos_activos);
+                pthread_mutex_lock(&mutex_cola_exit);
+                list_add(cola_exit, proceso_exec);
+                procesos_activos--;
+                sem_post(&sem_procesos_exit);
+                log_info(log_kernel_oblig, "Finaliza el proceso %d - Motivo: INVALID_INTERFACE", proceso_exec->pid); // log Obligatorio
+                log_info(log_kernel_oblig, "PID: %d - Estado Anterior: EXEC - Estado Actual: EXIT", proceso_exec->pid); // log Obligatorio
+                proceso_exec = NULL;
+                pthread_mutex_unlock(&mutex_cola_exit);
+                pthread_mutex_unlock(&mutex_procesos_activos);
+            }
+            pthread_mutex_unlock(&lista_io_blocked);
             break;
 
             case STDOUT_WRITE:
@@ -187,8 +224,8 @@ void planific_corto_fifo(void) {
             break;
 		}
 
-        pthread_mutex_unlock(&proceso_exec);        
-
+        pthread_mutex_unlock(&proceso_exec);
+        list_destroy_and_destroy_elements(desalojo_y_argumentos, (void*)free);
 	}
 }
 

@@ -132,14 +132,15 @@ void logguear_DialFs (dial_fs_op_code operacion, int pid, char *nombre_f, int ta
 
 void agregar_dir_y_size_a_paquete(t_paquete *paquete, t_list *lista, int *bytes)
 {   
-    char *data;
+    // toqué por las dudas. Se que asi funca.
+    int *data;
     while (!list_is_empty(lista)){
 			data = list_remove(lista, 0);
-			agregar_a_paquete(paquete,(int*) data, sizeof(int));
+			agregar_a_paquete(paquete, data, sizeof(int));
 			free(data);
 
 			data = list_remove(lista, 0);
-			agregar_a_paquete(paquete,(int*) data, sizeof(int));
+			agregar_a_paquete(paquete, data, sizeof(int));
 			bytes += *(int*)data; 
 			free(data);
 		}
