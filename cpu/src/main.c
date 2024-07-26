@@ -71,7 +71,6 @@ int main(int argc, char *argv[])
 	t_contexto_de_ejecucion reg;
 	int pid;
 	t_dictionary *diccionario = crear_diccionario(reg);
-	reg = recibir_contexto_ejecucion();
 	char *instruccion;
 	while (1)
 	{
@@ -92,11 +91,10 @@ int main(int argc, char *argv[])
 			unsigned int physical_frame = virtual_address;  // En un caso real, esto sería la página física real
 			tlb_update_lru(pid, virtual_address, physical_frame);
 		}*/
-
 		instruccion = fetch(reg.PC, pid);
 		char **arg = string_split(instruccion, " ");
 		execute_op_code op_code = decode(arg[0]);
-		int *a, *b;
+		int *a, *b, *c;
 		switch (op_code)
 		{ // las de enviar y recibir memoria hay que modificar, para hacerlas genericas
 		case SET:
@@ -106,7 +104,7 @@ int main(int argc, char *argv[])
 		case MOV_IN:
 			a = dictionary_get(diccionario, arg[1]);
 			b = dictionary_get(diccionario, arg[2]);
-			a * = leer_memoria(*b, sizeof(*a));
+			*a = leer_memoria(*b, sizeof(*a));
 			break;
 		case MOV_OUT:
 			a = dictionary_get(diccionario, arg[1]);
@@ -138,19 +136,49 @@ int main(int argc, char *argv[])
 			enviar_memoria(reg.reg_cpu_uso_general.DI, arg[1], aux);
 			break;
 		case WAIT:
+			t_paquete* par = desalojar_registros(reg, WAIT);
+			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
+			enviar_paquete(paq, socket_kernel_dispatch);
+			destruir_paquete(paq);
 			break;
 		case SIGNAL:
+			t_paquete* par = desalojar_registros(reg, SIGNAL);
+			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
+			enviar_paquete(paq, socket_kernel_dispatch);
+			destruir_paquete(paq);
 			break;
 		case IO_GEN_SLEEP:
-			desalojar(reg, IO_GEN_SLEEP, arg);
+			t_paquete* par = desalojar_registros(reg, GEN_SLEEP);
+			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
+			int unidades = atoi(arg[2]);
+			agregar_a_paquete(paq, &unidades, sizeof(int));
+			enviar_paquete(paq, socket_kernel_dispatch);
+			destruir_paquete(paq);
 			reg = recibir_contexto_ejecucion();
 			break;
 		case IO_STDIN_READ:
-			desalojar(reg, IO_STDIN_READ, arg);
+			t_paquete* par = desalojar_registros(reg, STDIN_READ);
 			reg = recibir_contexto_ejecucion();
 			break;
 		case IO_STDOUT_WRITE:
-			desalojar(reg, IO_STDOUT_WRITE, arg);
+			t_paquete* par = desalojar_registros(reg, STDIN_WRITE);
+			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
+			t_list* aux = list_create();
+			aux = mmu(dir_logica, tamanio);
+			t_mmu* aux2;
+
+			while(!list_is_empty(aux))
+			{
+				aux2 = list_remove(aux,0);
+				agregar_a_paquete(paq, &(aux2->direccion), sizeof(int));
+				agregar_a_paquete(paq, &(aux2->tamanio), sizeof(int));
+				free(aux2);
+			}
+
+			agregar_a_paquete(paq, a, sizeof(a));
+			enviar_paquete(paq, socket_kernel_dispatch);
+			destruir_paquete(paq);
+
 			reg = recibir_contexto_ejecucion();
 			break;
 		case IO_FS_CREATE:

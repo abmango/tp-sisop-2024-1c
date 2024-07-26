@@ -125,8 +125,8 @@ resultado_operacion finalizar_proceso (t_proceso *proceso);
 /// @brief "Simula" acceso a tabla de paginas (y su retraso), verificacion de pagina redundante
 /// @param proceso        : puntero a estructura proceso, para obtener la tabla de paginas
 /// @param ind_pagina_consulta : indice de pagina objetivo
-/// @return retorna si se encontro la pagina y se logueo (CORRECTA), ERROR si la pagina no estaba en tabla paginas (no tiene frame asignado)
-resultado_operacion acceso_tabla_paginas(t_proceso *proceso, int ind_pagina_consulta);
+/// @return Retorna -1 si hubo error al acceder a tabla de paginas, si el acceso es valido retorna el frame
+int acceso_tabla_paginas(t_proceso *proceso, int ind_pagina_consulta);
 /* "simula" xq basicamente es obtener_indice_frame() glorificado, podria devolver el frame de ser necesario */
 
 /// @brief Modifica tabla paginas del proceso, asignadole frames libres (gracias a bitmap) o liberando frames que tenia asignados... tambien loguea

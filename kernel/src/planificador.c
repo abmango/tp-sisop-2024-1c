@@ -252,7 +252,18 @@ void planific_corto_fifo(void) {
 
             recurso_en_sistema->instancias_disponibles++;
 
-            // DESARROLLANDO
+            t_recurso_ocupado* recurso_ocupado = encontrar_recurso_ocupado(proceso_exec->recursos_ocupados, nombre_recurso);
+            if (recurso_ocupado != NULL) {
+                (recurso_ocupado->instancias)--;
+            }
+            else { // ESTE CASO NO DEBERIA ESTAR EN LAS PRUEBAS
+                log_warning(log_kernel_gral, "El proceso %d hizo SIGNAL del recurso %s antes de hacer un WAIT. Esperemos que esto nunca suceda.", proceso_exec->pid, nombre_recurso);
+                recurso_ocupado = malloc(sizeof(t_recurso_ocupado));
+                recurso_ocupado->nombre = string_duplicate(nombre_recurso);
+                recurso_ocupado->instancias = 0;
+                list_add(proceso_exec->recursos_ocupados, recurso_ocupado);
+            }
+            log_debug(log_kernel_gral, "Instancia del recurso %s liberada por el proceso %d", nombre_recurso, proceso_exec->pid);
             
             // Si hay procesos bloqueados por el recurso:
             if (recurso_en_sistema->instancias_disponibles <= 0) {
@@ -261,20 +272,18 @@ void planific_corto_fifo(void) {
                 t_recurso_blocked* recurso_blocked = encontrar_recurso_blocked(nombre_recurso);
                 t_pcb* proceso_debloqueado = list_remove(recurso_blocked->cola_blocked, 0);
                 list_add(cola_ready, proceso_debloqueado);
-
-                
+                char* pids_en_cola_ready = string_lista_de_pid_de_lista_de_pcb(cola_ready);
                 log_info(log_kernel_oblig, "PID: %d - Estado Anterior: BLOCKED - Estado Actual: READY", proceso_debloqueado->pid); // log Obligatorio
-                log_info(log_kernel_oblig, "Cola Ready: [%s]", ACA ESTOY); // log Obligatorio
-
-                pthread_mutex_unlock(&mutex_cola_exit);
-            }
-            // Si NO hay procesos bloqueados por el recurso:
-            else {
-
+                log_info(log_kernel_oblig, "Cola Ready: [%s]", pids_en_cola_ready); // log Obligatorio
+                free(pids_en_cola_ready);
+                pthread_mutex_unlock(&mutex_lista_recurso_blocked);
+                pthread_mutex_unlock(&mutex_cola_ready);
             }
 
-            //falta desbloquear el primer proceso de la cola de bloqueados
+
             break;
+
+            
 		}
 
         pthread_mutex_unlock(&proceso_exec);
@@ -351,12 +360,50 @@ void planific_corto_rr(void) {
             // Por cualquiera de los dos caminos, se libera la cola de ejecucion
             break;
 
+            // Estan juntos porque tienen la misma logica
             case STDIN_READ:
-            // A DESARROLLAR
-            break;
-
             case STDOUT_WRITE:
-            // A DESARROLLAR
+            int cant_de_pares_direccion_tamanio = (list_size(desalojo_y_argumentos) - 2) / 2;
+            char* nombre_interfaz = list_get(desalojo_y_argumentos, 1);
+            int* dir;
+            int* tamanio;
+
+            t_paquete* paquete = crear_paquete(IO_OPERACION);
+            agregar_a_paquete(paquete, &(proceso_exec->pid), sizeof(int));
+
+            for(cant_de_pares_direccion_tamanio; cant_de_pares_direccion_tamanio > 0; cant_de_pares_direccion_tamanio--) {
+                dir = list_remove(desalojo_y_argumentos, 2);
+                agregar_a_paquete(paquete, dir, sizeof(int));
+                free(dir);
+                tamanio = list_remove(desalojo_y_argumentos, 2);
+                agregar_a_paquete(paquete, tamanio, sizeof(int));
+                free(tamanio);
+            }
+
+            pthread_mutex_lock(&lista_io_blocked);
+            t_io_blocked* io = encontrar_io(nombre_interfaz);
+            if(io != NULL) {
+                enviar_paquete(paquete, io->socket);
+                pthread_mutex_lock(&(proceso_exec->mutex_uso_de_io));
+                list_add(io->cola_blocked, proceso_exec);
+                log_info(log_kernel_oblig, "PID: %d - Bloqueado por: INTERFAZ", proceso_exec->pid); // log Obligatorio
+                log_info(log_kernel_oblig, "PID: %d - Estado Anterior: EXEC - Estado Actual: BLOCKED", proceso_exec->pid); // log Obligatorio
+                proceso_exec = NULL;
+            }
+            else {
+                log_error(log_kernel_gral, "Interfaz %s no encontrada.", nombre_interfaz);
+                pthread_mutex_lock(&mutex_procesos_activos);
+                pthread_mutex_lock(&mutex_cola_exit);
+                list_add(cola_exit, proceso_exec);
+                procesos_activos--;
+                sem_post(&sem_procesos_exit);
+                log_info(log_kernel_oblig, "Finaliza el proceso %d - Motivo: INVALID_INTERFACE", proceso_exec->pid); // log Obligatorio
+                log_info(log_kernel_oblig, "PID: %d - Estado Anterior: EXEC - Estado Actual: EXIT", proceso_exec->pid); // log Obligatorio
+                proceso_exec = NULL;
+                pthread_mutex_unlock(&mutex_cola_exit);
+                pthread_mutex_unlock(&mutex_procesos_activos);
+            }
+            pthread_mutex_unlock(&lista_io_blocked);
             break;
 
             case WAIT:

@@ -372,8 +372,9 @@ void atender_cpu(int socket)
 				continue;
 			}
 			// obtiene pagina /* ARREGLAR EL TEMA DE QUE ACCESO_TABLA_PAGINAS NO DA FRAME*/
-			result = acceso_tabla_paginas(proceso, *(int*)aux2 );
-			frame = obtener_indice_frame(list_get(proceso->tabla_paginas,*(int*)aux2));
+			// result = acceso_tabla_paginas(proceso, *(int*)aux2 );
+			// frame = obtener_indice_frame(list_get(proceso->tabla_paginas,*(int*)aux2));
+			frame = acceso_tabla_paginas(proceso, *(int*)aux2 );
 
 			paquete = crear_paquete(SIGUIENTE_INSTRUCCION);
 			agregar_a_paquete(paquete, &frame, sizeof(int));

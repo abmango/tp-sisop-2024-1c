@@ -56,14 +56,15 @@ bool recibir_y_manejar_handshake_kernel(int socket) {
 }
 
 //unifique pedir_io con desalojar para tener una funcion general
-void desalojar(t_contexto_de_ejecucion reg, motivo_desalojo_code opcode, char** arg)
+t_paquete* desalojar_registros(t_contexto_de_ejecucion reg, int motiv)
 {
    t_desalojo desalojo;
    desalojo.contexto = reg;
-   desalojo.motiv = opcode;
+   desalojo.motiv = motiv;
    void* buffer_desalojo = serializar_desalojo(desalojo);
    t_paquete* paq = crear_paquete(DESALOJO);
    agregar_a_paquete(paq, buffer_desalojo, tamanio_de_desalojo());
+   free(buffer_desalojo);
    // int desplazamiento = tamanio_de_desalojo();
    switch(opcode){
       case WAIT:
@@ -80,30 +81,11 @@ void desalojar(t_contexto_de_ejecucion reg, motivo_desalojo_code opcode, char** 
 
       break;
       case IO_STDIN_READ:
-         realloc(buffer_desalojo, tamanio_de_contexto_de_desalojo() + strlen(arg[1]) + 1 + 2*sizeof(int));
-         int tamanio_argumento = strlen(arg[1]) + 1;
-         memcpy(buffer + desplazamiento, &tamanio_argumento, sizeof(int));
-         desplazamiento += sizeof(int);
-         memcpy(buffer + desplazamiento, arg[1], tamanio_argumento);
-         desplazamiento += tamanio_argumento;
-         int aux = atoi(arg[2]);
-         memcpy(buffer + desplazamiento, &aux, sizeof(int));
-         desplazamiento += sizeof(int);
-         aux = atoi(arg[3]);
-         memcpy(buffer + desplazamiento, &aux, sizeof(int));
+
+         mmu()
       break;
       case IO_STDOUT_WRITE:
-         realloc(buffer_desalojo, tamanio_de_contexto_de_desalojo() + strlen(arg[1]) + 1 + 2*sizeof(int));
-         int tamanio_argumento = strlen(arg[1]) + 1;
-         memcpy(buffer + desplazamiento, &tamanio_argumento, sizeof(int));
-         desplazamiento += sizeof(int);
-         memcpy(buffer + desplazamiento, arg[1], tamanio_argumento);
-         desplazamiento += tamanio_argumento;
-         int aux = atoi(arg[2]);
-         memcpy(buffer + desplazamiento, &aux, sizeof(int));
-         desplazamiento += sizeof(int);
-         aux = atoi(arg[3]);
-         memcpy(buffer + desplazamiento, &aux, sizeof(int));
+    
       break;
       case IO_FS_CREATE:
       case IO_FS_DELETE:
@@ -266,15 +248,15 @@ int leer_memoria(int dir_logica, int tamanio)
 
    while(!list_is_empty(aux))
    {
-      aux2 = list_get(aux,0);
+      aux2 = list_remove(aux,0);
       agregar_a_paquete(paq, &(aux2->direccion), sizeof(int));
       agregar_a_paquete(paq, &(aux2->tamanio), sizeof(int));
+      free(aux2);
    }
    
    enviar_paquete(paq,socket_memoria);
    eliminar_paquete(paq);
-   recibir_codigo(socket_memoria);
-   aux = recibir_paquete(socket_memoria);
+   list_destroy(aux);
    
    // falta recibir el ok o la falla
    
@@ -317,7 +299,7 @@ t_list* mmu(int dir_logica, int tamanio)
       list_destroy(aux);
 
       // Actualizar la TLB
-      tlb_update_fifo(pid, num_pag, marco); // O usar tlb_update_lru(pid, num_pag, marco);
+      tlb_update(pid, num_pag, marco); // O usar tlb_update_lru(pid, num_pag, marco);
     }
     else
     {
@@ -331,25 +313,26 @@ t_list* mmu(int dir_logica, int tamanio)
    aux3->tamanio = tamanio_pagina - desplazamiento;
    aux3->direccion = dir_fisica;
    list_add(format, aux3);
-   tamanio-= tamanio_pagina - desplazamiento;
-   aux3->tamanio = tamanio_pagina;
-   marco+=1;
+   tamanio -= tamanio_pagina - desplazamiento;
+   dir_fisica = dir_fisica + tamanio_pagina - desplazamiento;
 
-   while(floor(tamanio/tamanio_pagina) > 0){
+   while(tamanio > tamanio_pagina){
       aux3 = malloc(sizeof(t_mmu));
-      dir_fisica = marco*tamanio_pagina;
-      marco+=1;
-      tamanio-=tamanio_pagina;
       aux3->direccion = dir_fisica;
+      aux3->tamanio = tamanio_pagina;
+      dir_fisica += tamanio_pagina;
+      tamanio-=tamanio_pagina;
+
       list_add(format,aux3);
    }
 
    aux3 = malloc(sizeof(t_mmu));
-   dir_fisica = marco*tamanio_pagina;
    aux3->direccion = dir_fisica;
    aux3->tamanio = tamanio;
    list_add(format, aux3);
-   return aux3;
+   free(aux3);
+
+   return format;
 }
 
 void enviar_memoria(int dir_logica, int tamanio, int valor) //hay q adaptar valor a string
@@ -363,17 +346,17 @@ void enviar_memoria(int dir_logica, int tamanio, int valor) //hay q adaptar valo
 
    while(!list_is_empty(aux))
    {
-      aux2 = list_get(aux,0);
+      aux2 = list_remove(aux,0);
       agregar_a_paquete(paq, &(aux2->direccion), sizeof(int));
       agregar_a_paquete(paq, &(aux2->tamanio), sizeof(int));
+      free(aux2);
    }
 
    agregar_a_paquete(paq, &valor, tamanio);
    
    enviar_paquete(paq,socket_memoria);
    eliminar_paquete(paq);
-   recibir_codigo(socket_memoria);
-   aux = recibir_paquete(socket_memoria);
+   free(aux);
 
    // falta recibir el ok o la falla
    
@@ -482,10 +465,10 @@ void init_tlb(int size) {
 }
 
 // Función para buscar en la TLB
-int tlb_lookup(int virtual_page, int *physical_page) {
+int tlb_lookup(int virtual_page, int *physical_page,int* frame) {
     for (int i = 0; i < tlb_size; ++i) {
-        if (tlb[i].valid && tlb[i].virtual_page == virtual_page) {
-            *physical_page = tlb[i].physical_page;
+        if (tlb[i].valid && tlb[i].page == virtual_page) {
+            *frame = tlb[i].frame;
             return 1;  // Éxito: entrada encontrada en la TLB
         }
     }

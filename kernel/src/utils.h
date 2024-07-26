@@ -24,7 +24,7 @@
 typedef struct
 {
     char* nombre;
-    int instancias_disponibles;
+    sem_t sem_contador_instancias; // TAL VEZ CONVIENE int
 } t_recurso;
 
 typedef struct
@@ -58,6 +58,11 @@ typedef struct
     char* nombre;
     t_list* cola_blocked; // Es una lista de t_pcb*
 } t_recurso_blocked;
+
+typedef struct {
+    int num_nodes;
+    bool adj_matrix[MAX_NODES][MAX_NODES];
+} t_graph;
 
 typedef enum
 {
@@ -192,9 +197,12 @@ void destruir_io(t_io_blocked* io); // DESARROLLANDO
 /// @return       : retorna el puntero a la IO (de tipo t_io_blocked* ), o NULL si no la encuentra.
 t_io_blocked* encontrar_io(char* nombre);
 
+char* string_lista_de_pid_de_lista_de_pcb(t_list* lista_de_pcb);
+
 // FUNCIONES AUXILIARES PARA MANEJAR LAS LISTAS DE ESTADOS:
 void imprimir_pid_de_pcb(t_pcb* pcb);
 void imprimir_pid_de_lista_de_pcb(t_list* lista_de_pcb);
+void imprimir_pid_de_lista_de_pcb_sin_msj_si_esta_vacia(t_list* lista_de_pcb);
 void imprimir_pid_de_estado_blocked();
 
 #endif /* UTILS_H_ */

@@ -463,6 +463,38 @@ t_io_blocked* encontrar_io(char* nombre) {
 	return list_find(lista_io_blocked, (void*)_es_mi_querida_interfaz);
 }
 
+char* string_lista_de_pid_de_lista_de_pcb(t_list* lista_de_pcb) {
+
+	char* lista_de_pid = string_new();
+
+	void _agregar_pid (t_pcb* pcb) {
+		char* pid_string = string_itoa(pcb->pid);
+		string_append(&lista_de_pid, pid_string);
+		free(pid_string);
+	}
+
+	int cant_procesos_en_lista = list_size(lista_de_pcb);
+
+	if(cant_procesos_en_lista == 0) {
+        string_append(&lista_de_pid, "Sin procesos.");
+    }
+	else if(cant_procesos_en_lista == 1) {
+		t_pcb* elem = list_get(lista_de_pcb, 0);
+		_agregar_pid(elem);
+    }
+	else {
+		t_pcb* elem = list_get(lista_de_pcb, 0);
+		_agregar_pid(elem);
+		for (int i = 1; i <= cant_procesos_en_lista-1; i++) {
+			elem = list_get(lista_de_pcb, i);
+			string_append(&lista_de_pid, ", ");
+			_agregar_pid(elem);
+		}
+	}
+
+	return lista_de_pid;
+}
+
 void imprimir_pid_de_pcb(t_pcb* pcb) {
     imprimir_entero(pcb->pid);
 }
@@ -473,7 +505,12 @@ void imprimir_pid_de_lista_de_pcb(t_list* lista_de_pcb) {
     } else {
         imprimir_mensaje("Ninguno.");
     }
-    
+}
+
+void imprimir_pid_de_lista_de_pcb_sin_msj_si_esta_vacia(t_list* lista_de_pcb) {
+    if(!list_is_empty(lista_de_pcb)) {
+        list_iterate(lista_de_pcb, (void*)imprimir_pid_de_pcb);
+    }
 }
 
 void imprimir_pid_de_estado_blocked() {

@@ -184,17 +184,18 @@ resultado_operacion finalizar_proceso (t_proceso *proceso)
 
 // ind_pagina_cosulta tendra el indice relativo a la tabla de paginas del proceso
 // revisar xq capaz esta funcion deberia devolver una direccion... x ahora solo esta preparada para el log
-resultado_operacion acceso_tabla_paginas(t_proceso *proceso, int ind_pagina_consulta)
+int acceso_tabla_paginas(t_proceso *proceso, int ind_pagina_consulta)
 {
+    int frame = -1; // Inicializo como Error
     if (ind_pagina_consulta >= list_size(proceso->tabla_paginas)) {
         retardo_operacion();
         log_info(log_memoria, "Tabla de Paginas del proceso <%i> no tiene asignada una pagina asignada en la posicion: %i",proceso->pid,ind_pagina_consulta);
-        return ERROR;
+        return frame;
     }
-    int frame = obtener_indice_frame(list_get(proceso->tabla_paginas,ind_pagina_consulta));
+    frame = obtener_indice_frame(list_get(proceso->tabla_paginas,ind_pagina_consulta));
     retardo_operacion();
     log_info(log_memoria, "PID: <%i> - Pagina: <%i> - Marco: <%i>",proceso->pid,ind_pagina_consulta,frame);
-    return CORRECTA;
+    return frame;
 }
 
 resultado_operacion ajustar_tamano_proceso(t_proceso *proceso, int nuevo_size)
