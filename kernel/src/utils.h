@@ -24,7 +24,7 @@
 typedef struct
 {
     char* nombre;
-    sem_t sem_contador_instancias; // TAL VEZ CONVIENE int
+    int instancias_disponibles;
 } t_recurso;
 
 typedef struct

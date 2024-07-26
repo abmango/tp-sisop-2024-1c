@@ -26,7 +26,7 @@ void planific_corto_fifo(void) {
     // void* buffer;
     int desplazamiento;
     int size_argument;
-    // Lista con data del paquete recibido. El elemento 0 es el t_desalojo, el resto son argumentos.
+    // Lista con data del paquete recibido desde cpu. El elemento 0 es el t_desalojo, el resto son argumentos.
     t_list* desalojo_y_argumentos = NULL;
 
     while(1) {
@@ -105,9 +105,10 @@ void planific_corto_fifo(void) {
                 list_add(io->cola_blocked, proceso_exec);
                 log_info(log_kernel_oblig, "PID: %d - Bloqueado por: INTERFAZ", proceso_exec->pid); // log Obligatorio
                 log_info(log_kernel_oblig, "PID: %d - Estado Anterior: EXEC - Estado Actual: BLOCKED", proceso_exec->pid); // log Obligatorio
+                proceso_exec = NULL;
             }
             else {
-                log_error(log_kernel_gral, "Interfaz %s no encontrada", nombre_interfaz);
+                log_error(log_kernel_gral, "Interfaz %s no encontrada.", nombre_interfaz);
                 pthread_mutex_lock(&mutex_procesos_activos);
                 pthread_mutex_lock(&mutex_cola_exit);
                 list_add(cola_exit, proceso_exec);
@@ -124,20 +125,26 @@ void planific_corto_fifo(void) {
             eliminar_paquete(paquete);;
             break;
 
+            // Están juntos porque tienen la misma lógica
             case STDIN_READ:
+            case STDOUT_WRITE:
             int cant_de_pares_direccion_tamanio = (list_size(desalojo_y_argumentos) - 2) / 2;
             char* nombre_interfaz = list_get(desalojo_y_argumentos, 1);
-            int dir;
-            int tamanio;
+            int* dir;
+            int* tamanio;
 
             t_paquete* paquete = crear_paquete(IO_OPERACION);
             agregar_a_paquete(paquete, &(proceso_exec->pid), sizeof(int));
-            // DESARROLLANDO
+
             for(cant_de_pares_direccion_tamanio; cant_de_pares_direccion_tamanio > 0; cant_de_pares_direccion_tamanio--) {
-                //
+                dir = list_remove(desalojo_y_argumentos, 2);
+                agregar_a_paquete(paquete, dir, sizeof(int));
+                free(dir);
+                tamanio = list_remove(desalojo_y_argumentos, 2);
+                agregar_a_paquete(paquete, tamanio, sizeof(int));
+                free(tamanio);
             }
 
-            
             pthread_mutex_lock(&lista_io_blocked);
             t_io_blocked* io = encontrar_io(nombre_interfaz);
             if(io != NULL) {
@@ -146,9 +153,10 @@ void planific_corto_fifo(void) {
                 list_add(io->cola_blocked, proceso_exec);
                 log_info(log_kernel_oblig, "PID: %d - Bloqueado por: INTERFAZ", proceso_exec->pid); // log Obligatorio
                 log_info(log_kernel_oblig, "PID: %d - Estado Anterior: EXEC - Estado Actual: BLOCKED", proceso_exec->pid); // log Obligatorio
+                proceso_exec = NULL;
             }
             else {
-                log_error(log_kernel_gral, "Interfaz %s no encontrada", nombre_interfaz);
+                log_error(log_kernel_gral, "Interfaz %s no encontrada.", nombre_interfaz);
                 pthread_mutex_lock(&mutex_procesos_activos);
                 pthread_mutex_lock(&mutex_cola_exit);
                 list_add(cola_exit, proceso_exec);
@@ -163,28 +171,31 @@ void planific_corto_fifo(void) {
             pthread_mutex_unlock(&lista_io_blocked);
             break;
 
-            case STDOUT_WRITE:
-            break;
-
             case WAIT:
-            memcpy(&size_argument, buffer + desplazamiento, sizeof(int));
-	        desplazamiento += sizeof(int);
-            char* nombre_recurso = malloc(size_argument);
-            memcpy(nombre_recurso, buffer + desplazamiento, size_argument);
-	        desplazamiento += size_argument;
+            char* nombre_recurso = list_get(desalojo_y_argumentos, 1);
 
-            t_recurso* recurso_en_sistema = encontrar_recurso(recursos_del_sistema, nombre_recurso);
+            t_recurso* recurso_en_sistema = encontrar_recurso_del_sistema(nombre_recurso);
             if( recurso_en_sistema==NULL )
             {
-                log_error(logger, "PID: %i - No se encuentra el recurso solicitado. Finalizando proceso...", proceso_exec->pid);
+                log_error(log_kernel_gral, "Recurso %s no encontrado en el sistema.", nombre_recurso);
+                pthread_mutex_lock(&mutex_procesos_activos);
+                pthread_mutex_lock(&mutex_cola_exit);
                 list_add(cola_exit, proceso_exec);
+                procesos_activos--;
+                sem_post(&sem_procesos_exit);
+                log_info(log_kernel_oblig, "Finaliza el proceso %d - Motivo: INVALID_RESOURCE", proceso_exec->pid); // log Obligatorio
+                log_info(log_kernel_oblig, "PID: %d - Estado Anterior: EXEC - Estado Actual: EXIT", proceso_exec->pid); // log Obligatorio
+                proceso_exec = NULL;
+                pthread_mutex_unlock(&mutex_cola_exit);
+                pthread_mutex_unlock(&mutex_procesos_activos);
                 break;
             }
-            int instancias_disponibles;
-            sem_getvalue(&(recurso_en_sistema->sem_contador_instancias), &instancias_disponibles);
-            if (instancias_disponibles > 0) {
 
-                sem_wait(&(recurso_en_sistema->sem_contador_instancias));
+            recurso_en_sistema->instancias_disponibles--;
+
+            // Si hay instancias disponibles:
+            if (recurso_en_sistema->instancias_disponibles >= 0) {
+
                 t_recurso_ocupado* recurso_ocupado = encontrar_recurso_ocupado(proceso_exec->recursos_ocupados, nombre_recurso);
                 if (recurso_ocupado != NULL) {
                     (recurso_ocupado->instancias)++;
@@ -195,31 +206,73 @@ void planific_corto_fifo(void) {
                     recurso_ocupado->instancias = 1;
                     list_add(proceso_exec->recursos_ocupados, recurso_ocupado);
                 }
+                log_debug(log_kernel_gral, "Instancia del recurso %s asignada a proceso %d", nombre_recurso, proceso_exec->pid);
+            }
+            // Si NO hay instancias disponibles:
+            else {
+                pthread_mutex_lock(&mutex_lista_recurso_blocked);
+                t_recurso_blocked* recurso_blocked = encontrar_recurso_blocked(nombre_recurso);
+                if(recurso_blocked != NULL) {
+                    list_add(recurso_blocked->cola_blocked, proceso_exec);
+                }
+                else {
+                    recurso_blocked = malloc(sizeof(t_recurso_blocked));
+                    recurso_blocked->nombre = string_duplicate(nombre_recurso);
+                    recurso_blocked->cola_blocked = list_create();
+                    list_add(recurso_blocked->cola_blocked, proceso_exec);
+                    list_add(lista_recurso_blocked, recurso_blocked);
+                }
+                log_info(log_kernel_oblig, "PID: %d - Bloqueado por: %s", proceso_exec->pid, nombre_recurso); // log Obligatorio
+                log_info(log_kernel_oblig, "PID: %d - Estado Anterior: EXEC - Estado Actual: BLOCKED", proceso_exec->pid); // log Obligatorio
+                proceso_exec = NULL;
+
+                pthread_mutex_lock(&mutex_lista_recurso_blocked);
             }
             break;
 
             case SIGNAL:
-            memcpy(&size_argument, buffer + desplazamiento, sizeof(int));
-	        desplazamiento += sizeof(int);
-            char* nombre_recurso = malloc(size_argument);
-            memcpy(nombre_recurso, buffer + desplazamiento, size_argument);
-	        desplazamiento += size_argument;
-            
-            t_recurso* recurso_en_sistema = encontrar_recurso(recursos_del_sistema, nombre_recurso);
-            // verifico que exista, si no existe lo mando a EXIT
+            char* nombre_recurso = list_get(desalojo_y_argumentos, 1);
+
+            t_recurso* recurso_en_sistema = encontrar_recurso_del_sistema(nombre_recurso);
             if( recurso_en_sistema==NULL )
             {
-                log_error(logger, "PID: %i - No se encuentra el recurso solicitado. Finalizando proceso...", proceso_exec->pid);
+                log_error(log_kernel_gral, "Recurso %s no encontrado en el sistema.", nombre_recurso);
+                pthread_mutex_lock(&mutex_procesos_activos);
+                pthread_mutex_lock(&mutex_cola_exit);
                 list_add(cola_exit, proceso_exec);
+                procesos_activos--;
+                sem_post(&sem_procesos_exit);
+                log_info(log_kernel_oblig, "Finaliza el proceso %d - Motivo: INVALID_RESOURCE", proceso_exec->pid); // log Obligatorio
+                log_info(log_kernel_oblig, "PID: %d - Estado Anterior: EXEC - Estado Actual: EXIT", proceso_exec->pid); // log Obligatorio
+                proceso_exec = NULL;
+                pthread_mutex_unlock(&mutex_cola_exit);
+                pthread_mutex_unlock(&mutex_procesos_activos);
                 break;
             }
-            int instancias_maximas;
-            sem_getvalue(&(recurso_en_sistema->sem_contador_instancias), &instancias_maximas);
-            sem_post(&(recurso_en_sistema->sem_contador_instancias));
-            t_recurso_ocupado* recurso_ocupado = encontrar_recurso_ocupado(proceso_exec->recursos_ocupados, nombre_recurso);
-            if (recurso_ocupado != NULL) {
-                (recurso_ocupado->instancias)--;
+
+            recurso_en_sistema->instancias_disponibles++;
+
+            // DESARROLLANDO
+            
+            // Si hay procesos bloqueados por el recurso:
+            if (recurso_en_sistema->instancias_disponibles <= 0) {
+                pthread_mutex_lock(&mutex_cola_ready);
+                pthread_mutex_lock(&mutex_lista_recurso_blocked);
+                t_recurso_blocked* recurso_blocked = encontrar_recurso_blocked(nombre_recurso);
+                t_pcb* proceso_debloqueado = list_remove(recurso_blocked->cola_blocked, 0);
+                list_add(cola_ready, proceso_debloqueado);
+
+                
+                log_info(log_kernel_oblig, "PID: %d - Estado Anterior: BLOCKED - Estado Actual: READY", proceso_debloqueado->pid); // log Obligatorio
+                log_info(log_kernel_oblig, "Cola Ready: [%s]", ACA ESTOY); // log Obligatorio
+
+                pthread_mutex_unlock(&mutex_cola_exit);
             }
+            // Si NO hay procesos bloqueados por el recurso:
+            else {
+
+            }
+
             //falta desbloquear el primer proceso de la cola de bloqueados
             break;
 		}
@@ -313,7 +366,7 @@ void planific_corto_rr(void) {
             memcpy(nombre_recurso, buffer + desplazamiento, size_argument);
 	        desplazamiento += size_argument;
 
-            t_recurso* recurso_en_sistema = encontrar_recurso(recursos_del_sistema, nombre_recurso);
+            t_recurso* recurso_en_sistema = encontrar_recurso_del_sistema(nombre_recurso);
             if( recurso_en_sistema==NULL )
             {
                 log_error(logger, "PID: %i - No se encuentra el recurso solicitado. Finalizando proceso...", proceso_exec->pid);
@@ -348,7 +401,7 @@ void planific_corto_rr(void) {
             memcpy(nombre_recurso, buffer + desplazamiento, size_argument);
 	        desplazamiento += size_argument;
             
-            t_recurso* recurso_en_sistema = encontrar_recurso(recursos_del_sistema, nombre_recurso);
+            t_recurso* recurso_en_sistema = encontrar_recurso_del_sistema(nombre_recurso);
             // verifico que exista, si no existe lo mando a EXIT
             if( recurso_en_sistema==NULL )
             {
@@ -459,7 +512,7 @@ void planific_corto_vrr(void) {
             memcpy(nombre_recurso, buffer + desplazamiento, size_argument);
 	        desplazamiento += size_argument;
 
-            t_recurso* recurso_en_sistema = encontrar_recurso(recursos_del_sistema, nombre_recurso);
+            t_recurso* recurso_en_sistema = encontrar_recurso_del_sistema(nombre_recurso);
             if( recurso_en_sistema==NULL )
             {
                 log_error(logger, "PID: %i - No se encuentra el recurso solicitado. Finalizando proceso...", proceso_exec->pid);
@@ -494,7 +547,7 @@ void planific_corto_vrr(void) {
             memcpy(nombre_recurso, buffer + desplazamiento, size_argument);
 	        desplazamiento += size_argument;
             
-            t_recurso* recurso_en_sistema = encontrar_recurso(recursos_del_sistema, nombre_recurso);
+            t_recurso* recurso_en_sistema = encontrar_recurso_del_sistema(nombre_recurso);
             // verifico que exista, si no existe lo mando a EXIT
             if( recurso_en_sistema==NULL )
             {
@@ -551,13 +604,13 @@ void recibir_y_verificar_codigo(int socket, op_code cod, char* traduccion_de_cod
     }
 }
 
-t_recurso* encontrar_recurso(t_list* lista_de_recursos, char* nombre) {
+t_recurso* encontrar_recurso_del_sistema(char* nombre) {
 
 	bool _es_mi_recurso(t_recurso* recurso) {
 		return strcmp(recurso->nombre, nombre) == 0;
 	}
 
-    return list_find(lista_de_recursos, (void*)_es_mi_recurso);
+    return list_find(recursos_del_sistema, (void*)_es_mi_recurso);
 }
 
 t_recurso_ocupado* encontrar_recurso_ocupado(t_list* lista_de_recursos_ocupados, char* nombre) {
@@ -567,6 +620,15 @@ t_recurso_ocupado* encontrar_recurso_ocupado(t_list* lista_de_recursos_ocupados,
 	}
 
     return list_find(lista_de_recursos_ocupados, (void*)_es_mi_recurso_ocupado);
+}
+
+t_recurso_blocked* encontrar_recurso_blocked(char* nombre) {
+
+	bool _es_mi_recurso_blocked(t_recurso_blocked* recurso) {
+		return strcmp(recurso->nombre, nombre) == 0;
+	}
+
+    return list_find(lista_recurso_blocked, (void*)_es_mi_recurso_blocked);
 }
 
 /*
