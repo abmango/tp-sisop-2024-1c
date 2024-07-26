@@ -59,7 +59,7 @@ bool recibir_y_manejar_handshake_conexiones_temp(int socket, char** nombre_modul
 bool recibir_y_manejar_handshake_cpu(int socket) {
     bool exito_handshake = false;
 
-    handshake_code handshake_codigo = recibir_handshake(socket);
+    int handshake_codigo = recibir_handshake(socket);
 
     switch (handshake_codigo) {
         case CPU:

@@ -132,7 +132,9 @@ void imprimir_entero(int num);
 ///////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////
 
-int tamanio_de_pcb(t_pcb* pcb); // t_pcb no esta definido >> No Compila
+// OBSOLETO. YA NO HACE FALTA
+// int tamanio_de_pcb(t_pcb* pcb);
+
 int tamanio_de_contexto_de_ejecucion(void);
 int tamanio_de_lista_de_recursos_ocupados(t_list* lista_de_recursos_ocupados);
 

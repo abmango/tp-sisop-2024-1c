@@ -111,7 +111,7 @@ t_io_blocked* recibir_handshake_y_datos_de_nueva_io_y_responder(int socket) {
 
 	t_list* datos_handshake = recibir_paquete(socket);
 
-	handshake_code handshake_codigo = *(list_get(datos_handshake, 0));
+	int handshake_codigo = *(list_get(datos_handshake, 0));
 	if (handshake_codigo != INTERFAZ) {
 		enviar_handshake(HANDSHAKE_INVALIDO, socket);
 		log_warning(log_kernel_gral, "Handshake invalido. Se esperaba INTERFAZ.");

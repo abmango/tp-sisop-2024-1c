@@ -35,7 +35,7 @@ void imprimir_entero(int num) {
     printf("%d\n", num);
 }
 
-/*
+/* OBSOLETO. YA NO HACE FALTA
 int tamanio_de_pcb(t_pcb* pcb) {
     return 2*sizeof(int) + 4*sizeof(uint8_t) + 7*sizeof(uint32_t) + tamanio_de_lista_de_recursos_ocupados(pcb->recursos_ocupados);
 }

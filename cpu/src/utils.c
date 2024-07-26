@@ -27,7 +27,7 @@ pthread_mutex_t mutex_interrupt;
 bool recibir_y_manejar_handshake_kernel(int socket) {
     bool exito_handshake = false;
 
-    handshake_code handshake_codigo = recibir_handshake(socket);
+    int handshake_codigo = recibir_handshake(socket);
 
     switch (handshake_codigo) {
         case KERNEL_D:

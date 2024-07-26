@@ -101,7 +101,7 @@ void liberar_conexion(t_log* log, char* nombre_conexion, int socket);
 //////////////////////////////////////////////
 bool recibir_y_manejar_rta_handshake(t_log* logger, const char* nombre_servidor, int socket);
 void enviar_handshake(handshake_code handshake_codigo, int socket);
-handshake_code recibir_handshake(int socket);
+int recibir_handshake(int socket);
 
 /// @brief Recibe un código de operación y el paquete que lo acompania, que debería estar vacío. Osea que solo debería tener el código de operación.
 /// @param logger           : Instancia de log Para loguear lo recibido.

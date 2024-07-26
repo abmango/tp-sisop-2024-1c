@@ -121,10 +121,11 @@ void liberar_conexion(t_log* log, char* nombre_conexion, int socket)
 /////////////////////////////////////////////////////
 
 /* TIENE UN PROBLEMA SIMILAR, handshake_code no contiene valores negativos, deberiamos cambiar a int */
+/* PROBLEMA ARREGLADO :D */
 bool recibir_y_manejar_rta_handshake(t_log* logger, const char* nombre_servidor, int socket) { 
    bool exito_handshake = false;
 
-   handshake_code handshake_codigo = recibir_handshake(socket);
+   int handshake_codigo = recibir_handshake(socket);
 
 	switch (handshake_codigo) {
 		case HANDSHAKE_OK:
@@ -156,7 +157,7 @@ void enviar_handshake(handshake_code handshake_codigo, int socket)
 	eliminar_paquete(paquete);
 }
 
-handshake_code recibir_handshake(int socket)
+int recibir_handshake(int socket)
 {
 	op_code codigo_op = recibir_codigo(socket);
 
@@ -173,7 +174,7 @@ handshake_code recibir_handshake(int socket)
 	int tamanio_codigo_handshake;
 	memcpy(&tamanio_codigo_handshake, buffer + desplazamiento, sizeof(int));
 	desplazamiento += sizeof(int);
-	handshake_code handshake_codigo;
+	int handshake_codigo;
 	memcpy(&handshake_codigo, buffer + desplazamiento, tamanio_codigo_handshake);
 	desplazamiento += tamanio_codigo_handshake;
 
