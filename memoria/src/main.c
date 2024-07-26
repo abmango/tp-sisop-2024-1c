@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
 
 	error = pthread_create(&hilo_recepcion, NULL, rutina_recepcion, NULL);
 	if (error != 0) {
-		log_error(log_memoria, "Error al crear hilo_recepcion");
+		log_error(log_memoria_gral, "Error al crear hilo_recepcion");
 	}
 
 	// atiende al cpu en bucle, hasta fin_programa = true; (se asigna cuando cpu se desconecta)
@@ -415,7 +415,7 @@ void terminar_programa(int socket_cpu)
 	config_destroy(config);
 }
 
-void iniciar_logger()
+void iniciar_logger() // tendria q modificarse al tener 2 logs >> No Compila
 {
 	log_memoria = log_create("memoria.log", "Memoria", true, LOG_LEVEL_INFO);
 	if(log_memoria == NULL){

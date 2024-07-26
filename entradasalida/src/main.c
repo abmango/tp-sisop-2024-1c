@@ -14,8 +14,8 @@ int main(int argc, char* argv[]) {
     int conexion_kernel = 1;
     char* ip;
 	char* puerto;
-	char* valor;
-	char* tipo_interfaz;
+	char* valor; // ME MARCA COMO QUE NO ESTA EN USO
+	char* tipo_interfaz; 
 	char* nombre;
 
     t_config* config;
@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
 
 	t_dictionary* diccionario_interfaces = crear_e_inicializar_diccionario_interfaces();
 	tipo_interfaz = config_get_string_value(config, "TIPO_INTERFAZ");
-	t_io_type_code cod_tipo_interfaz = *dictionary_get(diccionario_interfaces, tipo_interfaz);
+	t_io_type_code cod_tipo_interfaz = *(int*)(dictionary_get(diccionario_interfaces, tipo_interfaz));
 
 	// handshake y se identifica ante kernel, dándole nombre y tipo de interfaz
 	enviar_handshake_e_identificacion(nombre, cod_tipo_interfaz, conexion_kernel);
@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
 		}
 	}
 
-    terminar_programa(conexion_kernel, config);
+    terminar_programa(nombre, conexion_kernel, config);
 
     return 0;
 }
@@ -82,7 +82,7 @@ void interfaz_generica(char* nombre, t_config* config, int conexion_kernel)
 	t_paquete *paquete;
 	t_list *recibido;
 	char *data;
-	int id_interfaz;
+	int id_interfaz; // Me Marca como que no esta en uso
 	int unidadTrabajo = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO");
 	int tiempo;
 	unsigned int tiempo_en_microsegs;
@@ -302,7 +302,7 @@ void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 			
 			// se recibe directamente cod operacion + cadena con todo lo que habia en memoria
 			operacion = recibir_codigo(conexion_memoria);
-			if (operacion = ACCESO_LECTURA){
+			if (operacion == ACCESO_LECTURA){
 				recibido = recibir_paquete(conexion_memoria);
 				paquete = crear_paquete(IO_OPERACION);
 				data = list_remove(recibido, 0);
@@ -352,7 +352,7 @@ void interfaz_dialFS(char* nombre, t_config* config, int conexion_kernel)
 	// iniciando el FS
 	iniciar_FS(config, nombre);
 
-	identificarse(nombre, DIALFS, conexion_kernel);
+	// identificarse(nombre, DIALFS, conexion_kernel); // hay un problema con esto ?? (no tiene referencia)
 
 	operacion = recibir_codigo(conexion_kernel);
 	while (operacion != FIN_INTERFAZ)
@@ -400,11 +400,11 @@ void interfaz_dialFS(char* nombre, t_config* config, int conexion_kernel)
 	free(puerto);
 }
 
-void terminar_programa(int socket, t_config* config)
+void terminar_programa(char *nombre, int socket, t_config* config)
 {
 	// Y por ultimo, hay que liberar lo que utilizamos (conexion, log y config) 
 	 // con las funciones de las commons y del TP mencionadas en el enunciado /
-	liberar_conexion(socket);
+	liberar_conexion(log_io, nombre,socket);
 	config_destroy(config);
 }
 

@@ -17,7 +17,7 @@ void interfaz_stdout(char*, t_config*, int);
 void interfaz_dialFS(char*, t_config*, int);
 
 
-void terminar_programa(int, t_config*);
+void terminar_programa(char *nombre, int socket, t_config* config);
 t_dictionary *crear_e_inicializar_diccionario_interfaces(void);
 
 #endif

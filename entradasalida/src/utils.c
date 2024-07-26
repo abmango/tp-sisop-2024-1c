@@ -35,7 +35,8 @@ void enviar_handshake_a_memoria(char* nombre, int socket) {
 	eliminar_paquete(paquete);
 }
 
-bool manejar_rta_handshake(handshake_code rta_handshake, const char* nombre_servidor) {
+// cambie handshake_code a int xq un enum no posee valores en negativos
+bool manejar_rta_handshake(int rta_handshake, const char* nombre_servidor) {
     bool exito_handshake = false;
 
 	switch (rta_handshake) {

@@ -18,8 +18,7 @@ typedef struct {
     uint no_contiguos; // contara el total de bloques libres no contiguos encontrados en todo el FS
 } t_bloques_libres; 
 
-extern *t_file_system fs;
-void *espacio_bitmap; // para funcionamiento interno bitmap
+extern t_file_system *fs;
 
 /* Funcionamiento interno FS */ // REVISAR TEMA CON CHAR* RECIBIDO (TEMA DIRECTORIOS)
 // https://github.com/sisoputnfrba/foro/issues/4005 >> carpeta /home/utnso/dialFS [PENDIENTE IMPLEMENTAR] (sino puede ahorrarse...)

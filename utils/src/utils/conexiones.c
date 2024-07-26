@@ -120,7 +120,8 @@ void liberar_conexion(t_log* log, char* nombre_conexion, int socket)
 /////////////////////////////////////////////////////
 /////////////////////////////////////////////////////
 
-bool recibir_y_manejar_rta_handshake(t_log* logger, const char* nombre_servidor, int socket) {
+/* TIENE UN PROBLEMA SIMILAR, handshake_code no contiene valores negativos, deberiamos cambiar a int */
+bool recibir_y_manejar_rta_handshake(t_log* logger, const char* nombre_servidor, int socket) { 
    bool exito_handshake = false;
 
    handshake_code handshake_codigo = recibir_handshake(socket);
@@ -194,20 +195,27 @@ bool recibir_y_verificar_cod_respuesta_empaquetado(t_log* logger, op_code cod_es
 		cod_recibido = -2;
 	}
 
-	switch (cod_recibido) {
-		case cod_esperado:
+	if (cod_recibido == cod_esperado)
+	{
 		respuesta_exitosa = true;
 		log_trace(logger, "Respuesta de %s recibida: EXITO", nombre_conexion);
-		break;
-		case -1:
-		log_error(logger, "No se pudo recibir la respuesta de %s.", nombre_conexion);
-		break;
-		case -2:
-		log_error(logger, "Se esperaba solo un codigo de respuesta por parte de %s. Pero se recibieron mas cosas.", nombre_conexion);
-		break;
-		default:
-		log_trace(logger, "Respuesta de %s recibida: ERROR", nombre_conexion);
-		break;
+	} else 
+	{ // con esto solo va a entrar si el codigo no es el esperado (eliminando q esperado salga en default)
+		switch (cod_recibido) {
+			// case cod_esperado: // switch solo puede manejar expresiones q se evaluan en compilacion (no variables)
+			// respuesta_exitosa = true;
+			// log_trace(logger, "Respuesta de %s recibida: EXITO", nombre_conexion);
+			// break;
+			case -1:
+			log_error(logger, "No se pudo recibir la respuesta de %s.", nombre_conexion);
+			break;
+			case -2:
+			log_error(logger, "Se esperaba solo un codigo de respuesta por parte de %s. Pero se recibieron mas cosas.", nombre_conexion);
+			break;
+			default:
+			log_trace(logger, "Respuesta de %s recibida: ERROR", nombre_conexion);
+			break;
+		}
 	}
 
 	list_destroy_and_destroy_elements(lista, (void*)free);
@@ -345,7 +353,7 @@ int enviar_paquete(t_paquete* paquete, int socket)
 	int bytes = paquete->buffer->size + 2*sizeof(int);
 	void* a_enviar = serializar_paquete(paquete, bytes);
 
-	int bytes = send(socket, a_enviar, bytes, 0);
+	bytes = send(socket, a_enviar, bytes, 0);
 
 	free(a_enviar);
 
