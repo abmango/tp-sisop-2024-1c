@@ -14,7 +14,7 @@ void* rutina_planificador(void* puntero_null);
 
 /////// ALGORITMOS
 
-void planific_corto_fifo(void); // DESARROLLANDO
+void planific_corto_fifo(void);
 void planific_corto_rr(void); // DESARROLLANDO
 void planific_corto_vrr(void); // DESARROLLANDO
 
