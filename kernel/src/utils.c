@@ -80,7 +80,7 @@ bool enviar_handshake_a_memoria(int socket) {
 	return exito_envio;
 }
 
-void manejar_rta_handshake(handshake_code rta_handshake, const char* nombre_servidor) {
+void manejar_rta_handshake(int rta_handshake, const char* nombre_servidor) {
 
 	switch (rta_handshake) {
 		case HANDSHAKE_OK:
@@ -111,7 +111,7 @@ t_io_blocked* recibir_handshake_y_datos_de_nueva_io_y_responder(int socket) {
 
 	t_list* datos_handshake = recibir_paquete(socket);
 
-	int handshake_codigo = *(list_get(datos_handshake, 0));
+	int handshake_codigo = *(int*)(list_get(datos_handshake, 0));
 	if (handshake_codigo != INTERFAZ) {
 		enviar_handshake(HANDSHAKE_INVALIDO, socket);
 		log_warning(log_kernel_gral, "Handshake invalido. Se esperaba INTERFAZ.");
@@ -121,7 +121,7 @@ t_io_blocked* recibir_handshake_y_datos_de_nueva_io_y_responder(int socket) {
 
 	t_io_blocked* io_blocked = malloc(sizeof(t_io_blocked));
 	io_blocked->nombre = string_duplicate(list_get(datos_handshake, 1));
-	io_blocked->tipo = *(list_get(datos_handshake, 2));
+	io_blocked->tipo = *(t_io_type_code*)(list_get(datos_handshake, 2));
 	io_blocked->socket = socket;
 	io_blocked->cola_blocked = list_create();
 
@@ -150,7 +150,7 @@ t_pcb* crear_pcb() {
     pcb->reg_cpu_uso_general.EDX = 0;
     pcb->reg_cpu_uso_general.SI = 0;
     pcb->reg_cpu_uso_general.DI = 0;
-	pthread_mutex_init(&(pcb->uso_de_io), NULL);
+	pthread_mutex_init(&(pcb->mutex_uso_de_io), NULL);
 	return pcb;
 }
 
@@ -273,7 +273,9 @@ void destruir_recurso_ocupado(t_recurso_ocupado* recurso_ocupado) {
 	// libero una instancia, por cada una retenida
 	for (int instancias_retenidas = recurso_ocupado->instancias; instancias_retenidas > 0; instancias_retenidas--) {
 		(recurso_ocupado->instancias)--;
-		sem_post(&(recurso_en_sistema->sem_contador_instancias));
+		recurso_en_sistema->instancias_disponibles++;
+
+		// ACÁ HAY QUE AGREGAR UNA LÓGICA QUE FALTA. SIMILAR A UN SIGNAL DE PROCESO.
 	}
 
 	free(recurso_ocupado->nombre);
@@ -357,10 +359,12 @@ void enviar_contexto_de_ejecucion(t_contexto_de_ejecucion contexto_de_ejecucion,
 void enviar_orden_de_interrupcion(t_interrupt_code interrupt_code) {
 	t_paquete* paquete = crear_paquete(INTERRUPCION);
 	agregar_a_paquete(paquete, &interrupt_code, sizeof(t_interrupt_code));
+	agregar_a_paquete(paquete, &(proceso_exec->pid), sizeof(int));
 	enviar_paquete(paquete, socket_cpu_interrupt);
 	eliminar_paquete(paquete);
 }
 
+/* OBSOLETO. YA NO LA USAMOS.
 void* serializar_pcb(t_pcb* pcb, int bytes) {
 	void* magic = malloc(bytes);
 	int desplazamiento = 0;
@@ -399,6 +403,7 @@ void* serializar_pcb(t_pcb* pcb, int bytes) {
 
 	return magic;
 }
+*/
 
 void* serializar_lista_de_recursos_ocupados(t_list* lista_de_recursos_ocupados, int bytes) {
 	void* magic = malloc(bytes);
@@ -409,7 +414,7 @@ void* serializar_lista_de_recursos_ocupados(t_list* lista_de_recursos_ocupados, 
 	desplazamiento += sizeof(int);
 
 	for(int index_recurso = 0; index_recurso <= cant_recursos_ocupados-1; index_recurso++) {
-		t_recurso* recurso = list_get(lista_de_recursos_ocupados, index_recurso);
+		t_recurso_ocupado* recurso = list_get(lista_de_recursos_ocupados, index_recurso);
 		int tamanio_nombre_recurso = strlen(recurso->nombre) + 1;
 		memcpy(magic + desplazamiento, &tamanio_nombre_recurso, sizeof(int));
 		desplazamiento += sizeof(int);

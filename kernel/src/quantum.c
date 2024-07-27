@@ -1,5 +1,10 @@
 #include "quantum.h"
 
+t_temporal* timer;
+int ms_transcurridos;
+
+//////////////////////////////////////
+
 void* rutina_quantum(t_pcb *pcb) {
     
     unsigned int quantum_en_microsegs = (pcb->quantum)*MILISEG_A_MICROSEG;

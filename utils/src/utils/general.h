@@ -117,7 +117,7 @@ typedef struct
 typedef struct
 {
     char* nombre;
-    int instancias_disponibles; // TAL VEZ CONVIENE int
+    int instancias_disponibles;
 } t_recurso;
 
 typedef struct

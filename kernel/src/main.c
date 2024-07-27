@@ -64,7 +64,7 @@ int main(int argc, char* argv[]) {
 
 	t_dictionary* diccionario_algoritmos_corto_plazo = crear_e_inicializar_diccionario_algoritmos_corto_plazo();
 	char* algoritmo_planificacion_corto = config_get_string_value(config, "ALGORITMO_PLANIFICACION");
-	algoritmo_corto_code cod_algoritmo_planif_corto = *dictionary_get(diccionario_algoritmos_corto_plazo, algoritmo_planificacion_corto);
+	algoritmo_corto_code cod_algoritmo_planif_corto = *(algoritmo_corto_code*)dictionary_get(diccionario_algoritmos_corto_plazo, algoritmo_planificacion_corto);
 
 	puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
 	int socket_escucha = iniciar_servidor(puerto);
@@ -83,7 +83,7 @@ t_list* crear_lista_de_recursos(char* array_nombres[], char* array_instancias[])
 	while (array_nombres[i] != NULL) {
 		t_recurso* recurso = malloc(sizeof(t_recurso));
 		recurso->nombre = array_nombres[i];
-		sem_init(&(recurso->sem_contador_instancias), 0, atoi(array_instancias[i]));
+		recurso->instancias_disponibles = atoi(array_instancias[i]);
 		list_add(lista_recursos, recurso);
 		i++;
 	}
@@ -109,7 +109,7 @@ t_dictionary* crear_e_inicializar_diccionario_algoritmos_corto_plazo(void) {
 }
 
 void escuchar_y_atender_nuevas_io(algoritmo_corto_code cod_algoritmo_planif, int socket_de_escucha) {
-	if (cod_algoritmo_planif == FIFO || cod_algoritmo_planif == FIFO) {
+	if (cod_algoritmo_planif == FIFO || cod_algoritmo_planif == RR) {
 		while(1) {
 			int socket_io = esperar_cliente(socket_de_escucha);
 			t_io_blocked* io = recibir_handshake_y_datos_de_nueva_io_y_responder(socket_io);

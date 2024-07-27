@@ -1,10 +1,7 @@
 #include "consola.h"
 
-void *rutina_consola(t_parametros_consola *parametros)
+void *rutina_consola(void *puntero_NULL)
 {
-
-    t_config *config = parametros->config;
-
     char *ip_memoria = config_get_string_value(config, "IP_MEMORIA");
     char *puerto_memoria = config_get_string_value(config, "PUERTO_MEMORIA");
 
@@ -16,35 +13,41 @@ void *rutina_consola(t_parametros_consola *parametros)
         if (strcmp(palabras_comando_ingresado[0], "EJECUTAR_SCRIPT") == 0)
         {
             FILE *f = fopen(palabras_comando_ingresado[1], "r+b");
-            char **comando_a_ejecutar;
-            while (fgets(comando_a_ejecutar, sizeof(comando_a_ejecutar), f))
+
+            char *comando_a_ejecutar;
+            char **palabras_comando_a_ejecutar;
+
+            while (fgets(comando_a_ejecutar, 100, f) != NULL)
             {
                 comando_a_ejecutar[strcspn(comando_a_ejecutar, "\n")] = 0;
-                palabras_comando_ingresado = string_splitt(comando_a_ejecutar, " ");
+                palabras_comando_a_ejecutar = string_split(comando_a_ejecutar, " ");
 
-                if (strcmp(palabras_comando_ingresado[0], "INICIAR_PROCESO") == 0)
+                if (strcmp(palabras_comando_a_ejecutar[0], "INICIAR_PROCESO") == 0)
                 {
-                    op_iniciar_proceso(palabras_comando_ingresado[1], ip_memoria, puerto_memoria);
+                    op_iniciar_proceso(palabras_comando_a_ejecutar[1], ip_memoria, puerto_memoria);
                 }
-                else if (strcmp(palabras_comando_ingresado[0], "FINALIZAR_PROCESO") == 0)
+                else if (strcmp(palabras_comando_a_ejecutar[0], "FINALIZAR_PROCESO") == 0)
                 {
-                    op_finalizar_proceso(palabras_comando_ingresado[1]);
+                    op_finalizar_proceso(atoi(palabras_comando_a_ejecutar[1]));
                 }
-                else if (strcmp(palabras_comando_ingresado[0], "DETENER_PLANIFICACION") == 0)
-                {
-                }
-                else if (strcmp(palabras_comando_ingresado[0], "INICIAR_PLANIFICACION") == 0)
+                else if (strcmp(palabras_comando_a_ejecutar[0], "DETENER_PLANIFICACION") == 0)
                 {
                 }
-                else if (strcmp(palabras_comando_ingresado[0], "MULTIPROGRAMACION") == 0)
+                else if (strcmp(palabras_comando_a_ejecutar[0], "INICIAR_PLANIFICACION") == 0)
                 {
                 }
-                else if (strcmp(palabras_comando_ingresado[0], "PROCESO_ESTADO") == 0)
+                else if (strcmp(palabras_comando_a_ejecutar[0], "MULTIPROGRAMACION") == 0)
+                {
+                }
+                else if (strcmp(palabras_comando_a_ejecutar[0], "PROCESO_ESTADO") == 0)
                 {
                     op_proceso_estado();
                 }
+
+                string_array_destroy(palabras_comando_a_ejecutar);
+                free(comando_a_ejecutar);
             }
-            string_array_destroy(comando_a_ejecutar);
+
             fclose(f);
         }
         else if (strcmp(palabras_comando_ingresado[0], "INICIAR_PROCESO") == 0)
@@ -53,7 +56,7 @@ void *rutina_consola(t_parametros_consola *parametros)
         }
         else if (strcmp(palabras_comando_ingresado[0], "FINALIZAR_PROCESO") == 0)
         {
-            op_finalizar_proceso(palabras_comando_ingresado[1]);
+            op_finalizar_proceso(atoi(palabras_comando_ingresado[1]));
         }
         else if (strcmp(palabras_comando_ingresado[0], "DETENER_PLANIFICACION") == 0)
         {
@@ -77,7 +80,7 @@ void *rutina_consola(t_parametros_consola *parametros)
         free(comando_ingresado);
     }
 
-    return NULL; // acá no sé que es correcto retornar.
+    return NULL;
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -171,7 +174,7 @@ void op_finalizar_proceso(int pid)
     pthread_mutex_lock(&mutex_proceso_exec);
     if (proceso_esta_en_ejecucion(pid))
     {
-        enviar_orden_de_interrupcion(pid, FINALIZAR_PROCESO); // y luego lo maneja desde el planificador corto
+        enviar_orden_de_interrupcion(FINALIZAR_PROCESO); // y luego lo maneja desde el planificador corto
     }
     else
     {

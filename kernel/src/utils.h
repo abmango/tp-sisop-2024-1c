@@ -88,7 +88,7 @@ extern pthread_mutex_t mutex_cola_exit;
 
 bool enviar_handshake_a_memoria(int socket);
 
-void manejar_rta_handshake(handshake_code rta_handshake, const char* nombre_servidor);
+void manejar_rta_handshake(int rta_handshake, const char* nombre_servidor);
 
 // verifica el handshake, y lo responde. Además crea la estructura t_io_blocked con los datos identificatorios que recibe de la IO.
 t_io_blocked* recibir_handshake_y_datos_de_nueva_io_y_responder(int socket);
@@ -141,7 +141,9 @@ void enviar_orden_de_interrupcion(t_interrupt_code interrupt_code);
 
 ///////////////////////
 
-void* serializar_pcb(t_pcb* pcb, int bytes);
+// OBSOLETO. YA NO LA USAMOS.
+// void* serializar_pcb(t_pcb* pcb, int bytes);
+
 void* serializar_lista_de_recursos_ocupados(t_list* lista_de_recursos_ocupados, int bytes);
 
 // FUNCIONES PARA IOs:

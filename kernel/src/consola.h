@@ -7,15 +7,8 @@
 
 ///////////////////////////////////
 
-typedef struct // estructura de parametros. EN PROCESO
-{
-    t_config* config;
-} t_parametros_consola;
-
-///////////////////////////////////
-
 // esta se pasa al crear el hilo
-void* rutina_consola(t_parametros_consola* parametros);
+void *rutina_consola(void *puntero_NULL);
 
 // ==========================================================================
 // ====  Operaciones:  ======================================================

@@ -53,7 +53,7 @@ void* rutina_exit(void* puntero_null) {
         // En caso de algún error:
         if (!exito) {
 
-            log_warnig(log_kernel_gral, "La destruccion del proceso fue abortada.");
+            log_warning(log_kernel_gral, "La destruccion del proceso fue abortada.");
         }
 
         liberar_conexion(log_kernel_gral, "Memoria", socket_memoria);
