@@ -162,7 +162,7 @@ int main(int argc, char *argv[])
 			reg = recibir_contexto_ejecucion();
 			break;
 		case IO_STDOUT_WRITE:
-			paq = desalojar_registros(reg, STDIN_READ);
+			paq = desalojar_registros(reg, STDOUT_WRITE);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			agregar_mmu_paquete(paq, atoi(arg[2]), atoi(arg[3]));
 			

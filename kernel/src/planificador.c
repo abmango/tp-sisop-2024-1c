@@ -1,5 +1,5 @@
 #include "planificador.h"
-#include "quantum.c"
+#include "quantum.h"
 
 void* rutina_planificador(void* puntero_null) {
 

@@ -4,9 +4,6 @@
 #include <commons/config.h>
 
 #include "utils.h"
-
-
-
 // esta se pasa al crear el hilo
 void* rutina_planificador(void* puntero_null);
 

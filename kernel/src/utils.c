@@ -356,7 +356,7 @@ void enviar_contexto_de_ejecucion(t_contexto_de_ejecucion contexto_de_ejecucion,
 
 void enviar_orden_de_interrupcion(t_interrupt_code interrupt_code) {
 	t_paquete* paquete = crear_paquete(INTERRUPCION);
-	agregar_estatico_a_paquete(paquete, &interrupt_code, sizeof(t_interrupt_code));
+	agregar_a_paquete(paquete, &interrupt_code, sizeof(t_interrupt_code));
 	enviar_paquete(paquete, socket_cpu_interrupt);
 	eliminar_paquete(paquete);
 }

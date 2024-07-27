@@ -24,7 +24,7 @@
 typedef struct
 {
     char* nombre;
-    sem_t sem_contador_instancias; // TAL VEZ CONVIENE int
+    int instancias_disponibles; // TAL VEZ CONVIENE int
 } t_recurso;
 
 typedef struct
@@ -58,6 +58,7 @@ typedef struct
     char* nombre;
     t_list* cola_blocked; // Es una lista de t_pcb*
 } t_recurso_blocked;
+
 typedef enum
 {
     FIFO,
