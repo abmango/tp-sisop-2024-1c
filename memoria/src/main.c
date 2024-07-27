@@ -376,9 +376,13 @@ void atender_cpu(int socket)
 			// frame = obtener_indice_frame(list_get(proceso->tabla_paginas,*(int*)aux2));
 			frame = acceso_tabla_paginas(proceso, *(int*)aux2 );
 
-			paquete = crear_paquete(SIGUIENTE_INSTRUCCION);
-			agregar_a_paquete(paquete, &frame, sizeof(int));
-			
+			// verificamos si se obtuvo frame adecuadamente
+			if (frame == -1){
+				paquete = crear_paquete(MENSAJE_ERROR);
+			} else {
+				paquete = crear_paquete(SIGUIENTE_INSTRUCCION);
+				agregar_a_paquete(paquete, &frame, sizeof(int));
+			}
 			enviar_paquete(paquete, socket);
 
 			// se limpia lo recibido

@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
 
 	decir_hola("CPU");
 
-	t_config *config = iniciar_config("default");
+	config = iniciar_config("default");
 
 	pthread_mutex_init(&mutex_interrupt);
 
@@ -64,9 +64,7 @@ int main(int argc, char *argv[])
 	pthread_detach(interrupciones);
 
 	// Inicializar la TLB
-	int tlb_size_config = 16; // Ejemplo: tamaño de la TLB definido en el archivo de configuración
-	tlb_size = (tlb_size_config > 0) ? tlb_size_config : 0;
-	init_tlb(tlb_size);
+	init_tlb();
 
 	t_contexto_de_ejecucion reg;
 	int pid;
@@ -74,23 +72,6 @@ int main(int argc, char *argv[])
 	char *instruccion;
 	while (1)
 	{
-		/*Esto hay que ver cómo logramos loggearlo correctamente.
-		
-		// Ejemplo de uso de la TLB (prueba)
-		unsigned int virtual_address = 123;
-		unsigned int physical_address;
-
-		// Buscar en la TLB
-		if (tlb_lookup(pid, virtual_address, &physical_address)) {
-			printf("TLB Hit: PID %d, Virtual page %u maps to physical frame %u\n", pid, virtual_address, physical_address);
-		} else {
-			printf("TLB Miss: PID %d, Virtual page %u is not in TLB\n", pid, virtual_address);
-
-			// Lógica para buscar en la tabla de páginas y actualizar la TLB
-			// En este ejemplo, actualizamos la TLB con la misma página virtual y física
-			unsigned int physical_frame = virtual_address;  // En un caso real, esto sería la página física real
-			tlb_update_lru(pid, virtual_address, physical_frame);
-		}*/
 		instruccion = fetch(reg.PC, pid);
 		char **arg = string_split(instruccion, " ");
 		execute_op_code op_code = decode(arg[0]);
@@ -158,6 +139,24 @@ int main(int argc, char *argv[])
 			break;
 		case IO_STDIN_READ:
 			t_paquete* par = desalojar_registros(reg, STDIN_READ);
+			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
+			t_list* aux = list_create();
+			aux = mmu(atoi(arg[2]), atoi(arg[3]));
+			t_mmu* aux2;
+
+			while(!list_is_empty(aux))
+			{
+				aux2 = list_remove(aux,0);
+				agregar_a_paquete(paq, &(aux2->direccion), sizeof(int));
+				agregar_a_paquete(paq, &(aux2->tamanio), sizeof(int));
+				free(aux2);
+			}
+			
+			a = dictionary_get(diccionario, arg[3]);
+			agregar_a_paquete(paq, a, sizeof(a));
+			enviar_paquete(paq, socket_kernel_dispatch);
+			destruir_paquete(paq);
+
 			reg = recibir_contexto_ejecucion();
 			break;
 		case IO_STDOUT_WRITE:
@@ -174,7 +173,8 @@ int main(int argc, char *argv[])
 				agregar_a_paquete(paq, &(aux2->tamanio), sizeof(int));
 				free(aux2);
 			}
-
+			
+			a = dictionary_get(diccionario, arg[3]);
 			agregar_a_paquete(paq, a, sizeof(a));
 			enviar_paquete(paq, socket_kernel_dispatch);
 			destruir_paquete(paq);
@@ -182,17 +182,63 @@ int main(int argc, char *argv[])
 			reg = recibir_contexto_ejecucion();
 			break;
 		case IO_FS_CREATE:
+			t_paquete* par = desalojar_registros(reg, FS_CREATE);
+			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
+			agregar_a_paquete(paq, arg[2], strlen(arg[2]) + 1);
+			enviar_paquete(paq, socket_kernel_dispatch);
+			destruir_paquete(paq);
+
+			reg = recibir_contexto_ejecucion();
 			break;
 		case IO_FS_DELETE:
+			t_paquete* par = desalojar_registros(reg, FS_DELETE);
+			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
+			agregar_a_paquete(paq, arg[2], strlen(arg[2]) + 1);
+			enviar_paquete(paq, socket_kernel_dispatch);
+			destruir_paquete(paq);
+
+			reg = recibir_contexto_ejecucion();
 			break;
 		case IO_FS_TRUNCATE:
+			t_paquete* par = desalojar_registros(reg, FS_TRUNCATE);
+			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
+			agregar_a_paquete(paq, arg[2], strlen(arg[2]) + 1);
+			int aux = atoi(arg[3]);
+			agregar_a_paquete(paq, &aux, sizeof(int));
+			enviar_paquete(paq, socket_kernel_dispatch);
+			destruir_paquete(paq);
+
+			reg = recibir_contexto_ejecucion();
 			break;
 		case IO_FS_WRITE:
+			t_paquete* par = desalojar_registros(reg, FS_TRUNCATE);
+			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
+			agregar_a_paquete(paq, arg[2], strlen(arg[2]) + 1);
+			t_list* aux = mmu(atoi(arg[3]));
+			t_mmu* aux2;
+
+			while(!list_is_empty(aux))
+			{
+				aux2 = list_remove(aux,0);
+				agregar_a_paquete(paq, &(aux2->direccion), sizeof(int));
+				agregar_a_paquete(paq, &(aux2->tamanio), sizeof(int));
+				free(aux2);
+			}
+
+			list_destroy(aux);
+			agregar_a_paquete(paq, arg[3], strlen(arg[3]) + 1);
+
+			enviar_paquete(paq, socket_kernel_dispatch);
+			destruir_paquete(paq);
+
+			reg = recibir_contexto_ejecucion();
 			break;
 		case IO_FS_READ:
 			break;
 		case EXIT:
-			desalojar(reg, SUCCESS, arg);
+			t_paquete* paq = desalojar_registros(reg, SUCCESS);
+			enviar_paquete(paq, socket_kernel_dispatch);
+			destruir_paquete(paq);
 			reg = recibir_contexto_ejecucion();
 			break;
 		default:

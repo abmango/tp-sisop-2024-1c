@@ -55,13 +55,15 @@ int tamanio_de_lista_de_recursos_ocupados(t_list* lista_de_recursos_ocupados) {
 */
 
 int tamanio_de_contexto_de_ejecucion(void) {
-    return 4*sizeof(uint8_t) + 7*sizeof(uint32_t);
+    return 4*sizeof(uint8_t) + 7*sizeof(uint32_t) + sizeof(int);
 }
 
 void* serializar_contexto_de_ejecucion(t_contexto_de_ejecucion contexto_de_ejecucion, int bytes) {
 	void* magic = malloc(bytes);
 	int desplazamiento = 0;
 
+	memcpy(magic + desplazamiento, &(contexto_de_ejecucion.pid), sizeof(int));
+	desplazamiento += sizeof(int);
 	memcpy(magic + desplazamiento, &(contexto_de_ejecucion.PC), sizeof(uint32_t));
 	desplazamiento += sizeof(uint32_t);
 	memcpy(magic + desplazamiento, &(contexto_de_ejecucion.reg_cpu_uso_general.AX), sizeof(uint8_t));
@@ -86,6 +88,36 @@ void* serializar_contexto_de_ejecucion(t_contexto_de_ejecucion contexto_de_ejecu
 	desplazamiento += sizeof(uint32_t);
 
 	return magic;
+}
+
+t_contexto_de_ejecucion deserializar_contexto_de_ejecucion(void* buffer, int* desplazamiento) {
+	t_contexto_de_ejecucion contexto;
+
+	memcpy(&(contexto.pid), buffer + *desplazamiento, sizeof(int));
+	memcpy(&(contexto.PC), buffer + *desplazamiento, sizeof(uint32_t));
+	*desplazamiento += sizeof(uint32_t);
+	memcpy(&(contexto.reg_cpu_uso_general.AX), buffer + *desplazamiento, sizeof(uint8_t));
+	*desplazamiento += sizeof(uint8_t);
+	memcpy(&(contexto.reg_cpu_uso_general.BX), buffer + *desplazamiento, sizeof(uint8_t));
+	*desplazamiento += sizeof(uint8_t);
+	memcpy(&(contexto.reg_cpu_uso_general.CX), buffer + *desplazamiento, sizeof(uint8_t));
+	*desplazamiento += sizeof(uint8_t);
+	memcpy(&(contexto.reg_cpu_uso_general.DX), buffer + *desplazamiento, sizeof(uint8_t));
+	*desplazamiento += sizeof(uint8_t);
+	memcpy(&(contexto.reg_cpu_uso_general.EAX), buffer + *desplazamiento, sizeof(uint32_t));
+	*desplazamiento += sizeof(uint32_t);
+	memcpy(&(contexto.reg_cpu_uso_general.EBX), buffer + *desplazamiento, sizeof(uint32_t));
+	*desplazamiento += sizeof(uint32_t);
+	memcpy(&(contexto.reg_cpu_uso_general.ECX), buffer + *desplazamiento, sizeof(uint32_t));
+	*desplazamiento += sizeof(uint32_t);
+	memcpy(&(contexto.reg_cpu_uso_general.EDX), buffer + *desplazamiento, sizeof(uint32_t));
+	*desplazamiento += sizeof(uint32_t);
+	memcpy(&(contexto.reg_cpu_uso_general.SI), buffer + *desplazamiento, sizeof(uint32_t));
+	*desplazamiento += sizeof(uint32_t);
+	memcpy(&(contexto.reg_cpu_uso_general.DI), buffer + *desplazamiento, sizeof(uint32_t));
+	*desplazamiento += sizeof(uint32_t);
+
+	return contexto;
 }
 
 void avisar_y_cerrar_programa_por_error(t_log* log) {

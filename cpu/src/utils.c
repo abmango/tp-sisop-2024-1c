@@ -55,7 +55,6 @@ bool recibir_y_manejar_handshake_kernel(int socket) {
     return exito_handshake;
 }
 
-//unifique pedir_io con desalojar para tener una funcion general
 t_paquete* desalojar_registros(t_contexto_de_ejecucion reg, int motiv)
 {
    t_desalojo desalojo;
@@ -65,45 +64,7 @@ t_paquete* desalojar_registros(t_contexto_de_ejecucion reg, int motiv)
    t_paquete* paq = crear_paquete(DESALOJO);
    agregar_a_paquete(paq, buffer_desalojo, tamanio_de_desalojo());
    free(buffer_desalojo);
-   // int desplazamiento = tamanio_de_desalojo();
-   switch(opcode){
-      case WAIT:
-      case SIGNAL:
-         int tamanio_argumento = strlen(arg[1]) + 1;
-         agregar_a_paquete(paq, arg[1], tamanio_argumento);
-      break;
-      //en los casos de io falta hacer pasar la dir logica a una fisica a traves de mmu;
-      case IO_GEN_SLEEP:
-         int tamanio_argumento = strlen(arg[1]) + 1;
-         agregar_a_paquete(paq, arg[1], tamanio_argumento);
-         int unidades_de_trabajo = atoi(arg[2]);
-         agregar_a_paquete(paq, &unidades_de_trabajo, sizeof(int));
-
-      break;
-      case IO_STDIN_READ:
-
-         mmu()
-      break;
-      case IO_STDOUT_WRITE:
-    
-      break;
-      case IO_FS_CREATE:
-      case IO_FS_DELETE:
-         int tamanio_argumento = strlen(arg[1]) + 1;
-         agregar_a_paquete(paq, arg[1], tamanio_argumento);
-         tamanio_argumento = strlen(arg[2]) + 1;
-         agregar_a_paquete(paq, arg[2], tamanio_argumento);
-      break;
-      default:
-      break;
-   }
-
-   enviar_paquete(paq); // FALTA EL SOCKET
-
-   free(buffer_desalojo);
-   eliminar_paquete(paq);
-   
-   interrupcion = NADA; // limpio interrupciones para no usarlas en el proximo pid
+   return paq;
 }
 
 void* interrupt(void)
@@ -204,7 +165,9 @@ t_contexto_de_ejecucion recibir_contexto_ejecucion(void)
 
 t_contexto_de_ejecucion deserializar_contexto_ejecucion(void* buffer)
 {
-
+   t_contexto_de_ejecucion context; deseri
+   int desplazamiento = 0;
+   memcpy
 }
 
 void* serializar_desalojo(t_desalojo desalojo)
@@ -239,7 +202,7 @@ char* fetch(uint32_t PC, int pid)
 
 int leer_memoria(int dir_logica, int tamanio)
 {
-   t_paquete paq = crear_paquete(ACCESO_ESCRITURA);
+   t_paquete paq = crear_paquete(ACCESO_LECTURA);
    agregar_a_paquete(paq,&pid,sizeof(int));
    
    t_list* aux = list_create();
@@ -268,10 +231,14 @@ void check_interrupt(t_contexto_de_ejecucion reg)
       case NADA:
       break;
       case DESALOJAR:
-      desalojar(reg, INTERRUPTED_BY_QUANTUM); //desalojar mal llamado
+      t_paquete paq = desalojar_registros(reg, INTERRUPTED_BY_QUANTUM); //desalojar mal llamado
+      enviar_paquete(paq,socket_kernel_dispatch);
+      eliminar_paquete(paq);
       break;
       case FINALIZAR:
-      desalojar(reg, INTERRUPTED_BY_USER);
+      t_paquete paq = desalojar_registros(reg, INTERRUPTED_BY_USER);
+      enviar_paquete(paq,socket_kernel_dispatch);
+      eliminar_paquete(paq);
       break;
    }
 }
@@ -457,18 +424,18 @@ void terminar_programa(t_config *config)
 // ==========================================================================
 
 // Función para inicializar la TLB
-void init_tlb(int size) {
-    tlb = malloc(size * sizeof(tlb_entry));
-    for (int i = 0; i < size; ++i) {
-        tlb[i].valid = 0;  // Inicialmente, todas las entradas son inválidas
+void init_tlb() {
+    for (int i = 0; i < tlb.size; ++i) {
+        tlb.tlb_entry[i].valid = 0;  // Inicialmente, todas las entradas son inválidas
     }
+    tlb.planificacion = config_get_string_value(config,"ALGORITMO_TLB");
 }
 
 // Función para buscar en la TLB
 int tlb_lookup(int virtual_page, int *physical_page,int* frame) {
-    for (int i = 0; i < tlb_size; ++i) {
-        if (tlb[i].valid && tlb[i].page == virtual_page) {
-            *frame = tlb[i].frame;
+    for (int i = 0; i < tlb.size; ++i) {
+        if (tlb.tlb_entry[i].valid && tlb.tlb_entry[i].page == virtual_page) {
+            *frame = tlb.tlb_entry[i].frame;
             return 1;  // Éxito: entrada encontrada en la TLB
         }
     }
@@ -476,52 +443,62 @@ int tlb_lookup(int virtual_page, int *physical_page,int* frame) {
 }
 
 // Algoritmos para actualizar la TLB
+void tlb_update(int pid, int virtual_page, int physical_page) {
+   if(tlb.planificacion == "FIFO"){
+      tlb_update_fifo(pid, virtual_page, physical_page);
+   }
+   if(tlb.planificacion == "LRU"){
+      tlb_update_lru(pid, virtual_page, physical_page);
+   }
+}
+
+
 
 void tlb_update_fifo(int pid, int virtual_page, int physical_page) {
     // Encontrar la entrada más antigua (FIFO)
     int oldest_index = 0;
-    for (int i = 1; i < tlb_size; ++i) {
-        if (!tlb[i].valid) {
+    for (int i = 1; i < tlb.size; ++i) {
+        if (!tlb.tlb_entry[i].valid) {
             oldest_index = i;
             break;
         }
-        if (tlb[i].fifo_counter < tlb[oldest_index].fifo_counter) {
+        if (tlb.tlb_entry[i].fifo_counter < tlb.tlb_entry[oldest_index].fifo_counter) {
             oldest_index = i;
         }
     }
 
     // Actualizar la entrada
-    tlb[oldest_index].valid = 1;
-    tlb[oldest_index].pid = pid;
-    tlb[oldest_index].page = virtual_page;
-    tlb[oldest_index].frame = physical_page;
-    tlb[oldest_index].fifo_counter++;
+    tlb.tlb_entry[oldest_index].valid = 1;
+    tlb.tlb_entry[oldest_index].pid = pid;
+    tlb.tlb_entry[oldest_index].page = virtual_page;
+    tlb.tlb_entry[oldest_index].frame = physical_page;
+    tlb.tlb_entry[oldest_index].fifo_counter++;
 }
 
 void tlb_update_lru(int pid, int virtual_page, int physical_page) {
     // Encontrar la entrada menos recientemente usada (LRU)
     int least_recently_used = 0;
-    for (int i = 1; i < tlb_size; ++i) {
-        if (!tlb[i].valid) {
+    for (int i = 1; i < tlb.size; ++i) {
+        if (!tlb.tlb_entry[i].valid) {
             least_recently_used = i;
             break;
         }
-        if (tlb[i].access_time < tlb[least_recently_used].access_time) {
+        if (tlb.tlb_entry[i].access_time < tlb.tlb_entry[least_recently_used].access_time) {
             least_recently_used = i;
         }
     }
 
     // Actualizar la entrada
-    tlb[least_recently_used].valid = 1;
-    tlb[least_recently_used].pid = pid;
-    tlb[least_recently_used].page = virtual_page;
-    tlb[least_recently_used].frame = physical_page;
-    tlb[least_recently_used].access_time = 0; // Se reinicia el tiempo de acceso
+    tlb.tlb_entry[least_recently_used].valid = 1;
+    tlb.tlb_entry[least_recently_used].pid = pid;
+    tlb.tlb_entry[least_recently_used].page = virtual_page;
+    tlb.tlb_entry[least_recently_used].frame = physical_page;
+    tlb.tlb_entry[least_recently_used].access_time = 0; // Se reinicia el tiempo de acceso
 }
 
 // Función para limpiar la TLB
 void tlb_flush() {
-    for (int i = 0; i < tlb_size; ++i) {
-        tlb[i].valid = 0;
+    for (int i = 0; i < tlb.size; ++i) {
+        tlb.tlb_entry[i].valid = 0;
     }
 }

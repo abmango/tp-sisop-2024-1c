@@ -44,8 +44,16 @@ typedef enum
     STDIN_READ,
     // Se leyó la "instrucción IO_STDOUT_WRITE".
     STDOUT_WRITE,
-    // cuando desarrollemos el FS, aca irán el resto (las de DIALFS)
-    // ...
+    // Se leyó la "instrucción IO_FS_CREATE".
+    FS_CREATE,
+    // Se leyó la "instrucción IO_FS_DELETE".
+    FS_DELETE,
+    // Se leyó la "instrucción IO_FS_TRUNCATE".
+    FS_TRUNCATE,
+    // Se leyó la "instrucción IO_FS_WRITE".
+    FS_WRITE,
+    // Se leyó la "instrucción IO_FS_READ".
+    FS_READ,
 
 /* ------------------------------------------------------------------------------------------------------------------------- */
 /* ------ Motivos que indican que el PROCESO SIGUE EJECUTANDO (permanece en el estado EXEC), siempre que el recurso -------- */
@@ -76,6 +84,7 @@ typedef struct
 
 typedef struct
 {
+    int pid;
     uint32_t PC;
     t_reg_cpu_uso_general reg_cpu_uso_general;
 } t_contexto_de_ejecucion;
@@ -139,6 +148,7 @@ int tamanio_de_contexto_de_ejecucion(void);
 int tamanio_de_lista_de_recursos_ocupados(t_list* lista_de_recursos_ocupados);
 
 void* serializar_contexto_de_ejecucion(t_contexto_de_ejecucion contexto_de_ejecucion, int bytes);
+t_contexto_de_ejecucion deserializar_contexto_de_ejecucion(void* buffer, int* desplazamiento);
 
 void avisar_y_cerrar_programa_por_error(t_log* log);
 

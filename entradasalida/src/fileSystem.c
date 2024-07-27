@@ -2,7 +2,7 @@
 
 t_file_system *fs;
 void *espacio_bitmap; // para funcionamiento interno bitmap
-int unidad_trabajo = 0,
+int retraso_operacion = 0,
     retraso_compresion = 0;
 uint aux_bitmap = 0; // almacena la siguiente posicion a la ultima posicion libre [podria utilizarse metodo "static" en la funcion de busqueda]
 char *PATH_BASE;
@@ -21,8 +21,11 @@ void iniciar_FS (t_config *config, char *nombre){ /* EN PROCESO DE MODIFICACION 
     fs->cant_bloques = config_get_int_value(config, "BLOCK_COUNT");
     PATH_BASE = config_get_string_value(config, "PATH_BASE_DIALFS"); 
     // conversion para usleep
-    unidad_trabajo = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO")*MILISEG_A_MICROSEG;
+    retraso_operacion = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO")*MILISEG_A_MICROSEG;
     retraso_compresion = config_get_int_value(config, "RETRASO_COMPACTACION")*MILISEG_A_MICROSEG;
+
+    /* Si no lo probamos hay q comentarlo */
+    mkdir(PATH_BASE, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH); // En teoria esto deberia crear la carpeta del FS si no existiera
 
     string_append(ruta_aux,PATH_BASE);
 
@@ -69,6 +72,7 @@ void iniciar_FS (t_config *config, char *nombre){ /* EN PROCESO DE MODIFICACION 
             fgets(fs->bitmap->bitarray, aux, fs->f_bitmap); // tomamos el bitmap almacenado
         }
     }
+    usleep(retraso_operacion);
     free(ruta_aux);
 }
 
@@ -77,8 +81,10 @@ bool crear_f (char *ruta_metadata){
     t_bloques_libres *libres;
 
     libres = bloques_libres(1);
-    if (libres->bloque == -1) 
+    if (libres->bloque == -1){
+        usleep(retraso_operacion);
         return false; // FS lleno, no se encontro espacio
+    } 
 
     // los archivos de metadata se manejaran por libreria config.h (revisar tema de nombre despues)
     t_config *metadata = config_create(ruta_metadata);
@@ -106,7 +112,7 @@ bool crear_f (char *ruta_metadata){
 
     // liberamos el puntero con espacio libre
     free(libres);
-
+    usleep(retraso_operacion);
     return true;
 } 
 
@@ -116,6 +122,7 @@ bool eliminar_f (char *ruta_metadata){
     // obtener bloque inicial y cant bloques
     t_config *metadata = config_create(ruta_metadata);
     if (! metadata){
+        usleep(retraso_operacion);
         log_warning(log_io, "archivo metadata no existe");
         return false;
     }
@@ -128,9 +135,11 @@ bool eliminar_f (char *ruta_metadata){
     // cortar conexion y borrar archivo 
     config_destroy(metadata);
     if (remove(ruta_metadata)) {// si devuelve != 0 hubo error
+        usleep(retraso_operacion);
         log_warning(log_io, "Error al borrar archivo");
         return false;
     }
+    usleep(retraso_operacion);
     return true;
 }
 
@@ -140,6 +149,7 @@ bool truncar_f (t_config *metadata, int nuevo_size, int pid){
 
     // obtener bloque inicial y cant bloques
     if (! metadata){
+        usleep(retraso_operacion);
         log_warning(log_io, "archivo metadata no existe");
         return false;
     }
@@ -158,6 +168,7 @@ bool truncar_f (t_config *metadata, int nuevo_size, int pid){
     {
         libres = bloques_libres(nuevo_size);
         if (libres->no_contiguos < nuevo_size){
+            usleep(retraso_operacion);
             log_warning(log_io, "No hay espacio libre suficiente en FS");
             return false;
         }
@@ -177,6 +188,7 @@ bool truncar_f (t_config *metadata, int nuevo_size, int pid){
     }
     
     config_save(metadata);
+    usleep(retraso_operacion);
     return true; 
 }
 
@@ -255,6 +267,7 @@ void compactar_FS (void){
     fs->bitmap = new_bitmap;
     espacio_bitmap = espacio_bitmap_temporal;
     actualizar_f_bitmap();
+    usleep(retraso_compresion);
 }
 
 char * leer_f (t_config *metadata, int offset, int cant_bytes){ 
@@ -264,6 +277,7 @@ char * leer_f (t_config *metadata, int offset, int cant_bytes){
     // verificamos que este dentro del size del archivo
     if (!metadata || calcular_bloques(offset + cant_bytes) > config_get_int_value(metadata, "SIZE"))
     { // Si no existe la metadata Ó los bloques a leer (deplazamiento dentro file + cant) sobrepasan el tamaño del file...
+        usleep(retraso_operacion);
         log_warning(log_io, "Error al leer archivo, archivo inexistente ó leyendo fuera del archivo");
         return data;
     } 
@@ -286,7 +300,7 @@ char * leer_f (t_config *metadata, int offset, int cant_bytes){
     /* Como ya comprobamos que este dentro de los bloques del archivo podemos hacer read completo */
     // ahorramos el tener q considerar offsets internos en bloques
     fread(data, fs->tam_bloques, cant_bytes, fs->f_bloques);
-
+    usleep(retraso_operacion);
     return data;
 }
 
@@ -298,6 +312,7 @@ bool escribir_f (t_config *metadata, int offset, int cant_bytes, char *data){ /*
     // verificamos que este dentro del size del archivo
     if (!metadata || calcular_bloques(offset + cant_bytes) > config_get_int_value(metadata, "SIZE"))
     { // Si no existe la metadata Ó los bloques a leer (deplazamiento dentro file + cant) sobrepasan el tamaño del file...
+        usleep(retraso_operacion);
         log_warning(log_io, "Error al leer archivo, archivo inexistente ó leyendo fuera del archivo");
         return false;
     }
@@ -322,6 +337,7 @@ bool escribir_f (t_config *metadata, int offset, int cant_bytes, char *data){ /*
     if (temp) // si data_temp recibio espacio hay q liberarlo
         free(data_temp);
     
+    usleep(retraso_operacion);
     return true;
 }
 
@@ -639,7 +655,7 @@ void fs_write (int conexion, t_list *parametros, char *ip_mem, char *puerto_mem)
     agregar_a_paquete(paquete, &pid, sizeof(int));
 
     data = list_remove(parametros, 1);
-    offset = pid = *(int*)data;
+    offset = *(int*)data;
     free(data);
 
     data = list_remove(parametros, 0);  // parametros solo tiene bucle para memoria

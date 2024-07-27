@@ -168,8 +168,6 @@ void actualizar_contexto_de_ejecucion_de_pcb(t_contexto_de_ejecucion nuevo_conte
 
 // deserializa el t_desalojo del buffer dado.
 t_desalojo deserializar_desalojo(void* buffer);
-// funcion auxiliar de deserializar_desalojo()
-t_contexto_de_ejecucion deserializar_contexto_de_ejecucion(void* buffer, int* desplazamiento);
 
 // COMUNICACIONES CON MEMORIA
 

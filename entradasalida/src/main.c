@@ -352,10 +352,10 @@ void interfaz_dialFS(char* nombre, t_config* config, int conexion_kernel)
 	// iniciando el FS
 	iniciar_FS(config, nombre);
 
-	// identificarse(nombre, DIALFS, conexion_kernel); // hay un problema con esto ?? (no tiene referencia)
+	// identificarse(nombre, DIALFS, conexion_kernel); // hay un problema con esto ?? (no tiene referencia) // ESTO YA NO VA. Se puede borrar sin problema
 
 	operacion = recibir_codigo(conexion_kernel);
-	while (operacion != FIN_INTERFAZ)
+	while (operacion == IO_OPERACION)
 	{
 		recibido = recibir_paquete(conexion_kernel);
 

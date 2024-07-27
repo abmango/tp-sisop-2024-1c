@@ -284,6 +284,7 @@ t_contexto_de_ejecucion contexto_de_ejecucion_de_pcb(t_pcb* pcb) {
 	t_contexto_de_ejecucion contexto_de_ejecucion;
 	contexto_de_ejecucion.PC = pcb->PC;
 	contexto_de_ejecucion.reg_cpu_uso_general = pcb->reg_cpu_uso_general;
+	contexto_de_ejecucion.pid = pcb->pid;
 	return contexto_de_ejecucion;
 }
 
@@ -301,35 +302,6 @@ t_desalojo deserializar_desalojo(void* buffer) {
 	desalojo.contexto = deserializar_contexto_de_ejecucion(buffer, &desplazamiento);
 
 	return desalojo;
-}
-
-t_contexto_de_ejecucion deserializar_contexto_de_ejecucion(void* buffer, int* desplazamiento) {
-	t_contexto_de_ejecucion contexto;
-
-	memcpy(&(contexto.PC), buffer + *desplazamiento, sizeof(uint32_t));
-	*desplazamiento += sizeof(uint32_t);
-	memcpy(&(contexto.reg_cpu_uso_general.AX), buffer + *desplazamiento, sizeof(uint8_t));
-	*desplazamiento += sizeof(uint8_t);
-	memcpy(&(contexto.reg_cpu_uso_general.BX), buffer + *desplazamiento, sizeof(uint8_t));
-	*desplazamiento += sizeof(uint8_t);
-	memcpy(&(contexto.reg_cpu_uso_general.CX), buffer + *desplazamiento, sizeof(uint8_t));
-	*desplazamiento += sizeof(uint8_t);
-	memcpy(&(contexto.reg_cpu_uso_general.DX), buffer + *desplazamiento, sizeof(uint8_t));
-	*desplazamiento += sizeof(uint8_t);
-	memcpy(&(contexto.reg_cpu_uso_general.EAX), buffer + *desplazamiento, sizeof(uint32_t));
-	*desplazamiento += sizeof(uint32_t);
-	memcpy(&(contexto.reg_cpu_uso_general.EBX), buffer + *desplazamiento, sizeof(uint32_t));
-	*desplazamiento += sizeof(uint32_t);
-	memcpy(&(contexto.reg_cpu_uso_general.ECX), buffer + *desplazamiento, sizeof(uint32_t));
-	*desplazamiento += sizeof(uint32_t);
-	memcpy(&(contexto.reg_cpu_uso_general.EDX), buffer + *desplazamiento, sizeof(uint32_t));
-	*desplazamiento += sizeof(uint32_t);
-	memcpy(&(contexto.reg_cpu_uso_general.SI), buffer + *desplazamiento, sizeof(uint32_t));
-	*desplazamiento += sizeof(uint32_t);
-	memcpy(&(contexto.reg_cpu_uso_general.DI), buffer + *desplazamiento, sizeof(uint32_t));
-	*desplazamiento += sizeof(uint32_t);
-
-	return contexto;
 }
 
 bool enviar_info_nuevo_proceso(int pid, char* path, int socket_memoria) {

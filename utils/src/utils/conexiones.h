@@ -37,8 +37,6 @@ typedef enum
 	// INTERF_GEN, // duda, los codigos solo irian en kernel e IO??
 	// INTERF_STDIN,
 	// INTERF_STDOUT,
-	INTERF_DIALFS, // este no se usara eliminara
-	FIN_INTERFAZ,
 
 	// IO-MEMORIA y CPU-MEMORIA 
 	ACCESO_LECTURA,

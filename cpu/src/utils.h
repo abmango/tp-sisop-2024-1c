@@ -33,8 +33,7 @@ extern t_interrupt_code interrupcion;
 extern t_log* log_cpu_oblig; // logger para los logs obligatorios
 extern t_log* log_cpu_gral; // logger para los logs nuestros. Loguear con criterio de niveles.
 
-// a quitar luego
-extern t_log* logger;
+extern t_config* config;
 
 // ==========================================================================
 // ====  Semáforos globales:  ===============================================
@@ -150,12 +149,17 @@ typedef struct {
     int fifo_counter;     // Para FIFO: contador para manejar el orden de llegada
 } tlb_entry;
 
-tlb_entry *tlb; // TLB como un arreglo de entradas
+typedef struct {
+    tlb_entry *tlb_entry;
+    char* planificacion;
+    int size;
+} t_tlb;
 
-int tlb_size = 16;  // Tamaño predeterminado de la TLB
+extern t_tlb tlb;
 
 void init_tlb(int size);
 int tlb_lookup(int pid, int virtual_page, int *physical_page);
+void tlb_update(int pid, int virtual_page, int physical_page);
 void tlb_update_fifo(int pid, int virtual_page, int physical_page);
 void tlb_update_lru(int pid, int virtual_page, int physical_page);
 void tlb_flush();

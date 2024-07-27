@@ -3,6 +3,10 @@
 
 #include <utils.h>
 #include <commons/bitarray.h>
+// Intento de hacer q el FS cree su propio directorio para archivos
+#include <sys/stat.h>
+#include <sys/types.h>
+
 
 /* variables bitmap y FS (variables q referencian archivos) usar "wb+" (lect+escr+bin+creacion [sobreescribe]) */
 typedef struct {
