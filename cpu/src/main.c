@@ -67,10 +67,10 @@ int main(int argc, char *argv[])
 	// Inicializar la TLB
 	init_tlb();
 
-	t_contexto_de_ejecucion reg;
 	int pid;
 	t_dictionary *diccionario = crear_diccionario(reg);
 	char *instruccion;
+	reg = recibir_contexto_ejecucion();
 	while (1)
 	{
 		instruccion = fetch(reg.PC, pid);
@@ -96,16 +96,16 @@ int main(int argc, char *argv[])
 		case SUM:
 			a = dictionary_get(diccionario, arg[1]);
 			b = dictionary_get(diccionario, arg[2]);
-			*a = *a + *b;
+			*(int*)a = *(int*)a + *(int*)b;
 			break;
 		case SUB:
 			a = dictionary_get(diccionario, arg[1]);
 			b = dictionary_get(diccionario, arg[2]);
-			*a = *a - *b;
+			*(int*)a = *(int*)a - *(int*)b;
 			break;
 		case JNZ:
 			a = dictionary_get(diccionario, arg[1]);
-			if (*a == 0)
+			if (*(int*)a == 0)
 			{
 				reg.PC = atoi(arg[2]);
 			}
@@ -125,110 +125,110 @@ int main(int argc, char *argv[])
 
 			break;
 		case COPY_STRING:
-			void* aux = leer_memoria(reg.reg_cpu_uso_general.SI, atoi(arg[1]));
-			enviar_memoria(reg.reg_cpu_uso_general.SI, atoi(arg[1]), aux);
+			void* leido = leer_memoria(reg.reg_cpu_uso_general.SI, atoi(arg[1]));
+			memcpy(&(reg.reg_cpu_uso_general.DI), aux, sizeof(uint32_t));
 			break;
 		case WAIT_INSTRUCTION:
-			t_paquete* par = desalojar_registros(reg, WAIT);
+			paq = desalojar_registros(reg, WAIT);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			enviar_paquete(paq, socket_kernel_dispatch);
-			destruir_paquete(paq);
+			eliminar_paquete(paq);
 			reg = recibir_contexto_ejecucion();
 			break;
 		case SIGNAL_INSTRUCTION:
-			t_paquete* par = desalojar_registros(reg, SIGNAL);
+			paq = desalojar_registros(reg, SIGNAL);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			enviar_paquete(paq, socket_kernel_dispatch);
-			destruir_paquete(paq);
+			eliminar_paquete(paq);
 			reg = recibir_contexto_ejecucion();
 			break;
 		case IO_GEN_SLEEP:
-			t_paquete* par = desalojar_registros(reg, GEN_SLEEP);
+			paq = desalojar_registros(reg, GEN_SLEEP);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			int unidades = atoi(arg[2]);
 			agregar_a_paquete(paq, &unidades, sizeof(int));
 			enviar_paquete(paq, socket_kernel_dispatch);
-			destruir_paquete(paq);
+			eliminar_paquete(paq);
 			reg = recibir_contexto_ejecucion();
 			break;
 		case IO_STDIN_READ:
-			t_paquete* par = desalojar_registros(reg, STDIN_READ);
+			paq = desalojar_registros(reg, STDIN_READ);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			agregar_mmu_paquete(paq, atoi(arg[2]), atoi(arg[3]));
 			
 			enviar_paquete(paq, socket_kernel_dispatch);
-			destruir_paquete(paq);
+			eliminar_paquete(paq);
 
 			reg = recibir_contexto_ejecucion();
 			break;
 		case IO_STDOUT_WRITE:
-			t_paquete* par = desalojar_registros(reg, STDIN_WRITE);
+			paq = desalojar_registros(reg, STDIN_READ);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			agregar_mmu_paquete(paq, atoi(arg[2]), atoi(arg[3]));
 			
 			enviar_paquete(paq, socket_kernel_dispatch);
-			destruir_paquete(paq);
+			eliminar_paquete(paq);
 
 			reg = recibir_contexto_ejecucion();
 			break;
 		case IO_FS_CREATE:
-			t_paquete* par = desalojar_registros(reg, FS_CREATE);
+			paq = desalojar_registros(reg, FS_CREATE);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			agregar_a_paquete(paq, arg[2], strlen(arg[2]) + 1);
 			enviar_paquete(paq, socket_kernel_dispatch);
-			destruir_paquete(paq);
+			eliminar_paquete(paq);
 
 			reg = recibir_contexto_ejecucion();
 			break;
 		case IO_FS_DELETE:
-			t_paquete* par = desalojar_registros(reg, FS_DELETE);
+			paq = desalojar_registros(reg, FS_DELETE);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			agregar_a_paquete(paq, arg[2], strlen(arg[2]) + 1);
 			enviar_paquete(paq, socket_kernel_dispatch);
-			destruir_paquete(paq);
+			eliminar_paquete(paq);
 
 			reg = recibir_contexto_ejecucion();
 			break;
 		case IO_FS_TRUNCATE:
-			t_paquete* par = desalojar_registros(reg, FS_TRUNCATE);
+			paq = desalojar_registros(reg, FS_TRUNCATE);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			agregar_a_paquete(paq, arg[2], strlen(arg[2]) + 1);
-			int aux = atoi(arg[3]);
+			int aux2 = atoi(arg[3]);
 			agregar_a_paquete(paq, &aux, sizeof(int));
 			enviar_paquete(paq, socket_kernel_dispatch);
-			destruir_paquete(paq);
+			eliminar_paquete(paq);
 
 			reg = recibir_contexto_ejecucion();
 			break;
 		case IO_FS_WRITE:
-			t_paquete* par = desalojar_registros(reg, FS_WRITE);
+			paq = desalojar_registros(reg, FS_WRITE);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			agregar_a_paquete(paq, arg[2], strlen(arg[2]) + 1);
 			agregar_mmu_paquete(paq, atoi(arg[3]), atoi(arg[4]));
 			agregar_a_paquete(paq, arg[5], strlen(arg[5]) + 1);
 
 			enviar_paquete(paq, socket_kernel_dispatch);
-			destruir_paquete(paq);
+			eliminar_paquete(paq);
 
 			reg = recibir_contexto_ejecucion();
 			break;
 		case IO_FS_READ:
-			t_paquete* par = desalojar_registros(reg, FS_READ);
+			paq = desalojar_registros(reg, FS_READ);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			agregar_a_paquete(paq, arg[2], strlen(arg[2]) + 1);
 			agregar_mmu_paquete(paq, atoi(arg[3]), atoi(arg[4]));
 			agregar_a_paquete(paq, arg[5], strlen(arg[5]) + 1);
 
 			enviar_paquete(paq, socket_kernel_dispatch);
-			destruir_paquete(paq);
+			eliminar_paquete(paq);
 
 			reg = recibir_contexto_ejecucion();
 
 			break;
 		case EXIT:
-			t_paquete* paq = desalojar_registros(reg, SUCCESS);
+			paq = desalojar_registros(reg, SUCCESS);
 			enviar_paquete(paq, socket_kernel_dispatch);
-			destruir_paquete(paq);
+			eliminar_paquete(paq);
 			reg = recibir_contexto_ejecucion();
 			break;
 		default:

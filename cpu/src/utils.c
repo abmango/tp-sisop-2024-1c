@@ -6,6 +6,11 @@
 int socket_escucha_dispatch = 1;
 int socket_escucha_interrupt = 1;
 
+t_contexto_de_ejecucion reg;
+int tamanio_pagina;
+t_tlb tlb;
+t_config* config;
+
 int socket_memoria = 1;
 int socket_kernel_dispatch = 1;
 int socket_kernel_interrupt = 1;
@@ -126,8 +131,8 @@ execute_op_code decode(char* instruc)
    if (strcmp(instruc, "IO_STDIN_READ") == 0){
       return IO_STDIN_READ;
    }
-   if (strcmp(instruc, "IO_STDIN_WRITE") == 0){
-      return IO_STDIN_WRITE;
+   if (strcmp(instruc, "IO_STDOUT_WRITE") == 0){
+      return IO_STDOUT_WRITE;
    }
    if (strcmp(instruc, "IO_FS_CREATE") == 0){
       return IO_FS_CREATE;
@@ -158,16 +163,10 @@ t_contexto_de_ejecucion recibir_contexto_ejecucion(void)
    int size = 0;
    void* buffer;
    buffer = recibir_buffer(&size, socket_kernel_dispatch);
-   t_contexto_de_ejecucion ce = deserializar_contexto_ejecucion(buffer);
+   int desplazamiento = 0;
+   t_contexto_de_ejecucion ce = deserializar_contexto_de_ejecucion(buffer, desplazamiento); 
    free(buffer);
    return ce;
-}
-
-t_contexto_de_ejecucion deserializar_contexto_ejecucion(void* buffer)
-{
-   t_contexto_de_ejecucion context; deseri
-   int desplazamiento = 0;
-   memcpy
 }
 
 void* serializar_desalojo(t_desalojo desalojo)
@@ -177,7 +176,7 @@ void* serializar_desalojo(t_desalojo desalojo)
 
    memcpy(magic + desplazamiento, &(desalojo.motiv), sizeof(motivo_desalojo_code));
 	desplazamiento += sizeof(motivo_desalojo_code);
-   void* aux = serializar_contexto_de_ejecucion(desalojo.contexto);
+   void* aux = serializar_contexto_de_ejecucion(desalojo.contexto, tamanio_de_desalojo());
    memcpy(magic + desplazamiento, aux, tamanio_de_contexto_de_ejecucion());
    desplazamiento += tamanio_de_contexto_de_ejecucion();
 
@@ -202,8 +201,8 @@ char* fetch(uint32_t PC, int pid)
 
 void* leer_memoria(int dir_logica, int tamanio)
 {
-   t_paquete paq = crear_paquete(ACCESO_LECTURA);
-   agregar_a_paquete(paq,&pid,sizeof(int));
+   t_paquete* paq = crear_paquete(ACCESO_LECTURA);
+   agregar_a_paquete(paq,&(reg.pid),sizeof(int));
    
    agregar_mmu_paquete(paq, dir_logica, tamanio);
    
@@ -229,12 +228,12 @@ void check_interrupt(t_contexto_de_ejecucion reg)
       case NADA:
       break;
       case DESALOJAR:
-      t_paquete paq = desalojar_registros(reg, INTERRUPTED_BY_QUANTUM); //desalojar mal llamado
+      t_paquete* paq = desalojar_registros(reg, INTERRUPTED_BY_QUANTUM); //desalojar mal llamado
       enviar_paquete(paq,socket_kernel_dispatch);
       eliminar_paquete(paq);
       break;
       case FINALIZAR:
-      t_paquete paq = desalojar_registros(reg, INTERRUPTED_BY_USER);
+      paq = desalojar_registros(reg, INTERRUPTED_BY_USER);
       enviar_paquete(paq,socket_kernel_dispatch);
       eliminar_paquete(paq);
       break;
@@ -247,10 +246,10 @@ t_list* mmu(int dir_logica, int tamanio)
    int desplazamiento = dir_logica - num_pag*tamanio_pagina;
 
    int marco;
-   if (!tlb_lookup(pid, num_pag, &marco)) {
-      log_debug(log_cpu_gral, "TLB Miss: PID %d, Virtual page %u is not in TLB\n", pid, virtual_address);
+   if (!tlb_lookup(num_pag, &marco)) {
+      log_debug(log_cpu_gral, "TLB Miss: PID %d, Virtual page %u is not in TLB\n", reg.pid, dir_logica);
       t_paquete* paq = crear_paquete(PEDIDO_PAGINA);
-      agregar_a_paquete(paq, &pid, sizeof(int));
+      agregar_a_paquete(paq, &(reg.pid), sizeof(int));
       agregar_a_paquete(paq, &num_pag, sizeof(int));
       enviar_paquete(paq, socket_memoria);
       eliminar_paquete(paq);
@@ -264,11 +263,11 @@ t_list* mmu(int dir_logica, int tamanio)
       list_destroy(aux);
 
       // Actualizar la TLB
-      tlb_update(pid, num_pag, marco); // O usar tlb_update_lru(pid, num_pag, marco);
+      tlb_update(&(reg.pid), num_pag, marco); // O usar tlb_update_lru(pid, num_pag, marco);
     }
     else
     {
-      log_debug(log_cpu_gral, "TLB Hit: PID = %d, Página Virtual = %d, Marco = %d\n", pid, num_pag, marco);
+      log_debug(log_cpu_gral, "TLB Hit: PID = %d, Página Virtual = %d, Marco = %d\n", reg.pid, num_pag, marco);
     }
 
    int dir_fisica = marco*tamanio_pagina + desplazamiento;
@@ -302,8 +301,8 @@ t_list* mmu(int dir_logica, int tamanio)
 
 void enviar_memoria(int dir_logica, int tamanio, void* valor) //hay q adaptar valor a string
 {
-   t_paquete paq = crear_paquete(ACCESO_ESCRITURA);
-   agregar_a_paquete(paq,&pid,sizeof(int));
+   t_paquete* paq = crear_paquete(ACCESO_ESCRITURA);
+   agregar_a_paquete(paq,&(reg.pid),sizeof(int));
    
    t_list* aux = list_create();
    aux = mmu(dir_logica, tamanio);
@@ -421,7 +420,7 @@ void init_tlb() {
 }
 
 // Función para buscar en la TLB
-int tlb_lookup(int virtual_page, int *physical_page,int* frame) {
+int tlb_lookup(int virtual_page,int* frame) {
     for (int i = 0; i < tlb.size; ++i) {
         if (tlb.tlb_entry[i].valid && tlb.tlb_entry[i].page == virtual_page) {
             *frame = tlb.tlb_entry[i].frame;

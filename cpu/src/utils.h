@@ -21,6 +21,11 @@
 // ==========================================================================
 // ====  Variables globales:  ===============================================
 // ==========================================================================
+
+
+extern t_contexto_de_ejecucion reg;
+extern int tamanio_pagina;
+
 extern int socket_escucha_dispatch;
 extern int socket_escucha_interrupt;
 
@@ -34,6 +39,8 @@ extern t_log* log_cpu_oblig; // logger para los logs obligatorios
 extern t_log* log_cpu_gral; // logger para los logs nuestros. Loguear con criterio de niveles.
 
 extern t_config* config;
+
+
 
 // ==========================================================================
 // ====  Semáforos globales:  ===============================================
@@ -118,7 +125,6 @@ bool recibir_y_manejar_handshake_kernel(int socket);
 
 void desalojar(t_contexto_de_ejecucion ce, motivo_desalojo_code motiv, char** arg);
 t_contexto_de_ejecucion recibir_contexto_ejecucion(void);
-t_contexto_de_ejecucion deserializar_contexto_ejecucion(void* buffer); // EN DESARROLLO
 void* serializar_desalojo(t_desalojo desalojo);
 char* fetch(uint32_t PC, int pid);
 void* leer_memoria(int dir_logica, int tamanio);
@@ -158,7 +164,7 @@ typedef struct {
 extern t_tlb tlb;
 
 void init_tlb();
-int tlb_lookup(int pid, int virtual_page, int *physical_page);
+int tlb_lookup(int dir_logica, int* frame);
 void tlb_update(int pid, int virtual_page, int physical_page);
 void tlb_update_fifo(int pid, int virtual_page, int physical_page);
 void tlb_update_lru(int pid, int virtual_page, int physical_page);
