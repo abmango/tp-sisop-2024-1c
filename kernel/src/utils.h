@@ -21,44 +21,6 @@
 #include <pthread.h>
 #include <semaphore.h>
 
-typedef struct
-{
-    char* nombre;
-    int instancias_disponibles; // TAL VEZ CONVIENE int
-} t_recurso;
-
-typedef struct
-{
-    char* nombre;
-    int instancias;
-} t_recurso_ocupado;
-
-typedef struct
-{
-    int pid;
-    int quantum;
-    t_list* recursos_ocupados; // Es una lista de t_recurso_ocupado*
-    uint32_t PC;
-    t_reg_cpu_uso_general reg_cpu_uso_general;
-    // agrego esto, para poder esperar a que se termine de usar la IO, en caso de
-    // un pedido de finalizar_proceso por consola, a un proceso que esta usando una IO.
-    pthread_mutex_t mutex_uso_de_io;
-} t_pcb;
-
-typedef struct
-{
-    char* nombre;
-    t_io_type_code tipo;
-    int socket;
-    t_list* cola_blocked; // Es una lista de t_pcb*
-} t_io_blocked;
-
-typedef struct
-{
-    char* nombre;
-    t_list* cola_blocked; // Es una lista de t_pcb*
-} t_recurso_blocked;
-
 typedef enum
 {
     FIFO,
