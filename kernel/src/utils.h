@@ -58,12 +58,6 @@ typedef struct
     char* nombre;
     t_list* cola_blocked; // Es una lista de t_pcb*
 } t_recurso_blocked;
-
-typedef struct {
-    int num_nodes;
-    bool adj_matrix[MAX_NODES][MAX_NODES];
-} t_graph;
-
 typedef enum
 {
     FIFO,

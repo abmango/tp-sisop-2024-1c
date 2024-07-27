@@ -200,28 +200,26 @@ char* fetch(uint32_t PC, int pid)
    return instruccion;
 }
 
-int leer_memoria(int dir_logica, int tamanio)
+void* leer_memoria(int dir_logica, int tamanio)
 {
    t_paquete paq = crear_paquete(ACCESO_LECTURA);
    agregar_a_paquete(paq,&pid,sizeof(int));
    
-   t_list* aux = list_create();
-   aux = mmu(dir_logica, tamanio);
-   t_mmu* aux2;
-
-   while(!list_is_empty(aux))
-   {
-      aux2 = list_remove(aux,0);
-      agregar_a_paquete(paq, &(aux2->direccion), sizeof(int));
-      agregar_a_paquete(paq, &(aux2->tamanio), sizeof(int));
-      free(aux2);
-   }
+   agregar_mmu_paquete(paq, dir_logica, tamanio);
    
    enviar_paquete(paq,socket_memoria);
    eliminar_paquete(paq);
+
+   t_list* aux = list_create();
+   int codigo_paq = recibir_codigo(socket_memoria);
+   if (codigo_paq != ACCESO_LECTURA){
+      //error
+   }
+   aux = recibir_paquete(socket_memoria);
+   void* resultado = list_remove(aux, 0);
    list_destroy(aux);
+   return resultado;
    
-   // falta recibir el ok o la falla
    
 }
 
@@ -302,7 +300,7 @@ t_list* mmu(int dir_logica, int tamanio)
    return format;
 }
 
-void enviar_memoria(int dir_logica, int tamanio, int valor) //hay q adaptar valor a string
+void enviar_memoria(int dir_logica, int tamanio, void* valor) //hay q adaptar valor a string
 {
    t_paquete paq = crear_paquete(ACCESO_ESCRITURA);
    agregar_a_paquete(paq,&pid,sizeof(int));
@@ -329,15 +327,6 @@ void enviar_memoria(int dir_logica, int tamanio, int valor) //hay q adaptar valo
    
 }
 
-void resize(int tamanio){
-   t_paquete paq = crear_paquete(AJUSTAR_PROCESO);
-   agregar_a_paquete(paq, &pid, sizeof(int));
-   agregar_a_paquete(paq, &tamanio, sizeof(int));
-   enviar_paquete(paq,socket_memoria);
-   eliminar_paquete(paq);
-
-   // falta recibir el ok o la falla
-}
 
 // INSTRUCCIONES A INTERPRETAR
 
@@ -501,4 +490,22 @@ void tlb_flush() {
     for (int i = 0; i < tlb.size; ++i) {
         tlb.tlb_entry[i].valid = 0;
     }
+}
+
+void agregar_mmu_paquete(t_paquete* paq, int direccion_logica, int tamanio){
+   t_list* aux = list_create();
+			aux = mmu(direccion_logica,tamanio);
+			t_mmu* aux2;
+
+         int contador = 0;
+			while(!list_is_empty(aux))
+			{
+				aux2 = list_remove(aux,contador);
+				agregar_a_paquete(paq, &(aux2->direccion), sizeof(int));
+				agregar_a_paquete(paq, &(aux2->tamanio), sizeof(int));
+            contador++;
+				free(aux2);
+			}
+
+			list_destroy(aux);
 }

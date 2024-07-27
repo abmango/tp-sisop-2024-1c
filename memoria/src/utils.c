@@ -34,8 +34,8 @@ bool recibir_y_manejar_handshake_conexiones_temp(int socket, char** nombre_modul
 	}
 
 	t_list* datos_handshake = recibir_paquete(socket);
-
-    handshake_code handshake_codigo = *(list_get(datos_handshake, 0));
+    
+    handshake_code handshake_codigo = *(int*)(list_get(datos_handshake, 0));
     switch (handshake_codigo) {
         case KERNEL:
         case INTERFAZ:
@@ -162,7 +162,7 @@ resultado_operacion crear_proceso (t_list *solicitud, t_proceso *proceso)
         proceso = NULL;
         return ERROR;
     }
-    log_info(log_memoria, "PID: <%i> - Tamaño: <0>",proceso->pid);
+    log_info(log_memoria_oblig, "PID: <%i> - Tamaño: <0>",proceso->pid);
     return CORRECTA;
 }
 
@@ -178,7 +178,7 @@ resultado_operacion finalizar_proceso (t_proceso *proceso)
     limpiar_estructura_proceso(proceso);
 
     retardo_operacion();
-    log_info(log_memoria, "PID: <%i> - Tamaño: <0>",pid_temp);
+    log_info(log_memoria_oblig, "PID: <%i> - Tamaño: <0>",pid_temp);
     return CORRECTA;
 }
 
@@ -189,12 +189,12 @@ int acceso_tabla_paginas(t_proceso *proceso, int ind_pagina_consulta)
     int frame = -1; // Inicializo como Error
     if (ind_pagina_consulta >= list_size(proceso->tabla_paginas)) {
         retardo_operacion();
-        log_info(log_memoria, "Tabla de Paginas del proceso <%i> no tiene asignada una pagina asignada en la posicion: %i",proceso->pid,ind_pagina_consulta);
+        log_info(log_memoria_gral, "Tabla de Paginas del proceso <%i> no tiene asignada una pagina asignada en la posicion: %i",proceso->pid,ind_pagina_consulta);
         return frame;
     }
     frame = obtener_indice_frame(list_get(proceso->tabla_paginas,ind_pagina_consulta));
     retardo_operacion();
-    log_info(log_memoria, "PID: <%i> - Pagina: <%i> - Marco: <%i>",proceso->pid,ind_pagina_consulta,frame);
+    log_info(log_memoria_oblig, "PID: <%i> - Pagina: <%i> - Marco: <%i>",proceso->pid,ind_pagina_consulta,frame);
     return frame;
 }
 
@@ -255,7 +255,7 @@ resultado_operacion acceso_espacio_usuario(t_buffer *data, t_list *solicitudes, 
             pedido = list_get(solicitudes, i);
             aux = (aux + pedido->desplazamiento);
 
-            log_info(log_memoria, "PID: <%i> - Accion: <LEER> - Direccion fisica: <%i> - Tamaño <%i>", pid, pedido->desplazamiento, pedido->cant_bytes);
+            log_info(log_memoria_oblig, "PID: <%i> - Accion: <LEER> - Direccion fisica: <%i> - Tamaño <%i>", pid, pedido->desplazamiento, pedido->cant_bytes);
 
             pthread_mutex_lock(&mutex_memoria);
             agregar_a_buffer_mem(data, aux, pedido->cant_bytes);
@@ -275,7 +275,7 @@ resultado_operacion acceso_espacio_usuario(t_buffer *data, t_list *solicitudes, 
             pedido = list_get(solicitudes, i);
             aux = (aux + pedido->desplazamiento);
 
-            log_info(log_memoria, "PID: <%i> - Accion: <ESCRIBIR> - Direccion fisica: <%i> - Tamaño <%i>", pid, pedido->desplazamiento, pedido->cant_bytes);
+            log_info(log_memoria_gral, "PID: <%i> - Accion: <ESCRIBIR> - Direccion fisica: <%i> - Tamaño <%i>", pid, pedido->desplazamiento, pedido->cant_bytes);
 
             pthread_mutex_lock(&mutex_memoria);
             agregar_a_memoria(aux, stream, pedido->cant_bytes);

@@ -52,8 +52,8 @@ typedef enum {
     JNZ,
     RESIZE,
     COPY_STRING,
-    WAIT,
-    SIGNAL,
+    WAIT_INSTRUCTION,
+    SIGNAL_INSTRUCTION,
     IO_GEN_SLEEP,
     IO_STDIN_READ,
     IO_STDOUT_WRITE,
@@ -121,12 +121,12 @@ t_contexto_de_ejecucion recibir_contexto_ejecucion(void);
 t_contexto_de_ejecucion deserializar_contexto_ejecucion(void* buffer); // EN DESARROLLO
 void* serializar_desalojo(t_desalojo desalojo);
 char* fetch(uint32_t PC, int pid);
-int leer_memoria(int dir_logica, int tamanio);
+void* leer_memoria(int dir_logica, int tamanio);
 void check_interrupt(t_contexto_de_ejecucion reg);
 void pedir_io(t_contexto_de_ejecucion reg, motivo_desalojo_code opcode, char** arg);
 t_list* mmu(int dir_logica, int tamanio);
-void enviar_memoria(int direccion, int tamanio, int valor);
-void resize(int tamanio);
+void enviar_memoria(int direccion, int tamanio, void* valor);
+void agregar_mmu_paquete(t_paquete* paq, int direccion_logica, int tamanio);
 
 void* interrupt(void);
 
@@ -157,7 +157,7 @@ typedef struct {
 
 extern t_tlb tlb;
 
-void init_tlb(int size);
+void init_tlb();
 int tlb_lookup(int pid, int virtual_page, int *physical_page);
 void tlb_update(int pid, int virtual_page, int physical_page);
 void tlb_update_fifo(int pid, int virtual_page, int physical_page);

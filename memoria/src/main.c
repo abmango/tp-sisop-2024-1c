@@ -422,8 +422,12 @@ void terminar_programa(int socket_cpu)
 
 void iniciar_logger() // tendria q modificarse al tener 2 logs >> No Compila
 {
-	log_memoria = log_create("memoria.log", "Memoria", true, LOG_LEVEL_INFO);
-	if(log_memoria == NULL){
+	log_memoria_oblig = log_create("memoria_oblig.log", "Memoria", true, LOG_LEVEL_INFO);
+	if(log_memoria_oblig == NULL){
+		printf("No se pudo crear un log");
+	}
+	log_memoria_gral = log_create("memoria_gral.log", "Memoria", true, LOG_LEVEL_INFO);
+	if(log_memoria_gral == NULL){
 		printf("No se pudo crear un log");
 	}
 }
