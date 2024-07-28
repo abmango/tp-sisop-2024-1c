@@ -55,6 +55,7 @@ void planific_corto_fifo(void) {
             enviar_contexto_de_ejecucion(contexto_de_ejecucion, socket_cpu_dispatch);
         }
 
+        // Se queda esperando el desalojo del proceso.
         recibir_y_verificar_codigo(socket_cpu_dispatch, DESALOJO, "DESALOJO");
 
         pthread_mutex_lock(&mutex_proceso_exec);
@@ -70,8 +71,8 @@ void planific_corto_fifo(void) {
             list_add(cola_exit, proceso_exec);
             sem_post(&sem_procesos_exit);
             procesos_activos--;
-            log_info(logger, "Finaliza el proceso %i - Motivo: SUCCESS", proceso_exec->pid); // log Obligatorio.
-            log_info(logger, "PID: %i - Estado Anterior: EXEC - Estado Actual: EXIT", proceso_exec->pid); // log Obligatorio.
+            log_info(logger, "Finaliza el proceso %d - Motivo: SUCCESS", proceso_exec->pid); // log Obligatorio.
+            log_info(logger, "PID: %d - Estado Anterior: EXEC - Estado Actual: EXIT", proceso_exec->pid); // log Obligatorio.
             proceso_exec = NULL;
             pthread_mutex_unlock(&mutex_cola_exit);
             pthread_mutex_unlock(&mutex_procesos_activos);
@@ -83,8 +84,8 @@ void planific_corto_fifo(void) {
             list_add(cola_exit, proceso_exec);
             sem_post(&sem_procesos_exit);
             procesos_activos--;
-            log_info(logger, "Finaliza el proceso %i - Motivo: OUT_OF_MEMORY", proceso_exec->pid); // log Obligatorio.
-            log_info(logger, "PID: %i - Estado Anterior: EXEC - Estado Actual: EXIT", proceso_exec->pid); // log Obligatorio.
+            log_info(logger, "Finaliza el proceso %d - Motivo: OUT_OF_MEMORY", proceso_exec->pid); // log Obligatorio.
+            log_info(logger, "PID: %d - Estado Anterior: EXEC - Estado Actual: EXIT", proceso_exec->pid); // log Obligatorio.
             proceso_exec = NULL;
             pthread_mutex_unlock(&mutex_cola_exit);
             pthread_mutex_unlock(&mutex_procesos_activos);
@@ -96,8 +97,8 @@ void planific_corto_fifo(void) {
             list_add(cola_exit, proceso_exec);
             sem_post(&sem_procesos_exit);
             procesos_activos--;
-            log_info(logger, "Finaliza el proceso %i - Motivo: INTERRUPTED_BY_USER", proceso_exec->pid); // log Obligatorio.
-            log_info(logger, "PID: %i - Estado Anterior: EXEC - Estado Actual: EXIT", proceso_exec->pid); // log Obligatorio.
+            log_info(logger, "Finaliza el proceso %d - Motivo: INTERRUPTED_BY_USER", proceso_exec->pid); // log Obligatorio.
+            log_info(logger, "PID: %d - Estado Anterior: EXEC - Estado Actual: EXIT", proceso_exec->pid); // log Obligatorio.
             proceso_exec = NULL;
             pthread_mutex_unlock(&mutex_cola_exit);
             pthread_mutex_unlock(&mutex_procesos_activos);
@@ -188,9 +189,14 @@ void planific_corto_fifo(void) {
             break;
 
             case FS_CREATE:
-            fs_codigo = CREAR_F;
             case FS_DELETE:
-            fs_codigo = ELIMINAR_F;
+            // un asquito. No le den bola pls.
+            if(desalojo.motiv == FS_CREATE) {
+                fs_codigo = CREAR_F;
+            }
+            if(desalojo.motiv == FS_DELETE) {
+                fs_codigo = ELIMINAR_F;
+            }
 
             nombre_interfaz = list_get(desalojo_y_argumentos, 1);
             nombre_archivo = list_get(desalojo_y_argumentos, 2);
@@ -273,9 +279,14 @@ void planific_corto_fifo(void) {
             break;
 
             case FS_WRITE:
-            fs_codigo = ESCRIBIR_F;
             case FS_READ:
-            fs_codigo = LEER_F;
+            // un asquito. No le den bola pls.
+            if (desalojo.motiv == FS_WRITE) {
+                fs_codigo = ESCRIBIR_F;
+            }
+            if (desalojo.motiv == FS_READ) {
+                fs_codigo = LEER_F;
+            }
 
             cant_de_pares_direccion_tamanio = (list_size(desalojo_y_argumentos) - 4) / 2;
             nombre_interfaz = list_get(desalojo_y_argumentos, 1);
@@ -361,7 +372,7 @@ void planific_corto_fifo(void) {
                     recurso_ocupado->instancias = 1;
                     list_add(proceso_exec->recursos_ocupados, recurso_ocupado);
                 }
-                log_debug(log_kernel_gral, "Instancia del recurso %s asignada a proceso %d", nombre_recurso, proceso_exec->pid);
+                log_debug(log_kernel_gral, "Una instancia del recurso %s fue asignada al proceso %d", nombre_recurso, proceso_exec->pid);
             }
             // Si NO hay instancias disponibles:
             else {
@@ -455,21 +466,34 @@ void planific_corto_fifo(void) {
 // DESARROLLANDO ===
 
 void planific_corto_rr(void) {
-/*
+
     // Lista con data del paquete recibido desde cpu. El elemento 0 es el t_desalojo, el resto son argumentos.
     t_list* desalojo_y_argumentos = NULL;
+
+    // variables que defino acá porque las repito en varios case del switch
+    t_paquete* paquete = NULL;
+    char* nombre_interfaz = NULL;
+    t_io_blocked* io = NULL;
+    int cant_de_pares_direccion_tamanio;
+    int* dir = NULL;
+    int* tamanio = NULL;
+    int fs_codigo;
+    char* nombre_archivo = NULL;
+    char* nombre_recurso = NULL;
+    t_recurso* recurso_en_sistema = NULL;
+    t_recurso_ocupado* recurso_ocupado = NULL;
 
     while(1) {
 
         if(proceso_exec == NULL) {
             sem_wait(&sem_procesos_ready);
             
-            pthread_mutex_lock(&proceso_exec);
-            pthread_mutex_lock(&cola_ready);
+            pthread_mutex_lock(&mutex_proceso_exec);
+            pthread_mutex_lock(&mutex_cola_ready);
             // pone proceso de estado READY a estado EXEC. Y envia contexto de ejecucion al cpu.
             ejecutar_sig_proceso();
-            pthread_mutex_unlock(&cola_ready);
-            pthread_mutex_unlock(&proceso_exec);
+            pthread_mutex_unlock(&mutex_cola_ready);
+            pthread_mutex_unlock(&mutex_proceso_exec);
 
         }
         else { // solo se envia contexto de ejecucion al cpu.
@@ -477,9 +501,10 @@ void planific_corto_rr(void) {
             enviar_contexto_de_ejecucion(contexto_de_ejecucion, socket_cpu_dispatch);
         }
 
-        esperar_cpu_rr(proceso_exec);
+        // Pone a correr el quantum y se queda esperando el desalojo del proceso.
+        esperar_cpu_rr();
 
-        pthread_mutex_lock(&proceso_exec);
+        pthread_mutex_lock(&mutex_proceso_exec);
 
         desalojo_y_argumentos = recibir_paquete(socket_cpu_dispatch);
 		t_desalojo desalojo = deserializar_desalojo(list_get(desalojo_y_argumentos, 0));
@@ -492,8 +517,8 @@ void planific_corto_rr(void) {
             list_add(cola_exit, proceso_exec);
             sem_post(&sem_procesos_exit);
             procesos_activos--;
-            log_info(logger, "Finaliza el proceso %i - Motivo: SUCCESS", proceso_exec->pid); // log Obligatorio.
-            log_info(logger, "PID: %i - Estado Anterior: EXEC - Estado Actual: EXIT", proceso_exec->pid); // log Obligatorio.
+            log_info(logger, "Finaliza el proceso %d - Motivo: SUCCESS", proceso_exec->pid); // log Obligatorio.
+            log_info(logger, "PID: %d - Estado Anterior: EXEC - Estado Actual: EXIT", proceso_exec->pid); // log Obligatorio.
             proceso_exec = NULL;
             pthread_mutex_unlock(&mutex_cola_exit);
             pthread_mutex_unlock(&mutex_procesos_activos);
@@ -505,8 +530,8 @@ void planific_corto_rr(void) {
             list_add(cola_exit, proceso_exec);
             sem_post(&sem_procesos_exit);
             procesos_activos--;
-            log_info(logger, "Finaliza el proceso %i - Motivo: OUT_OF_MEMORY", proceso_exec->pid); // log Obligatorio.
-            log_info(logger, "PID: %i - Estado Anterior: EXEC - Estado Actual: EXIT", proceso_exec->pid); // log Obligatorio.
+            log_info(logger, "Finaliza el proceso %d - Motivo: OUT_OF_MEMORY", proceso_exec->pid); // log Obligatorio.
+            log_info(logger, "PID: %d - Estado Anterior: EXEC - Estado Actual: EXIT", proceso_exec->pid); // log Obligatorio.
             proceso_exec = NULL;
             pthread_mutex_unlock(&mutex_cola_exit);
             pthread_mutex_unlock(&mutex_procesos_activos);
@@ -518,8 +543,8 @@ void planific_corto_rr(void) {
             list_add(cola_exit, proceso_exec);
             sem_post(&sem_procesos_exit);
             procesos_activos--;
-            log_info(logger, "Finaliza el proceso %i - Motivo: INTERRUPTED_BY_USER", proceso_exec->pid); // log Obligatorio.
-            log_info(logger, "PID: %i - Estado Anterior: EXEC - Estado Actual: EXIT", proceso_exec->pid); // log Obligatorio.
+            log_info(logger, "Finaliza el proceso %d - Motivo: INTERRUPTED_BY_USER", proceso_exec->pid); // log Obligatorio.
+            log_info(logger, "PID: %d - Estado Anterior: EXEC - Estado Actual: EXIT", proceso_exec->pid); // log Obligatorio.
             proceso_exec = NULL;
             pthread_mutex_unlock(&mutex_cola_exit);
             pthread_mutex_unlock(&mutex_procesos_activos);
@@ -528,6 +553,7 @@ void planific_corto_rr(void) {
             case INTERRUPTED_BY_QUANTUM:
             pthread_mutex_lock(&mutex_cola_ready);
             list_add(cola_ready, proceso_exec);
+            sem_post(&sem_procesos_ready);
             char* pids_en_cola_ready = string_lista_de_pid_de_lista_de_pcb(cola_ready);
             log_info(log_kernel_oblig, "PID: %d - Desalojado por fin de Quantum", proceso_exec->pid); // log Obligatorio
             log_info(log_kernel_oblig, "PID: %d - Estado Anterior: EXEC - Estado Actual: READY", proceso_exec->pid); // log Obligatorio
@@ -538,15 +564,15 @@ void planific_corto_rr(void) {
             break;
 
             case GEN_SLEEP:
-            char* nombre_interfaz = list_get(desalojo_y_argumentos, 1);
-            int unidades_de_trabajo = *list_get(desalojo_y_argumentos, 2);
+            nombre_interfaz = list_get(desalojo_y_argumentos, 1);
+            int unidades_de_trabajo = *(int*)list_get(desalojo_y_argumentos, 2);
 
-            t_paquete* paquete = crear_paquete(IO_OPERACION);
+            paquete = crear_paquete(IO_OPERACION);
             agregar_a_paquete(paquete, &(proceso_exec->pid), sizeof(int));
             agregar_a_paquete(paquete, &unidades_de_trabajo, sizeof(int));
 
-            pthread_mutex_lock(&lista_io_blocked);
-            t_io_blocked* io = encontrar_io(nombre_interfaz);
+            pthread_mutex_lock(&mutex_lista_io_blocked);
+            io = encontrar_io(nombre_interfaz);
             if(io != NULL) {
                 enviar_paquete(paquete, io->socket);
                 log_debug(log_kernel_gral, "Proceso %d empieza a usar interfaz %s", proceso_exec->pid, nombre_interfaz);
@@ -569,7 +595,7 @@ void planific_corto_rr(void) {
                 pthread_mutex_unlock(&mutex_cola_exit);
                 pthread_mutex_unlock(&mutex_procesos_activos);
             }
-            pthread_mutex_unlock(&lista_io_blocked);
+            pthread_mutex_unlock(&mutex_lista_io_blocked);
 
             eliminar_paquete(paquete);
             break;
@@ -577,15 +603,13 @@ void planific_corto_rr(void) {
             // Están juntos porque tienen la misma lógica
             case STDIN_READ:
             case STDOUT_WRITE:
-            int cant_de_pares_direccion_tamanio = (list_size(desalojo_y_argumentos) - 2) / 2;
-            char* nombre_interfaz = list_get(desalojo_y_argumentos, 1);
-            int* dir;
-            int* tamanio;
+            cant_de_pares_direccion_tamanio = (list_size(desalojo_y_argumentos) - 2) / 2;
+            nombre_interfaz = list_get(desalojo_y_argumentos, 1);
 
-            t_paquete* paquete = crear_paquete(IO_OPERACION);
+            paquete = crear_paquete(IO_OPERACION);
             agregar_a_paquete(paquete, &(proceso_exec->pid), sizeof(int));
 
-            for(cant_de_pares_direccion_tamanio; cant_de_pares_direccion_tamanio > 0; cant_de_pares_direccion_tamanio--) {
+            for( ; cant_de_pares_direccion_tamanio > 0; cant_de_pares_direccion_tamanio--) {
                 dir = list_remove(desalojo_y_argumentos, 2);
                 agregar_a_paquete(paquete, dir, sizeof(int));
                 free(dir);
@@ -594,8 +618,8 @@ void planific_corto_rr(void) {
                 free(tamanio);
             }
 
-            pthread_mutex_lock(&lista_io_blocked);
-            t_io_blocked* io = encontrar_io(nombre_interfaz);
+            pthread_mutex_lock(&mutex_lista_io_blocked);
+            io = encontrar_io(nombre_interfaz);
             if(io != NULL) {
                 enviar_paquete(paquete, io->socket);
                 log_debug(log_kernel_gral, "Proceso %d empieza a usar interfaz %s", proceso_exec->pid, nombre_interfaz);
@@ -618,27 +642,31 @@ void planific_corto_rr(void) {
                 pthread_mutex_unlock(&mutex_cola_exit);
                 pthread_mutex_unlock(&mutex_procesos_activos);
             }
-            pthread_mutex_unlock(&lista_io_blocked);
+            pthread_mutex_unlock(&mutex_lista_io_blocked);
 
             eliminar_paquete(paquete);
             break;
 
             case FS_CREATE:
-            int fs_codigo = CREAR_F;
             case FS_DELETE:
-            int fs_codigo = ELIMINAR_F;
+            // un asquito. No le den bola pls.
+            if(desalojo.motiv == FS_CREATE) {
+                fs_codigo = CREAR_F;
+            }
+            if(desalojo.motiv == FS_DELETE) {
+                fs_codigo = ELIMINAR_F;
+            }
 
-            char* nombre_interfaz = list_get(desalojo_y_argumentos, 1);
-            char* nombre_archivo = list_get(desalojo_y_argumentos, 2);
+            nombre_interfaz = list_get(desalojo_y_argumentos, 1);
+            nombre_archivo = list_get(desalojo_y_argumentos, 2);
 
-            t_paquete* paquete = crear_paquete(IO_OPERACION);
+            paquete = crear_paquete(IO_OPERACION);
             agregar_a_paquete(paquete, &fs_codigo, sizeof(int));
             agregar_a_paquete(paquete, &(proceso_exec->pid), sizeof(int));
-            int tam_nombre_archivo = strlen(nombre_archivo) + 1;
-            agregar_a_paquete(paquete, nombre_archivo, tam_nombre_archivo);
+            agregar_a_paquete(paquete, nombre_archivo, strlen(nombre_archivo) + 1);
 
-            pthread_mutex_lock(&lista_io_blocked);
-            t_io_blocked* io = encontrar_io(nombre_interfaz);
+            pthread_mutex_lock(&mutex_lista_io_blocked);
+            io = encontrar_io(nombre_interfaz);
             if(io != NULL) {
                 enviar_paquete(paquete, io->socket);
                 log_debug(log_kernel_gral, "Proceso %d empieza a usar interfaz %s", proceso_exec->pid, nombre_interfaz);
@@ -661,28 +689,27 @@ void planific_corto_rr(void) {
                 pthread_mutex_unlock(&mutex_cola_exit);
                 pthread_mutex_unlock(&mutex_procesos_activos);
             }
-            pthread_mutex_unlock(&lista_io_blocked);
+            pthread_mutex_unlock(&mutex_lista_io_blocked);
 
             eliminar_paquete(paquete);
             break;
 
             case FS_TRUNCATE:
-            int fs_codigo = TRUNCAR_F;
+            fs_codigo = TRUNCAR_F;
 
-            char* nombre_interfaz = list_get(desalojo_y_argumentos, 1);
-            char* nombre_archivo = list_get(desalojo_y_argumentos, 2);
-            int size_en_bytes = *list_get(desalojo_y_argumentos, 3);
+            nombre_interfaz = list_get(desalojo_y_argumentos, 1);
+            nombre_archivo = list_get(desalojo_y_argumentos, 2);
+            int size_en_bytes = *(int*)list_get(desalojo_y_argumentos, 3);
 
-            t_paquete* paquete = crear_paquete(IO_OPERACION);
+            paquete = crear_paquete(IO_OPERACION);
 
             agregar_a_paquete(paquete, &fs_codigo, sizeof(int));
             agregar_a_paquete(paquete, &(proceso_exec->pid), sizeof(int));
-            int tam_nombre_archivo = strlen(nombre_archivo) + 1;
-            agregar_a_paquete(paquete, nombre_archivo, tam_nombre_archivo);
+            agregar_a_paquete(paquete, nombre_archivo, strlen(nombre_archivo) + 1);
             agregar_a_paquete(paquete, &size_en_bytes, sizeof(int));
 
-            pthread_mutex_lock(&lista_io_blocked);
-            t_io_blocked* io = encontrar_io(nombre_interfaz);
+            pthread_mutex_lock(&mutex_lista_io_blocked);
+            io = encontrar_io(nombre_interfaz);
             if(io != NULL) {
                 enviar_paquete(paquete, io->socket);
                 log_debug(log_kernel_gral, "Proceso %d empieza a usar interfaz %s", proceso_exec->pid, nombre_interfaz);
@@ -705,31 +732,33 @@ void planific_corto_rr(void) {
                 pthread_mutex_unlock(&mutex_cola_exit);
                 pthread_mutex_unlock(&mutex_procesos_activos);
             }
-            pthread_mutex_unlock(&lista_io_blocked);
+            pthread_mutex_unlock(&mutex_lista_io_blocked);
 
             eliminar_paquete(paquete);
             break;
 
             case FS_WRITE:
-            int fs_codigo = ESCRIBIR_F;
             case FS_READ:
-            int fs_codigo = LEER_F;
+            // un asquito. No le den bola pls.
+            if (desalojo.motiv == FS_WRITE) {
+                fs_codigo = ESCRIBIR_F;
+            }
+            if (desalojo.motiv == FS_READ) {
+                fs_codigo = LEER_F;
+            }
 
-            int cant_de_pares_direccion_tamanio = (list_size(desalojo_y_argumentos) - 4) / 2;
-            char* nombre_interfaz = list_get(desalojo_y_argumentos, 1);
-            char* nombre_archivo = list_get(desalojo_y_argumentos, 2);
-            int offset_en_archivo = *list_get(desalojo_y_argumentos, 3);
-            int* dir;
-            int* tamanio;
+            cant_de_pares_direccion_tamanio = (list_size(desalojo_y_argumentos) - 4) / 2;
+            nombre_interfaz = list_get(desalojo_y_argumentos, 1);
+            nombre_archivo = list_get(desalojo_y_argumentos, 2);
+            int offset_en_archivo = *(int*)list_get(desalojo_y_argumentos, 3);
 
-            t_paquete* paquete = crear_paquete(IO_OPERACION);
+            paquete = crear_paquete(IO_OPERACION);
             agregar_a_paquete(paquete, &fs_codigo, sizeof(int));
             agregar_a_paquete(paquete, &(proceso_exec->pid), sizeof(int));
-            int tam_nombre_archivo = strlen(nombre_archivo) + 1;
-            agregar_a_paquete(paquete, nombre_archivo, tam_nombre_archivo);
+            agregar_a_paquete(paquete, nombre_archivo, strlen(nombre_archivo) + 1);
             agregar_a_paquete(paquete, &offset_en_archivo, sizeof(int));
 
-            for(cant_de_pares_direccion_tamanio; cant_de_pares_direccion_tamanio > 0; cant_de_pares_direccion_tamanio--) {
+            for( ; cant_de_pares_direccion_tamanio > 0; cant_de_pares_direccion_tamanio--) {
                 dir = list_remove(desalojo_y_argumentos, 4);
                 agregar_a_paquete(paquete, dir, sizeof(int));
                 free(dir);
@@ -738,8 +767,8 @@ void planific_corto_rr(void) {
                 free(tamanio);
             }
 
-            pthread_mutex_lock(&lista_io_blocked);
-            t_io_blocked* io = encontrar_io(nombre_interfaz);
+            pthread_mutex_lock(&mutex_lista_io_blocked);
+            io = encontrar_io(nombre_interfaz);
             if(io != NULL) {
                 enviar_paquete(paquete, io->socket);
                 log_debug(log_kernel_gral, "Proceso %d empieza a usar interfaz %s", proceso_exec->pid, nombre_interfaz);
@@ -762,15 +791,15 @@ void planific_corto_rr(void) {
                 pthread_mutex_unlock(&mutex_cola_exit);
                 pthread_mutex_unlock(&mutex_procesos_activos);
             }
-            pthread_mutex_unlock(&lista_io_blocked);
+            pthread_mutex_unlock(&mutex_lista_io_blocked);
 
             eliminar_paquete(paquete);
             break;
 
             case WAIT:
-            char* nombre_recurso = list_get(desalojo_y_argumentos, 1);
+            nombre_recurso = list_get(desalojo_y_argumentos, 1);
 
-            t_recurso* recurso_en_sistema = encontrar_recurso_del_sistema(nombre_recurso);
+            recurso_en_sistema = encontrar_recurso_del_sistema(nombre_recurso);
             if( recurso_en_sistema==NULL )
             {
                 log_error(log_kernel_gral, "Recurso %s no encontrado en el sistema.", nombre_recurso);
@@ -792,7 +821,7 @@ void planific_corto_rr(void) {
             // Si hay instancias disponibles:
             if (recurso_en_sistema->instancias_disponibles >= 0) {
 
-                t_recurso_ocupado* recurso_ocupado = encontrar_recurso_ocupado(proceso_exec->recursos_ocupados, nombre_recurso);
+                recurso_ocupado = encontrar_recurso_ocupado(proceso_exec->recursos_ocupados, nombre_recurso);
                 if (recurso_ocupado != NULL) {
                     (recurso_ocupado->instancias)++;
                 }
@@ -802,7 +831,7 @@ void planific_corto_rr(void) {
                     recurso_ocupado->instancias = 1;
                     list_add(proceso_exec->recursos_ocupados, recurso_ocupado);
                 }
-                log_debug(log_kernel_gral, "Instancia del recurso %s asignada a proceso %d", nombre_recurso, proceso_exec->pid);
+                log_debug(log_kernel_gral, "Una instancia del recurso %s fue asignada al proceso %d", nombre_recurso, proceso_exec->pid);
             }
             // Si NO hay instancias disponibles:
             else {
@@ -822,14 +851,14 @@ void planific_corto_rr(void) {
                 log_info(log_kernel_oblig, "PID: %d - Estado Anterior: EXEC - Estado Actual: BLOCKED", proceso_exec->pid); // log Obligatorio
                 proceso_exec = NULL;
 
-                pthread_mutex_lock(&mutex_lista_recurso_blocked);
+                pthread_mutex_unlock(&mutex_lista_recurso_blocked);
             }
             break;
 
             case SIGNAL:
-            char* nombre_recurso = list_get(desalojo_y_argumentos, 1);
+            nombre_recurso = list_get(desalojo_y_argumentos, 1);
 
-            t_recurso* recurso_en_sistema = encontrar_recurso_del_sistema(nombre_recurso);
+            recurso_en_sistema = encontrar_recurso_del_sistema(nombre_recurso);
             if( recurso_en_sistema==NULL )
             {
                 log_error(log_kernel_gral, "Recurso %s no encontrado en el sistema.", nombre_recurso);
@@ -848,11 +877,11 @@ void planific_corto_rr(void) {
 
             recurso_en_sistema->instancias_disponibles++;
 
-            t_recurso_ocupado* recurso_ocupado = encontrar_recurso_ocupado(proceso_exec->recursos_ocupados, nombre_recurso);
+            recurso_ocupado = encontrar_recurso_ocupado(proceso_exec->recursos_ocupados, nombre_recurso);
             if (recurso_ocupado != NULL) {
                 (recurso_ocupado->instancias)--;
             }
-            else { // ESTE CASO NO DEBERIA ESTAR EN LAS PRUEBAS. LO PONGO POR SI TESTEAMOS NOSOTROS
+            else { // ESTE CASO NO DEBERIA ESTAR EN LAS PRUEBAS. LO PONGO POR SI TESTEAMOS NOSOTROS.
                 log_warning(log_kernel_gral, "El proceso %d hizo SIGNAL del recurso %s antes de hacer un WAIT. Esperemos que esto nunca suceda.", proceso_exec->pid, nombre_recurso);
                 recurso_ocupado = malloc(sizeof(t_recurso_ocupado));
                 recurso_ocupado->nombre = string_duplicate(nombre_recurso);
@@ -861,7 +890,7 @@ void planific_corto_rr(void) {
             }
             log_debug(log_kernel_gral, "Instancia del recurso %s liberada por el proceso %d", nombre_recurso, proceso_exec->pid);
             
-            // Si hay procesos bloqueados por el recurso, desbloquea al primero de ellos:
+            // Si hay procesos bloqueados por el recurso, desbloqueo al primero de ellos:
             if (recurso_en_sistema->instancias_disponibles <= 0) {
                 pthread_mutex_lock(&mutex_cola_ready);
                 pthread_mutex_lock(&mutex_lista_recurso_blocked);
@@ -875,7 +904,10 @@ void planific_corto_rr(void) {
                 pthread_mutex_unlock(&mutex_lista_recurso_blocked);
                 pthread_mutex_unlock(&mutex_cola_ready);
             }
-
+            break;
+            
+            default:
+            log_error(log_kernel_gral, "El motivo de desalojo del proceso %d no se puede interpretar, es desconocido.", proceso_exec->pid);
             break;
             
 		}
@@ -889,7 +921,7 @@ void planific_corto_rr(void) {
         pthread_mutex_unlock(&proceso_exec);
         list_destroy_and_destroy_elements(desalojo_y_argumentos, (void*)free);
 	}
-*/
+
 }
 
 void planific_corto_vrr(void) {

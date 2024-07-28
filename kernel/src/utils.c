@@ -133,7 +133,7 @@ t_io_blocked* recibir_handshake_y_datos_de_nueva_io_y_responder(int socket) {
 	return io_blocked;
 }
 
-t_pcb* crear_pcb() {
+t_pcb* crear_pcb(void) {
 	t_pcb* pcb = malloc(sizeof(t_pcb));
 	pcb->pid = contador_pid;
     contador_pid++;
@@ -291,8 +291,15 @@ t_contexto_de_ejecucion contexto_de_ejecucion_de_pcb(t_pcb* pcb) {
 }
 
 void actualizar_contexto_de_ejecucion_de_pcb(t_contexto_de_ejecucion nuevo_contexto_de_ejecucion, t_pcb* pcb) {
-	pcb->PC = nuevo_contexto_de_ejecucion.PC;
-	pcb->reg_cpu_uso_general = nuevo_contexto_de_ejecucion.reg_cpu_uso_general;
+	if (pcb->pid == nuevo_contexto_de_ejecucion.pid) {
+		pcb->PC = nuevo_contexto_de_ejecucion.PC;
+		pcb->reg_cpu_uso_general = nuevo_contexto_de_ejecucion.reg_cpu_uso_general;
+	}
+	else {
+		log_error(log_kernel_gral,
+		 "ERROR FATAL: pid recibido de desalojo no es el esperado. Se esperaba PID: %d y se recibio PID: %d.",
+		  pcb->pid, nuevo_contexto_de_ejecucion.pid);
+	}
 }
 
 t_desalojo deserializar_desalojo(void* buffer) {

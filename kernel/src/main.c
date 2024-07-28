@@ -115,11 +115,13 @@ void escuchar_y_atender_nuevas_io(algoritmo_corto_code cod_algoritmo_planif, int
 			t_io_blocked* io = recibir_handshake_y_datos_de_nueva_io_y_responder(socket_io);
 
 			if (io != NULL) {
+				pthread_mutex_lock(&mutex_lista_io_blocked);
 				list_add(lista_io_blocked, io);
 
 				pthread_t* hilo_io = malloc(sizeof(pthread_t)); // acá no habría memory leak, pues al terminar el hilo detacheado, lo liberaría
 				pthread_create(hilo_io, NULL, rutina_atender_io, io);
 				pthread_detach(*hilo_io);
+				pthread_mutex_unlock(&mutex_lista_io_blocked);
 			}
 		}
 	}
@@ -129,11 +131,13 @@ void escuchar_y_atender_nuevas_io(algoritmo_corto_code cod_algoritmo_planif, int
 			t_io_blocked* io = recibir_handshake_y_datos_de_nueva_io_y_responder(socket_io);
 
 			if (io != NULL) {
+				pthread_mutex_lock(&mutex_lista_io_blocked);
 				list_add(lista_io_blocked, io);
 
 				pthread_t* hilo_io = malloc(sizeof(pthread_t)); // acá no habría memory leak, pues al terminar el hilo detacheado, lo liberaría
 				pthread_create(hilo_io, NULL, rutina_atender_io_para_vrr, io);
 				pthread_detach(*hilo_io);
+				pthread_mutex_unlock(&mutex_lista_io_blocked);
 			}
 		}
 	}

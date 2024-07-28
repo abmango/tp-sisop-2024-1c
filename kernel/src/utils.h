@@ -97,7 +97,7 @@ t_io_blocked* recibir_handshake_y_datos_de_nueva_io_y_responder(int socket);
 
 /// @brief Crea un pcb (t_pcb) para un nuevo proceso, inicializando todos los campos.
 /// @return : retorna puntero al pcb creado.
-t_pcb* crear_pcb();
+t_pcb* crear_pcb(void);
 
 /// @brief Destruye el pcb. Antes de usar esta función hay que asegurarse que el proceso haya liberado los recursos retenidos.
 /// @param pcb : puntero a pcb del proceso.
