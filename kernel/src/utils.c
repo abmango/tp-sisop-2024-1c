@@ -253,6 +253,9 @@ void buscar_y_finalizar_proceso(int pid) {
 }
 
 bool proceso_esta_en_ejecucion(int pid) {
+	if (hay_algun_proceso_en_exec) {
+		
+	}
 	if (proceso_exec != NULL) {
 		return proceso_exec->pid == pid;
 	}

@@ -34,6 +34,7 @@ typedef enum
 extern int grado_multiprogramacion; // Viene del archivo config
 extern int procesos_activos; // Cantidad de procesos en READY, BLOCKED, o EXEC
 extern int contador_pid; // Contador. Para asignar diferente pid a cada nuevo proceso.
+extern bool hay_algun_proceso_en_exec;
 
 extern t_list* cola_new; // Estado NEW. Es una lista de t_pcb*
 extern t_list* cola_ready; // Estado READY. Es una lista de t_pcb*

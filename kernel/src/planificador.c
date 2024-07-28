@@ -4,6 +4,7 @@
 void* rutina_planificador(void* puntero_null) {
 
     char* algoritmo_planificacion = config_get_string_value(config, "ALGORITMO_PLANIFICACION");
+    hay_algun_proceso_en_exec = false;
 
     if (strcmp(algoritmo_planificacion, "FIFO") == 0) {
         planific_corto_fifo();
@@ -47,16 +48,22 @@ void planific_corto_fifo(void) {
             pthread_mutex_lock(&mutex_cola_ready);
             // pone proceso de estado READY a estado EXEC. Y envia contexto de ejecucion al cpu.
             ejecutar_sig_proceso();
+            hay_algun_proceso_en_exec = true;
             pthread_mutex_unlock(&mutex_cola_ready);
             pthread_mutex_unlock(&mutex_proceso_exec);
         }
-        else { // solo se envia contexto de ejecucion al cpu.
+        // Este es el caso en que vuelve a cpu el mismo proceso luego de un WAIT/SIGNAL exitoso:
+        else {
+            // solo se envia contexto de ejecucion al cpu.
             t_contexto_de_ejecucion contexto_de_ejecucion = contexto_de_ejecucion_de_pcb(proceso_exec);
             enviar_contexto_de_ejecucion(contexto_de_ejecucion, socket_cpu_dispatch);
+            hay_algun_proceso_en_exec = true;
         }
 
         // Se queda esperando el desalojo del proceso.
         recibir_y_verificar_codigo(socket_cpu_dispatch, DESALOJO, "DESALOJO");
+
+        hay_algun_proceso_en_exec = false;
 
         pthread_mutex_lock(&mutex_proceso_exec);
 
@@ -71,8 +78,8 @@ void planific_corto_fifo(void) {
             list_add(cola_exit, proceso_exec);
             sem_post(&sem_procesos_exit);
             procesos_activos--;
-            log_info(logger, "Finaliza el proceso %d - Motivo: SUCCESS", proceso_exec->pid); // log Obligatorio.
-            log_info(logger, "PID: %d - Estado Anterior: EXEC - Estado Actual: EXIT", proceso_exec->pid); // log Obligatorio.
+            log_info(log_kernel_oblig, "Finaliza el proceso %d - Motivo: SUCCESS", proceso_exec->pid); // log Obligatorio.
+            log_info(log_kernel_oblig, "PID: %d - Estado Anterior: EXEC - Estado Actual: EXIT", proceso_exec->pid); // log Obligatorio.
             proceso_exec = NULL;
             pthread_mutex_unlock(&mutex_cola_exit);
             pthread_mutex_unlock(&mutex_procesos_activos);
@@ -84,8 +91,8 @@ void planific_corto_fifo(void) {
             list_add(cola_exit, proceso_exec);
             sem_post(&sem_procesos_exit);
             procesos_activos--;
-            log_info(logger, "Finaliza el proceso %d - Motivo: OUT_OF_MEMORY", proceso_exec->pid); // log Obligatorio.
-            log_info(logger, "PID: %d - Estado Anterior: EXEC - Estado Actual: EXIT", proceso_exec->pid); // log Obligatorio.
+            log_info(log_kernel_oblig, "Finaliza el proceso %d - Motivo: OUT_OF_MEMORY", proceso_exec->pid); // log Obligatorio.
+            log_info(log_kernel_oblig, "PID: %d - Estado Anterior: EXEC - Estado Actual: EXIT", proceso_exec->pid); // log Obligatorio.
             proceso_exec = NULL;
             pthread_mutex_unlock(&mutex_cola_exit);
             pthread_mutex_unlock(&mutex_procesos_activos);
@@ -97,8 +104,8 @@ void planific_corto_fifo(void) {
             list_add(cola_exit, proceso_exec);
             sem_post(&sem_procesos_exit);
             procesos_activos--;
-            log_info(logger, "Finaliza el proceso %d - Motivo: INTERRUPTED_BY_USER", proceso_exec->pid); // log Obligatorio.
-            log_info(logger, "PID: %d - Estado Anterior: EXEC - Estado Actual: EXIT", proceso_exec->pid); // log Obligatorio.
+            log_info(log_kernel_oblig, "Finaliza el proceso %d - Motivo: INTERRUPTED_BY_USER", proceso_exec->pid); // log Obligatorio.
+            log_info(log_kernel_oblig, "PID: %d - Estado Anterior: EXEC - Estado Actual: EXIT", proceso_exec->pid); // log Obligatorio.
             proceso_exec = NULL;
             pthread_mutex_unlock(&mutex_cola_exit);
             pthread_mutex_unlock(&mutex_procesos_activos);
@@ -462,6 +469,7 @@ void planific_corto_rr(void) {
     char* nombre_recurso = NULL;
     t_recurso_blocked* recurso_blocked = NULL;
     t_recurso_ocupado* recurso_ocupado = NULL;
+    int backup_pid_de_proceso_en_exec;
 
     while(1) {
 
@@ -472,17 +480,29 @@ void planific_corto_rr(void) {
             pthread_mutex_lock(&mutex_cola_ready);
             // pone proceso de estado READY a estado EXEC. Y envia contexto de ejecucion al cpu.
             ejecutar_sig_proceso();
+            hay_algun_proceso_en_exec = true;
+            backup_pid_de_proceso_en_exec = proceso_exec->pid;
             pthread_mutex_unlock(&mutex_cola_ready);
             pthread_mutex_unlock(&mutex_proceso_exec);
 
         }
-        else { // solo se envia contexto de ejecucion al cpu.
+        // Este es el caso en que vuelve a cpu el mismo proceso luego de un WAIT/SIGNAL exitoso:
+        else {
+            pthread_mutex_lock(&mutex_proceso_exec);
+            // actualiza quantum y envia contexto de ejecucion al cpu.
+            proceso_exec->quantum -= ms_transcurridos; // SE PUEDE MEJORAR. ES PROVISORIO
             t_contexto_de_ejecucion contexto_de_ejecucion = contexto_de_ejecucion_de_pcb(proceso_exec);
             enviar_contexto_de_ejecucion(contexto_de_ejecucion, socket_cpu_dispatch);
+            hay_algun_proceso_en_exec = true;
+            backup_pid_de_proceso_en_exec = proceso_exec->pid;
+            pthread_mutex_unlock(&mutex_proceso_exec);
         }
 
         // Pone a correr el quantum y se queda esperando el desalojo del proceso.
-        esperar_cpu_rr();
+        esperar_cpu_rr_y_vrr();
+
+        hay_algun_proceso_en_exec = false;
+        log_debug(log_kernel_gral, "Milisegundos aprox. de tiempo de proceso %d en cpu: %d", backup_pid_de_proceso_en_exec, ms_transcurridos);
 
         pthread_mutex_lock(&mutex_proceso_exec);
 
@@ -497,8 +517,8 @@ void planific_corto_rr(void) {
             list_add(cola_exit, proceso_exec);
             sem_post(&sem_procesos_exit);
             procesos_activos--;
-            log_info(logger, "Finaliza el proceso %d - Motivo: SUCCESS", proceso_exec->pid); // log Obligatorio.
-            log_info(logger, "PID: %d - Estado Anterior: EXEC - Estado Actual: EXIT", proceso_exec->pid); // log Obligatorio.
+            log_info(log_kernel_oblig, "Finaliza el proceso %d - Motivo: SUCCESS", proceso_exec->pid); // log Obligatorio.
+            log_info(log_kernel_oblig, "PID: %d - Estado Anterior: EXEC - Estado Actual: EXIT", proceso_exec->pid); // log Obligatorio.
             proceso_exec = NULL;
             pthread_mutex_unlock(&mutex_cola_exit);
             pthread_mutex_unlock(&mutex_procesos_activos);
@@ -510,8 +530,8 @@ void planific_corto_rr(void) {
             list_add(cola_exit, proceso_exec);
             sem_post(&sem_procesos_exit);
             procesos_activos--;
-            log_info(logger, "Finaliza el proceso %d - Motivo: OUT_OF_MEMORY", proceso_exec->pid); // log Obligatorio.
-            log_info(logger, "PID: %d - Estado Anterior: EXEC - Estado Actual: EXIT", proceso_exec->pid); // log Obligatorio.
+            log_info(log_kernel_oblig, "Finaliza el proceso %d - Motivo: OUT_OF_MEMORY", proceso_exec->pid); // log Obligatorio.
+            log_info(log_kernel_oblig, "PID: %d - Estado Anterior: EXEC - Estado Actual: EXIT", proceso_exec->pid); // log Obligatorio.
             proceso_exec = NULL;
             pthread_mutex_unlock(&mutex_cola_exit);
             pthread_mutex_unlock(&mutex_procesos_activos);
@@ -523,8 +543,8 @@ void planific_corto_rr(void) {
             list_add(cola_exit, proceso_exec);
             sem_post(&sem_procesos_exit);
             procesos_activos--;
-            log_info(logger, "Finaliza el proceso %d - Motivo: INTERRUPTED_BY_USER", proceso_exec->pid); // log Obligatorio.
-            log_info(logger, "PID: %d - Estado Anterior: EXEC - Estado Actual: EXIT", proceso_exec->pid); // log Obligatorio.
+            log_info(log_kernel_oblig, "Finaliza el proceso %d - Motivo: INTERRUPTED_BY_USER", proceso_exec->pid); // log Obligatorio.
+            log_info(log_kernel_oblig, "PID: %d - Estado Anterior: EXEC - Estado Actual: EXIT", proceso_exec->pid); // log Obligatorio.
             proceso_exec = NULL;
             pthread_mutex_unlock(&mutex_cola_exit);
             pthread_mutex_unlock(&mutex_procesos_activos);
@@ -532,6 +552,7 @@ void planific_corto_rr(void) {
 
             case INTERRUPTED_BY_QUANTUM:
             pthread_mutex_lock(&mutex_cola_ready);
+            proceso_exec->quantum = quantum_de_config;
             list_add(cola_ready, proceso_exec);
             sem_post(&sem_procesos_ready);
             char* pids_en_cola_ready = string_lista_de_pid_de_lista_de_pcb(cola_ready);
@@ -557,6 +578,7 @@ void planific_corto_rr(void) {
                 enviar_paquete(paquete, io->socket);
                 log_debug(log_kernel_gral, "Proceso %d empieza a usar interfaz %s", proceso_exec->pid, nombre_interfaz);
                 pthread_mutex_lock(&(proceso_exec->mutex_uso_de_io));
+                proceso_exec->quantum = quantum_de_config;
                 list_add(io->cola_blocked, proceso_exec);
                 log_info(log_kernel_oblig, "PID: %d - Bloqueado por: INTERFAZ", proceso_exec->pid); // log Obligatorio
                 log_info(log_kernel_oblig, "PID: %d - Estado Anterior: EXEC - Estado Actual: BLOCKED", proceso_exec->pid); // log Obligatorio
@@ -604,6 +626,7 @@ void planific_corto_rr(void) {
                 enviar_paquete(paquete, io->socket);
                 log_debug(log_kernel_gral, "Proceso %d empieza a usar interfaz %s", proceso_exec->pid, nombre_interfaz);
                 pthread_mutex_lock(&(proceso_exec->mutex_uso_de_io));
+                proceso_exec->quantum = quantum_de_config;
                 list_add(io->cola_blocked, proceso_exec);
                 log_info(log_kernel_oblig, "PID: %d - Bloqueado por: INTERFAZ", proceso_exec->pid); // log Obligatorio
                 log_info(log_kernel_oblig, "PID: %d - Estado Anterior: EXEC - Estado Actual: BLOCKED", proceso_exec->pid); // log Obligatorio
@@ -651,6 +674,7 @@ void planific_corto_rr(void) {
                 enviar_paquete(paquete, io->socket);
                 log_debug(log_kernel_gral, "Proceso %d empieza a usar interfaz %s", proceso_exec->pid, nombre_interfaz);
                 pthread_mutex_lock(&(proceso_exec->mutex_uso_de_io));
+                proceso_exec->quantum = quantum_de_config;
                 list_add(io->cola_blocked, proceso_exec);
                 log_info(log_kernel_oblig, "PID: %d - Bloqueado por: INTERFAZ", proceso_exec->pid); // log Obligatorio
                 log_info(log_kernel_oblig, "PID: %d - Estado Anterior: EXEC - Estado Actual: BLOCKED", proceso_exec->pid); // log Obligatorio
@@ -694,6 +718,7 @@ void planific_corto_rr(void) {
                 enviar_paquete(paquete, io->socket);
                 log_debug(log_kernel_gral, "Proceso %d empieza a usar interfaz %s", proceso_exec->pid, nombre_interfaz);
                 pthread_mutex_lock(&(proceso_exec->mutex_uso_de_io));
+                proceso_exec->quantum = quantum_de_config;
                 list_add(io->cola_blocked, proceso_exec);
                 log_info(log_kernel_oblig, "PID: %d - Bloqueado por: INTERFAZ", proceso_exec->pid); // log Obligatorio
                 log_info(log_kernel_oblig, "PID: %d - Estado Anterior: EXEC - Estado Actual: BLOCKED", proceso_exec->pid); // log Obligatorio
@@ -753,6 +778,7 @@ void planific_corto_rr(void) {
                 enviar_paquete(paquete, io->socket);
                 log_debug(log_kernel_gral, "Proceso %d empieza a usar interfaz %s", proceso_exec->pid, nombre_interfaz);
                 pthread_mutex_lock(&(proceso_exec->mutex_uso_de_io));
+                proceso_exec->quantum = quantum_de_config;
                 list_add(io->cola_blocked, proceso_exec);
                 log_info(log_kernel_oblig, "PID: %d - Bloqueado por: INTERFAZ", proceso_exec->pid); // log Obligatorio
                 log_info(log_kernel_oblig, "PID: %d - Estado Anterior: EXEC - Estado Actual: BLOCKED", proceso_exec->pid); // log Obligatorio
@@ -809,6 +835,7 @@ void planific_corto_rr(void) {
             }
             // Si NO hay instancias disponibles:
             else {
+                proceso_exec->quantum = quantum_de_config;
                 list_add(recurso_blocked->cola_blocked, proceso_exec);
                 log_info(log_kernel_oblig, "PID: %d - Bloqueado por: %s", proceso_exec->pid, nombre_recurso); // log Obligatorio
                 log_info(log_kernel_oblig, "PID: %d - Estado Anterior: EXEC - Estado Actual: BLOCKED", proceso_exec->pid); // log Obligatorio
