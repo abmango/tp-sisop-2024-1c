@@ -33,7 +33,8 @@ int main(int argc, char* argv[]) {
 	sem_init(&sem_procesos_ready, 0, 0);
 	sem_init(&sem_procesos_exit, 0, 0);
 
-	logger = log_create("kernel.log", "Kernel", true, LOG_LEVEL_DEBUG);
+	log_kernel_gral = log_create("kernel_general.log", "Kernel", true, LOG_LEVEL_DEBUG);
+	log_kernel_oblig = log_create("kernel_obligatorio.log", "Kernel", true, LOG_LEVEL_INFO);
 
     decir_hola("Kernel");
 
