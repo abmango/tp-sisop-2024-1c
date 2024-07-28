@@ -35,7 +35,7 @@ void planific_corto_fifo(void) {
     int fs_codigo;
     char* nombre_archivo = NULL;
     char* nombre_recurso = NULL;
-    t_recurso* recurso_en_sistema = NULL;
+    t_recurso_blocked* recurso_blocked = NULL;
     t_recurso_ocupado* recurso_ocupado = NULL;
 
     while(1) {
@@ -340,8 +340,11 @@ void planific_corto_fifo(void) {
             case WAIT:
             nombre_recurso = list_get(desalojo_y_argumentos, 1);
 
-            recurso_en_sistema = encontrar_recurso_del_sistema(nombre_recurso);
-            if( recurso_en_sistema==NULL )
+            pthread_mutex_lock(&mutex_lista_recurso_blocked);
+            recurso_blocked = encontrar_recurso_blocked(nombre_recurso);
+            pthread_mutex_unlock(&mutex_lista_recurso_blocked);
+
+            if( recurso_blocked==NULL )
             {
                 log_error(log_kernel_gral, "Recurso %s no encontrado en el sistema.", nombre_recurso);
                 pthread_mutex_lock(&mutex_procesos_activos);
@@ -357,50 +360,32 @@ void planific_corto_fifo(void) {
                 break;
             }
 
-            recurso_en_sistema->instancias_disponibles--;
+            pthread_mutex_lock(&mutex_lista_recurso_blocked);
+            recurso_blocked->instancias_disponibles--;
 
             // Si hay instancias disponibles:
-            if (recurso_en_sistema->instancias_disponibles >= 0) {
-
-                recurso_ocupado = encontrar_recurso_ocupado(proceso_exec->recursos_ocupados, nombre_recurso);
-                if (recurso_ocupado != NULL) {
-                    (recurso_ocupado->instancias)++;
-                }
-                else {
-                    recurso_ocupado = malloc(sizeof(t_recurso_ocupado));
-                    recurso_ocupado->nombre = string_duplicate(nombre_recurso);
-                    recurso_ocupado->instancias = 1;
-                    list_add(proceso_exec->recursos_ocupados, recurso_ocupado);
-                }
+            if (recurso_blocked->instancias_disponibles >= 0) {
+                asignar_recurso_ocupado(proceso_exec, nombre_recurso);
                 log_debug(log_kernel_gral, "Una instancia del recurso %s fue asignada al proceso %d", nombre_recurso, proceso_exec->pid);
             }
             // Si NO hay instancias disponibles:
             else {
-                pthread_mutex_lock(&mutex_lista_recurso_blocked);
-                t_recurso_blocked* recurso_blocked = encontrar_recurso_blocked(nombre_recurso);
-                if(recurso_blocked != NULL) {
-                    list_add(recurso_blocked->cola_blocked, proceso_exec);
-                }
-                else {
-                    recurso_blocked = malloc(sizeof(t_recurso_blocked));
-                    recurso_blocked->nombre = string_duplicate(nombre_recurso);
-                    recurso_blocked->cola_blocked = list_create();
-                    list_add(recurso_blocked->cola_blocked, proceso_exec);
-                    list_add(lista_recurso_blocked, recurso_blocked);
-                }
+                list_add(recurso_blocked->cola_blocked, proceso_exec);
                 log_info(log_kernel_oblig, "PID: %d - Bloqueado por: %s", proceso_exec->pid, nombre_recurso); // log Obligatorio
                 log_info(log_kernel_oblig, "PID: %d - Estado Anterior: EXEC - Estado Actual: BLOCKED", proceso_exec->pid); // log Obligatorio
                 proceso_exec = NULL;
-
-                pthread_mutex_unlock(&mutex_lista_recurso_blocked);
             }
+            pthread_mutex_unlock(&mutex_lista_recurso_blocked);
             break;
 
             case SIGNAL:
             nombre_recurso = list_get(desalojo_y_argumentos, 1);
 
-            recurso_en_sistema = encontrar_recurso_del_sistema(nombre_recurso);
-            if( recurso_en_sistema==NULL )
+            pthread_mutex_lock(&mutex_lista_recurso_blocked);
+            recurso_blocked = encontrar_recurso_blocked(nombre_recurso);
+            pthread_mutex_unlock(&mutex_lista_recurso_blocked);
+
+            if( recurso_blocked==NULL )
             {
                 log_error(log_kernel_gral, "Recurso %s no encontrado en el sistema.", nombre_recurso);
                 pthread_mutex_lock(&mutex_procesos_activos);
@@ -416,35 +401,32 @@ void planific_corto_fifo(void) {
                 break;
             }
 
-            recurso_en_sistema->instancias_disponibles++;
+            pthread_mutex_lock(&mutex_cola_ready);
+            pthread_mutex_lock(&mutex_lista_recurso_blocked);
+            recurso_blocked->instancias_disponibles++;
 
             recurso_ocupado = encontrar_recurso_ocupado(proceso_exec->recursos_ocupados, nombre_recurso);
             if (recurso_ocupado != NULL) {
                 (recurso_ocupado->instancias)--;
             }
-            else { // ESTE CASO NO DEBERIA ESTAR EN LAS PRUEBAS. LO PONGO POR SI TESTEAMOS NOSOTROS.
-                log_warning(log_kernel_gral, "El proceso %d hizo SIGNAL del recurso %s antes de hacer un WAIT. Esperemos que esto nunca suceda.", proceso_exec->pid, nombre_recurso);
-                recurso_ocupado = malloc(sizeof(t_recurso_ocupado));
-                recurso_ocupado->nombre = string_duplicate(nombre_recurso);
-                recurso_ocupado->instancias = 0;
-                list_add(proceso_exec->recursos_ocupados, recurso_ocupado);
+            else {
+                log_warning(log_kernel_gral, "El proceso %d hizo SIGNAL del recurso %s antes de hacer un WAIT. Creemos que esto no sucedera en las pruebas.", proceso_exec->pid, nombre_recurso);
             }
             log_debug(log_kernel_gral, "Instancia del recurso %s liberada por el proceso %d", nombre_recurso, proceso_exec->pid);
             
             // Si hay procesos bloqueados por el recurso, desbloqueo al primero de ellos:
-            if (recurso_en_sistema->instancias_disponibles <= 0) {
-                pthread_mutex_lock(&mutex_cola_ready);
-                pthread_mutex_lock(&mutex_lista_recurso_blocked);
-                t_recurso_blocked* recurso_blocked = encontrar_recurso_blocked(nombre_recurso);
+            if (!list_is_empty(recurso_blocked->cola_blocked)) {
                 t_pcb* proceso_desbloqueado = list_remove(recurso_blocked->cola_blocked, 0);
+                asignar_recurso_ocupado(proceso_desbloqueado, nombre_recurso);
                 list_add(cola_ready, proceso_desbloqueado);
                 char* pids_en_cola_ready = string_lista_de_pid_de_lista_de_pcb(cola_ready);
                 log_info(log_kernel_oblig, "PID: %d - Estado Anterior: BLOCKED - Estado Actual: READY", proceso_desbloqueado->pid); // log Obligatorio
                 log_info(log_kernel_oblig, "Cola Ready: [%s]", pids_en_cola_ready); // log Obligatorio
+                log_debug(log_kernel_gral, "Una instancia del recurso %s fue asignada al proceso %d", nombre_recurso, proceso_desbloqueado->pid);
                 free(pids_en_cola_ready);
-                pthread_mutex_unlock(&mutex_lista_recurso_blocked);
-                pthread_mutex_unlock(&mutex_cola_ready);
             }
+            pthread_mutex_unlock(&mutex_lista_recurso_blocked);
+            pthread_mutex_unlock(&mutex_cola_ready);
             break;
             
             default:
@@ -463,8 +445,6 @@ void planific_corto_fifo(void) {
 	}
 }
 
-// DESARROLLANDO ===
-
 void planific_corto_rr(void) {
 
     // Lista con data del paquete recibido desde cpu. El elemento 0 es el t_desalojo, el resto son argumentos.
@@ -480,7 +460,7 @@ void planific_corto_rr(void) {
     int fs_codigo;
     char* nombre_archivo = NULL;
     char* nombre_recurso = NULL;
-    t_recurso* recurso_en_sistema = NULL;
+    t_recurso_blocked* recurso_blocked = NULL;
     t_recurso_ocupado* recurso_ocupado = NULL;
 
     while(1) {
@@ -799,8 +779,11 @@ void planific_corto_rr(void) {
             case WAIT:
             nombre_recurso = list_get(desalojo_y_argumentos, 1);
 
-            recurso_en_sistema = encontrar_recurso_del_sistema(nombre_recurso);
-            if( recurso_en_sistema==NULL )
+            pthread_mutex_lock(&mutex_lista_recurso_blocked);
+            recurso_blocked = encontrar_recurso_blocked(nombre_recurso);
+            pthread_mutex_unlock(&mutex_lista_recurso_blocked);
+
+            if( recurso_blocked==NULL )
             {
                 log_error(log_kernel_gral, "Recurso %s no encontrado en el sistema.", nombre_recurso);
                 pthread_mutex_lock(&mutex_procesos_activos);
@@ -816,50 +799,32 @@ void planific_corto_rr(void) {
                 break;
             }
 
-            recurso_en_sistema->instancias_disponibles--;
+            pthread_mutex_lock(&mutex_lista_recurso_blocked);
+            recurso_blocked->instancias_disponibles--;
 
             // Si hay instancias disponibles:
-            if (recurso_en_sistema->instancias_disponibles >= 0) {
-
-                recurso_ocupado = encontrar_recurso_ocupado(proceso_exec->recursos_ocupados, nombre_recurso);
-                if (recurso_ocupado != NULL) {
-                    (recurso_ocupado->instancias)++;
-                }
-                else {
-                    recurso_ocupado = malloc(sizeof(t_recurso_ocupado));
-                    recurso_ocupado->nombre = string_duplicate(nombre_recurso);
-                    recurso_ocupado->instancias = 1;
-                    list_add(proceso_exec->recursos_ocupados, recurso_ocupado);
-                }
+            if (recurso_blocked->instancias_disponibles >= 0) {
+                asignar_recurso_ocupado(proceso_exec, nombre_recurso);
                 log_debug(log_kernel_gral, "Una instancia del recurso %s fue asignada al proceso %d", nombre_recurso, proceso_exec->pid);
             }
             // Si NO hay instancias disponibles:
             else {
-                pthread_mutex_lock(&mutex_lista_recurso_blocked);
-                t_recurso_blocked* recurso_blocked = encontrar_recurso_blocked(nombre_recurso);
-                if(recurso_blocked != NULL) {
-                    list_add(recurso_blocked->cola_blocked, proceso_exec);
-                }
-                else {
-                    recurso_blocked = malloc(sizeof(t_recurso_blocked));
-                    recurso_blocked->nombre = string_duplicate(nombre_recurso);
-                    recurso_blocked->cola_blocked = list_create();
-                    list_add(recurso_blocked->cola_blocked, proceso_exec);
-                    list_add(lista_recurso_blocked, recurso_blocked);
-                }
+                list_add(recurso_blocked->cola_blocked, proceso_exec);
                 log_info(log_kernel_oblig, "PID: %d - Bloqueado por: %s", proceso_exec->pid, nombre_recurso); // log Obligatorio
                 log_info(log_kernel_oblig, "PID: %d - Estado Anterior: EXEC - Estado Actual: BLOCKED", proceso_exec->pid); // log Obligatorio
                 proceso_exec = NULL;
-
-                pthread_mutex_unlock(&mutex_lista_recurso_blocked);
             }
+            pthread_mutex_unlock(&mutex_lista_recurso_blocked);
             break;
 
             case SIGNAL:
             nombre_recurso = list_get(desalojo_y_argumentos, 1);
 
-            recurso_en_sistema = encontrar_recurso_del_sistema(nombre_recurso);
-            if( recurso_en_sistema==NULL )
+            pthread_mutex_lock(&mutex_lista_recurso_blocked);
+            recurso_blocked = encontrar_recurso_blocked(nombre_recurso);
+            pthread_mutex_unlock(&mutex_lista_recurso_blocked);
+
+            if( recurso_blocked==NULL )
             {
                 log_error(log_kernel_gral, "Recurso %s no encontrado en el sistema.", nombre_recurso);
                 pthread_mutex_lock(&mutex_procesos_activos);
@@ -875,35 +840,32 @@ void planific_corto_rr(void) {
                 break;
             }
 
-            recurso_en_sistema->instancias_disponibles++;
+            pthread_mutex_lock(&mutex_cola_ready);
+            pthread_mutex_lock(&mutex_lista_recurso_blocked);
+            recurso_blocked->instancias_disponibles++;
 
             recurso_ocupado = encontrar_recurso_ocupado(proceso_exec->recursos_ocupados, nombre_recurso);
             if (recurso_ocupado != NULL) {
                 (recurso_ocupado->instancias)--;
             }
-            else { // ESTE CASO NO DEBERIA ESTAR EN LAS PRUEBAS. LO PONGO POR SI TESTEAMOS NOSOTROS.
-                log_warning(log_kernel_gral, "El proceso %d hizo SIGNAL del recurso %s antes de hacer un WAIT. Esperemos que esto nunca suceda.", proceso_exec->pid, nombre_recurso);
-                recurso_ocupado = malloc(sizeof(t_recurso_ocupado));
-                recurso_ocupado->nombre = string_duplicate(nombre_recurso);
-                recurso_ocupado->instancias = 0;
-                list_add(proceso_exec->recursos_ocupados, recurso_ocupado);
+            else {
+                log_warning(log_kernel_gral, "El proceso %d hizo SIGNAL del recurso %s antes de hacer un WAIT. Creemos que esto no sucedera en las pruebas.", proceso_exec->pid, nombre_recurso);
             }
             log_debug(log_kernel_gral, "Instancia del recurso %s liberada por el proceso %d", nombre_recurso, proceso_exec->pid);
             
             // Si hay procesos bloqueados por el recurso, desbloqueo al primero de ellos:
-            if (recurso_en_sistema->instancias_disponibles <= 0) {
-                pthread_mutex_lock(&mutex_cola_ready);
-                pthread_mutex_lock(&mutex_lista_recurso_blocked);
-                t_recurso_blocked* recurso_blocked = encontrar_recurso_blocked(nombre_recurso);
+            if (!list_is_empty(recurso_blocked->cola_blocked)) {
                 t_pcb* proceso_desbloqueado = list_remove(recurso_blocked->cola_blocked, 0);
+                asignar_recurso_ocupado(proceso_desbloqueado, nombre_recurso);
                 list_add(cola_ready, proceso_desbloqueado);
                 char* pids_en_cola_ready = string_lista_de_pid_de_lista_de_pcb(cola_ready);
                 log_info(log_kernel_oblig, "PID: %d - Estado Anterior: BLOCKED - Estado Actual: READY", proceso_desbloqueado->pid); // log Obligatorio
                 log_info(log_kernel_oblig, "Cola Ready: [%s]", pids_en_cola_ready); // log Obligatorio
+                log_debug(log_kernel_gral, "Una instancia del recurso %s fue asignada al proceso %d", nombre_recurso, proceso_desbloqueado->pid);
                 free(pids_en_cola_ready);
-                pthread_mutex_unlock(&mutex_lista_recurso_blocked);
-                pthread_mutex_unlock(&mutex_cola_ready);
             }
+            pthread_mutex_unlock(&mutex_lista_recurso_blocked);
+            pthread_mutex_unlock(&mutex_cola_ready);
             break;
             
             default:
@@ -918,12 +880,13 @@ void planific_corto_rr(void) {
         }
 
 
-        pthread_mutex_unlock(&proceso_exec);
+        pthread_mutex_unlock(&mutex_proceso_exec);
         list_destroy_and_destroy_elements(desalojo_y_argumentos, (void*)free);
 	}
 
 }
 
+// DESARROLLANDO
 void planific_corto_vrr(void) {
 /*
 
@@ -1228,6 +1191,7 @@ void recibir_y_verificar_codigo(int socket, op_code cod, char* traduccion_de_cod
     }
 }
 
+/* OBSOLETO. SE PUEDE SACAR
 t_recurso* encontrar_recurso_del_sistema(char* nombre) {
 
 	bool _es_mi_recurso(t_recurso* recurso) {
@@ -1236,6 +1200,7 @@ t_recurso* encontrar_recurso_del_sistema(char* nombre) {
 
     return list_find(recursos_del_sistema, (void*)_es_mi_recurso);
 }
+*/
 
 t_recurso_ocupado* encontrar_recurso_ocupado(t_list* lista_de_recursos_ocupados, char* nombre) {
 
@@ -1253,6 +1218,19 @@ t_recurso_blocked* encontrar_recurso_blocked(char* nombre) {
 	}
 
     return list_find(lista_recurso_blocked, (void*)_es_mi_recurso_blocked);
+}
+
+void asignar_recurso_ocupado(t_pcb* pcb, char* nombre_recurso) {
+    t_recurso_ocupado* recurso_ocupado = encontrar_recurso_ocupado(pcb->recursos_ocupados, nombre_recurso);
+    if (recurso_ocupado != NULL) {
+        (recurso_ocupado->instancias)++;
+    }
+    else {
+        recurso_ocupado = malloc(sizeof(t_recurso_ocupado));
+        recurso_ocupado->nombre = string_duplicate(nombre_recurso);
+        recurso_ocupado->instancias = 1;
+        list_add(proceso_exec->recursos_ocupados, recurso_ocupado);
+    }
 }
 
 /*

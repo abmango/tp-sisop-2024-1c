@@ -137,6 +137,7 @@ typedef struct
 typedef struct
 {
     char* nombre;
+    int instancias_disponibles;
     t_list* cola_blocked; // Es una lista de t_pcb*
 } t_recurso_blocked;
 

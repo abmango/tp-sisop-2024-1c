@@ -15,8 +15,6 @@ t_list* lista_io_blocked = NULL;
 t_list* lista_recurso_blocked = NULL;
 t_list* cola_exit = NULL;
 
-t_list* recursos_del_sistema = NULL;
-
 int socket_cpu_dispatch = 1;
 int socket_cpu_interrupt = 1;
 //int socket_memoria = 1;
@@ -224,6 +222,7 @@ void buscar_y_finalizar_proceso(int pid) {
 	else if (list_any_satisfy(lista_recurso_blocked, (void*)_recurso_blocked_contiene_al_proceso_buscado)) {
 		t_recurso_blocked* recurso_blocked = list_find(lista_recurso_blocked, (void*)_recurso_blocked_contiene_al_proceso_buscado);
 		proceso = list_remove_by_condition(recurso_blocked->cola_blocked, (void*)_es_el_proceso_buscado);
+		(recurso_blocked->instancias_disponibles)++;
 		estaba_activo = true;
 		estado_donde_estaba = string_from_format("BLOCKED");
 	}
@@ -264,18 +263,30 @@ bool proceso_esta_en_ejecucion(int pid) {
 
 void destruir_recurso_ocupado(t_recurso_ocupado* recurso_ocupado) {
 
-	bool _es_mi_querido_recurso (t_recurso* recurso) {
+	bool _es_mi_querido_recurso_blocked (t_recurso_blocked* recurso) {
 		return strcmp(recurso->nombre, recurso_ocupado->nombre) == 0;
 	}
 
-	t_recurso* recurso_en_sistema = list_find(recursos_del_sistema, (void*)_es_mi_querido_recurso);
+	t_recurso_blocked* recurso_blocked = list_find(lista_recurso_blocked, (void*)_es_mi_querido_recurso_blocked);
 	
 	// libero una instancia, por cada una retenida
 	for (int instancias_retenidas = recurso_ocupado->instancias; instancias_retenidas > 0; instancias_retenidas--) {
 		(recurso_ocupado->instancias)--;
-		recurso_en_sistema->instancias_disponibles++;
+		recurso_blocked->instancias_disponibles++;
+		log_debug(log_kernel_gral, "Instancia del recurso %s liberada", recurso_ocupado->nombre);
 
-		// ACÁ HAY QUE AGREGAR UNA LÓGICA QUE FALTA. SIMILAR A UN SIGNAL DE PROCESO.
+		// Si hay procesos bloqueados por el recurso, desbloqueo al primero de ellos:
+		if (!list_is_empty(recurso_blocked->cola_blocked)) {
+			t_pcb* proceso_desbloqueado = list_remove(recurso_blocked->cola_blocked, 0);
+			asignar_recurso_ocupado(proceso_desbloqueado, recurso_blocked->nombre);
+			list_add(cola_ready, proceso_desbloqueado);
+			char* pids_en_cola_ready = string_lista_de_pid_de_lista_de_pcb(cola_ready);
+			log_info(log_kernel_oblig, "PID: %d - Estado Anterior: BLOCKED - Estado Actual: READY", proceso_desbloqueado->pid); // log Obligatorio
+			log_info(log_kernel_oblig, "Cola Ready: [%s]", pids_en_cola_ready); // log Obligatorio
+			log_debug(log_kernel_gral, "Una instancia del recurso %s fue asignada al proceso %d", recurso_blocked->nombre, proceso_desbloqueado->pid);
+			free(pids_en_cola_ready);
+		}
+
 	}
 
 	free(recurso_ocupado->nombre);

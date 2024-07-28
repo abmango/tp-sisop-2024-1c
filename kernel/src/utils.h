@@ -43,8 +43,6 @@ extern t_list* lista_io_blocked; // Estado BLOCKED. Los bloqueados por esperar a
 extern t_list* lista_recurso_blocked; // Estado BLOCKED. Los bloqueados por esperar la liberacion de un recurso. Es una lista de t_recurso_blocked*
 extern t_list* cola_exit; // Estado EXIT. Es una lista de t_pcb*
 
-extern t_list* recursos_del_sistema; // Recursos, con sus instancias disponibles actualmente. Es una lista de t_recurso*
-
 extern int socket_cpu_dispatch;
 extern int socket_cpu_interrupt;
 
@@ -118,6 +116,8 @@ void buscar_y_finalizar_proceso(int pid);
 /// @return    : retorna true si lo está, false si no lo está.
 bool proceso_esta_en_ejecucion(int pid);
 
+/// @brief Libera las instancias retenidas de un recurso ocupado, y destruye la estructura (t_recurso_ocupado).
+/// @param recurso_ocupado : puntero al recurso ocupado.
 void destruir_recurso_ocupado(t_recurso_ocupado* recurso_ocupado);
 
 t_contexto_de_ejecucion contexto_de_ejecucion_de_pcb(t_pcb* pcb);

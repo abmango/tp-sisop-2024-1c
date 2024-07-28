@@ -17,11 +17,20 @@ void* rutina_exit(void* puntero_null) {
             proceso_a_destruir = list_get(cola_exit, 0);
             pthread_mutex_unlock(&mutex_cola_exit);
 
-            // ======== Acá capaz falta algun mutex_lock =================
+            // Esto capaz funcione mejor si se hace antes de mandar al proceso a EXIT.
+            // Hay que ver que pasa al testear.
+            pthread_mutex_lock(&mutex_cola_ready);
+            pthread_mutex_lock(&mutex_lista_recurso_blocked);
             liberar_recursos_retenidos(proceso_a_destruir);
-        }
+            pthread_mutex_unlock(&mutex_lista_recurso_blocked);
+            pthread_mutex_unlock(&mutex_cola_ready);
 
-        log_debug(log_kernel_gral, "Inicia ciclo de destruccion de proceso.");
+            log_debug(log_kernel_gral, "Inicia destruccion del proceso %d", proceso_a_destruir->pid);
+        }
+        else {
+            log_debug(log_kernel_gral, "Inicia nuevo intento de destruccion del proceso %d", proceso_a_destruir->pid);
+        }
+        
 
         // Me conecto con Memoria
         int socket_memoria = crear_conexion(ip_memoria, puerto_memoria);

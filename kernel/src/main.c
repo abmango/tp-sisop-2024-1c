@@ -19,7 +19,8 @@ int main(int argc, char* argv[]) {
 
 	char** recursos_nombres = config_get_array_value(config, "RECURSOS");
 	char** recursos_instancias = config_get_array_value(config, "INSTANCIAS_RECURSOS");
-	recursos_del_sistema = crear_lista_de_recursos(recursos_nombres, recursos_instancias);
+	//recursos_del_sistema = crear_lista_de_recursos(recursos_nombres, recursos_instancias);
+	// AHORA ESTO ES DIFERENTE. DEBO MODIFICARLO.
 
 	sem_init(&sem_procesos_new, 0, 0);
 	pthread_mutex_init(&mutex_grado_multiprogramacion, NULL);
