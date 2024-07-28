@@ -18,8 +18,8 @@ int main(int argc, char *argv[])
 
 	pthread_mutex_init(&mutex_interrupt, NULL);
 
-	log_cpu_gral = log_create("cpu.log", "CPU", true, LOG_LEVEL_DEBUG);
-	log_cpu_oblig = log_create("cpu.log", "CPU", true, LOG_LEVEL_DEBUG);
+	log_cpu_gral = log_create("cpu_general.log", "CPU", true, LOG_LEVEL_DEBUG);
+	log_cpu_oblig = log_create("cpu_obligatorio.log", "CPU", true, LOG_LEVEL_DEBUG);
 
 	// Me conecto con Memoria
 	char *ip = config_get_string_value(config, "IP_MEMORIA");
