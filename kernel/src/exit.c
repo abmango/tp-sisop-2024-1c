@@ -8,6 +8,8 @@ void* rutina_exit(void* puntero_null) {
     t_pcb* proceso_a_destruir = NULL;
     bool exito = true;
 
+    log_debug(log_kernel_gral, "Hilo de EXIT listo.");
+
     while(1) {
 
         if(exito) {

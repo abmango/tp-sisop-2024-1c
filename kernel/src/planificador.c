@@ -6,6 +6,8 @@ void* rutina_planificador(void* puntero_null) {
     char* algoritmo_planificacion = config_get_string_value(config, "ALGORITMO_PLANIFICACION");
     hay_algun_proceso_en_exec = false;
 
+    log_debug(log_kernel_gral, "Hilo de Planificador corto plazo iniciado.");
+
     if (strcmp(algoritmo_planificacion, "FIFO") == 0) {
         planific_corto_fifo();
     }
@@ -38,6 +40,8 @@ void planific_corto_fifo(void) {
     char* nombre_recurso = NULL;
     t_recurso_blocked* recurso_blocked = NULL;
     t_recurso_ocupado* recurso_ocupado = NULL;
+
+    log_debug(log_kernel_gral, "Planificador corto plazo listo para funcionar con algoritmo FIFO.");
 
     while(1) {
 
@@ -470,6 +474,8 @@ void planific_corto_rr(void) {
     t_recurso_blocked* recurso_blocked = NULL;
     t_recurso_ocupado* recurso_ocupado = NULL;
     int backup_pid_de_proceso_en_exec;
+
+    log_debug(log_kernel_gral, "Planificador corto plazo listo para funcionar con algoritmo RR.");
 
     while(1) {
 

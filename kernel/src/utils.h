@@ -47,9 +47,6 @@ extern t_list* cola_exit; // Estado EXIT. Es una lista de t_pcb*
 extern int socket_cpu_dispatch;
 extern int socket_cpu_interrupt;
 
-// Este lo quito, dado que las conexiones con memoria son temporales, asi me resulta más seguro.
-// extern int socket_memoria;
-
 extern t_config *config;
 extern int quantum_de_config;
 

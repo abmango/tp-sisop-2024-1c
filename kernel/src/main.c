@@ -7,9 +7,8 @@ int main(int argc, char* argv[]) {
 	
 	cola_new = list_create();
 	cola_ready = list_create();
-	proceso_exec = malloc(sizeof(t_pcb));
+	proceso_exec = NULL;
 	lista_io_blocked = list_create();
-	lista_recurso_blocked = list_create();
 	cola_exit = list_create();
 
 	config = iniciar_config("default");
@@ -19,19 +18,29 @@ int main(int argc, char* argv[]) {
 
 	char** recursos_nombres = config_get_array_value(config, "RECURSOS");
 	char** recursos_instancias = config_get_array_value(config, "INSTANCIAS_RECURSOS");
-	//recursos_del_sistema = crear_lista_de_recursos(recursos_nombres, recursos_instancias);
-	// AHORA ESTO ES DIFERENTE. DEBO MODIFICARLO.
+
+	t_dictionary* diccionario_algoritmos_corto_plazo = crear_e_inicializar_diccionario_algoritmos_corto_plazo();
+	char* algoritmo_planificacion_corto = config_get_string_value(config, "ALGORITMO_PLANIFICACION");
+	algoritmo_corto_code cod_algoritmo_planif_corto = *(algoritmo_corto_code*)dictionary_get(diccionario_algoritmos_corto_plazo, algoritmo_planificacion_corto);
+
+	if (cod_algoritmo_planif_corto == VRR) {
+		cola_ready_plus = list_create();
+	}
+
+	lista_recurso_blocked = crear_lista_de_recursos(recursos_nombres, recursos_instancias);
 
 	sem_init(&sem_procesos_new, 0, 0);
+	sem_init(&sem_procesos_ready, 0, 0);
+	sem_init(&sem_procesos_exit, 0, 0);
+	pthread_mutex_init(&mutex_proceso_exec, NULL);
 	pthread_mutex_init(&mutex_grado_multiprogramacion, NULL);
 	pthread_mutex_init(&mutex_procesos_activos, NULL);
 	pthread_mutex_init(&mutex_cola_new, NULL);
 	pthread_mutex_init(&mutex_cola_ready, NULL);
 	pthread_mutex_init(&mutex_cola_ready_plus, NULL);
-	pthread_mutex_init(&mutex_proceso_exec, NULL);
+	pthread_mutex_init(&mutex_lista_io_blocked, NULL);
+	pthread_mutex_init(&mutex_lista_recurso_blocked, NULL);
 	pthread_mutex_init(&mutex_cola_exit, NULL);
-	sem_init(&sem_procesos_ready, 0, 0);
-	sem_init(&sem_procesos_exit, 0, 0);
 
 	log_kernel_gral = log_create("kernel_general.log", "Kernel", true, LOG_LEVEL_DEBUG);
 	log_kernel_oblig = log_create("kernel_obligatorio.log", "Kernel", true, LOG_LEVEL_INFO);
@@ -64,18 +73,34 @@ int main(int argc, char* argv[]) {
 		return EXIT_FAILURE;
 	}
 
-	t_dictionary* diccionario_algoritmos_corto_plazo = crear_e_inicializar_diccionario_algoritmos_corto_plazo();
-	char* algoritmo_planificacion_corto = config_get_string_value(config, "ALGORITMO_PLANIFICACION");
-	algoritmo_corto_code cod_algoritmo_planif_corto = *(algoritmo_corto_code*)dictionary_get(diccionario_algoritmos_corto_plazo, algoritmo_planificacion_corto);
+	pthread_t hilo_new;
+	pthread_t hilo_exit;
+	pthread_t hilo_planificador;
+	pthread_t hilo_consola;
+
+	pthread_create(&hilo_new, NULL, rutina_new, NULL);
+	pthread_create(&hilo_exit, NULL, rutina_exit, NULL);
+	pthread_create(&hilo_planificador, NULL, rutina_planificador, NULL);
+	pthread_create(&hilo_consola, NULL, rutina_consola, NULL);
 
 	puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
 	int socket_escucha = iniciar_servidor(puerto);
 
+
 	// Servidor en bucle que espera y atiende conexiones de nuevas interfaces.
 	escuchar_y_atender_nuevas_io(cod_algoritmo_planif_corto, socket_escucha);
 
+
+	pthread_join(hilo_new, NULL);
+	pthread_join(hilo_exit, NULL);
+	pthread_join(hilo_planificador, NULL);
+	pthread_join(hilo_consola, NULL);
+
 	return EXIT_SUCCESS;
 }
+
+/////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////
 
 t_list* crear_lista_de_recursos(char* array_nombres[], char* array_instancias[]) {
 
@@ -83,9 +108,10 @@ t_list* crear_lista_de_recursos(char* array_nombres[], char* array_instancias[])
 
 	int i = 0;
 	while (array_nombres[i] != NULL) {
-		t_recurso* recurso = malloc(sizeof(t_recurso));
+		t_recurso_blocked* recurso = malloc(sizeof(t_recurso_blocked));
 		recurso->nombre = array_nombres[i];
 		recurso->instancias_disponibles = atoi(array_instancias[i]);
+		recurso->cola_blocked = list_create();
 		list_add(lista_recursos, recurso);
 		i++;
 	}

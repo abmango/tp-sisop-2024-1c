@@ -5,6 +5,8 @@ void *rutina_consola(void *puntero_NULL)
     char *ip_memoria = config_get_string_value(config, "IP_MEMORIA");
     char *puerto_memoria = config_get_string_value(config, "PUERTO_MEMORIA");
 
+    log_debug(log_kernel_gral, "Hilo de Consola listo. Ya se pueden ingresar comandos");
+
     while (1)
     {
         char *comando_ingresado = readline("> ");

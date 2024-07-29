@@ -5,6 +5,8 @@ void* rutina_new(void* puntero_null) {
     t_pcb* pcb = NULL;
     bool exito = true;
 
+    log_debug(log_kernel_gral, "Hilo de NEW listo.");
+
     while (1) {
 
         if (exito) {

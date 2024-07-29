@@ -6,6 +6,7 @@
 int grado_multiprogramacion;
 int procesos_activos = 0;
 int contador_pid = 0;
+bool hay_algun_proceso_en_exec = false;
 
 t_list* cola_new = NULL;
 t_list* cola_ready = NULL;
@@ -17,7 +18,6 @@ t_list* cola_exit = NULL;
 
 int socket_cpu_dispatch = 1;
 int socket_cpu_interrupt = 1;
-//int socket_memoria = 1;
 
 t_config *config = NULL;
 int quantum_de_config;
