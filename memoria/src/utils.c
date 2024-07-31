@@ -162,7 +162,7 @@ resultado_operacion crear_proceso (t_list *solicitud, t_proceso *proceso)
         proceso = NULL;
         return ERROR;
     }
-    log_info(log_memoria_oblig, "PID: <%i> - Tamaño: <0>",proceso->pid);
+    log_info(log_memoria_oblig, "PID: %i - Tamaño: 0",proceso->pid);
     return CORRECTA;
 }
 
@@ -178,7 +178,7 @@ resultado_operacion finalizar_proceso (t_proceso *proceso)
     limpiar_estructura_proceso(proceso);
 
     retardo_operacion();
-    log_info(log_memoria_oblig, "PID: <%i> - Tamaño: <0>",pid_temp);
+    log_info(log_memoria_oblig, "PID: %i - Tamaño: 0",pid_temp);
     return CORRECTA;
 }
 
@@ -194,7 +194,7 @@ int acceso_tabla_paginas(t_proceso *proceso, int ind_pagina_consulta)
     }
     frame = obtener_indice_frame(list_get(proceso->tabla_paginas,ind_pagina_consulta));
     retardo_operacion();
-    log_info(log_memoria_oblig, "PID: <%i> - Pagina: <%i> - Marco: <%i>",proceso->pid,ind_pagina_consulta,frame);
+    log_info(log_memoria_oblig, "PID: %i - Pagina: %i - Marco: %i",proceso->pid,ind_pagina_consulta,frame);
     return frame;
 }
 
@@ -255,7 +255,7 @@ resultado_operacion acceso_espacio_usuario(t_buffer *data, t_list *solicitudes, 
             pedido = list_get(solicitudes, i);
             aux = (aux + pedido->desplazamiento);
 
-            log_info(log_memoria_oblig, "PID: <%i> - Accion: <LEER> - Direccion fisica: <%i> - Tamaño <%i>", pid, pedido->desplazamiento, pedido->cant_bytes);
+            log_info(log_memoria_oblig, "PID: %i - Accion: LEER - Direccion fisica: %i - Tamaño %i", pid, pedido->desplazamiento, pedido->cant_bytes);
 
             pthread_mutex_lock(&mutex_memoria);
             agregar_a_buffer_mem(data, aux, pedido->cant_bytes);

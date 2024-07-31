@@ -101,7 +101,7 @@ void op_proceso_estado(void)
     imprimir_mensaje("PROCESOS EN NEW:");
     imprimir_pid_de_lista_de_pcb(cola_new);
     imprimir_mensaje("PROCESOS EN READY:");
-    if (imprimir_pid_de_lista_de_pcb_sin_msj_si_esta_vacia(cola_ready_plus);)
+    if (imprimir_pid_de_lista_de_pcb_sin_msj_si_esta_vacia(cola_ready_plus))
     {
         imprimir_pid_de_lista_de_pcb(cola_ready);
     }
