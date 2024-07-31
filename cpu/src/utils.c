@@ -421,6 +421,8 @@ void terminar_programa(t_config *config)
 // Función para inicializar la TLB
 void init_tlb() {
    tlb.size = config_get_int_value(config,"CANTIDAD_ENTRADAS_TLB");
+   tlb_entry entradas[tlb.size];
+   tlb.tlb_entry = entradas;
    for (int i = 0; i < tlb.size; ++i) {
        tlb.tlb_entry[i].valid = 0;  // Inicialmente, todas las entradas son inválidas
    }

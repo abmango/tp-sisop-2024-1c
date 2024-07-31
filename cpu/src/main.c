@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
 		terminar_programa(config);
 		return EXIT_FAILURE;
 	}
-	liberar_conexion(log_cpu_gral, "escucha_dispatch", socket_escucha_dispatch);
+	//liberar_conexion(log_cpu_gral, "escucha_dispatch", socket_escucha_dispatch);
 
 	// Espero que se conecte el Kernel en puerto Interrupt
 	socket_kernel_interrupt = esperar_cliente(socket_escucha_interrupt);
@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
 		terminar_programa(config);
 		return EXIT_FAILURE;
 	}
-	liberar_conexion(log_cpu_gral, "escucha_interrupt", socket_escucha_interrupt);
+	//liberar_conexion(log_cpu_gral, "escucha_interrupt", socket_escucha_interrupt);
 
 	pthread_t interrupciones;
 	pthread_create(&interrupciones, NULL, (void *)interrupt, NULL); // hilo pendiente de escuchar las interrupciones
