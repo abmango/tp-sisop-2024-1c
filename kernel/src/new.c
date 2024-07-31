@@ -36,7 +36,9 @@ void* rutina_new(void* puntero_null) {
             pthread_mutex_unlock(&mutex_procesos_activos);
             pthread_mutex_unlock(&mutex_grado_multiprogramacion);
 
+            // IMPORTANTE:
             usleep(100000); // esto para probar. Si funca bien vemos como va quitándolo
+            
             log_debug(log_kernel_gral, "Volviendo a intentar activar proceso...");
         }
 
