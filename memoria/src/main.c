@@ -343,7 +343,7 @@ void atender_cpu(int socket)
 					aux = list_remove(recibido, 0);
 					free(aux);
 				}
-				log_error(log_memoria_gral, "El proceso %d pidio una instruccion que no es posible darle", backup_pid_proceso);
+				log_error(log_memoria_gral, "El CPU ejecutando el proceso %d pidio una instruccion que no es posible darle", backup_pid_proceso);
 				list_clean(recibido);
 				continue;
 			}
@@ -361,6 +361,9 @@ void atender_cpu(int socket)
 			}
 			list_clean(recibido);
 			eliminar_paquete(paquete);
+
+			log_debug(log_memoria_gral, "Instruccion enviada correctamente a CPU ejecutando proceso %d", backup_pid_proceso);
+
 			break;
 
 		case PEDIDO_PAGINA:

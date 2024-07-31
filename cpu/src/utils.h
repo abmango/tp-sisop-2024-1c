@@ -136,7 +136,7 @@ void* interrupt(void);
 
 execute_op_code decode(char* instruc);
 
-t_dictionary* crear_diccionario(t_contexto_de_ejecucion reg);
+t_dictionary* crear_diccionario(t_contexto_de_ejecucion* reg);
 
 int tamanio_de_desalojo(void);
 

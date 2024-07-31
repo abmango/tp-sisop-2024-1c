@@ -385,19 +385,19 @@ void sub_uint32(uint32_t* registro1, uint32_t* registro2) {
     void: sum_uint32 \
 )(x, y)
 
-t_dictionary* crear_diccionario(t_contexto_de_ejecucion reg)
+t_dictionary* crear_diccionario(t_contexto_de_ejecucion* reg)
 {
    t_dictionary* dicc = dictionary_create();
-   dictionary_put(dicc, "AX", &(reg.reg_cpu_uso_general.AX));
-   dictionary_put(dicc, "BX", &(reg.reg_cpu_uso_general.BX));
-   dictionary_put(dicc, "CX", &(reg.reg_cpu_uso_general.CX));
-   dictionary_put(dicc, "DX", &(reg.reg_cpu_uso_general.DX));
-   dictionary_put(dicc, "EAX", &(reg.reg_cpu_uso_general.EAX));
-   dictionary_put(dicc, "EBX", &(reg.reg_cpu_uso_general.EBX));
-   dictionary_put(dicc, "ECX", &(reg.reg_cpu_uso_general.ECX));
-   dictionary_put(dicc, "EDX", &(reg.reg_cpu_uso_general.EDX));
-   dictionary_put(dicc, "SI", &(reg.reg_cpu_uso_general.SI));
-   dictionary_put(dicc, "DI", &(reg.reg_cpu_uso_general.DI));
+   dictionary_put(dicc, "AX", &(reg->reg_cpu_uso_general.AX));
+   dictionary_put(dicc, "BX", &(reg->reg_cpu_uso_general.BX));
+   dictionary_put(dicc, "CX", &(reg->reg_cpu_uso_general.CX));
+   dictionary_put(dicc, "DX", &(reg->reg_cpu_uso_general.DX));
+   dictionary_put(dicc, "EAX", &(reg->reg_cpu_uso_general.EAX));
+   dictionary_put(dicc, "EBX", &(reg->reg_cpu_uso_general.EBX));
+   dictionary_put(dicc, "ECX", &(reg->reg_cpu_uso_general.ECX));
+   dictionary_put(dicc, "EDX", &(reg->reg_cpu_uso_general.EDX));
+   dictionary_put(dicc, "SI", &(reg->reg_cpu_uso_general.SI));
+   dictionary_put(dicc, "DI", &(reg->reg_cpu_uso_general.DI));
    return dicc;
 }
 

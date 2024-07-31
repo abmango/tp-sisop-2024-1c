@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
 	// Inicializar la TLB
 	init_tlb();
 
-	t_dictionary *diccionario = crear_diccionario(reg);
+	t_dictionary *diccionario = crear_diccionario(&reg);
 	char *instruccion;
 	reg = recibir_contexto_ejecucion();
 	while (1)
