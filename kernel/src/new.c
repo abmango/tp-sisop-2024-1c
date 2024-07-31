@@ -23,6 +23,7 @@ void* rutina_new(void* puntero_null) {
             pcb = list_remove(cola_new, 0);
             list_add(cola_ready, pcb);
             procesos_activos++;
+            sem_post(&sem_procesos_ready);
             log_info(log_kernel_oblig, "PID: %d - Estado Anterior: NEW - Estado Actual: READY", pcb->pid); // log Obligatorio
 
             pthread_mutex_unlock(&mutex_cola_ready);
