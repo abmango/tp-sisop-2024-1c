@@ -3,10 +3,12 @@
 // ==========================================================================
 // ====  Variables globales:  ===============================================
 // ==========================================================================
+algoritmo_corto_code cod_algoritmo_planif_corto;
 int grado_multiprogramacion;
 int procesos_activos = 0;
 int contador_pid = 0;
 bool hay_algun_proceso_en_exec = false;
+bool planificacion_pausada = false;
 
 t_list* cola_new = NULL;
 t_list* cola_ready = NULL;
@@ -203,7 +205,7 @@ void buscar_y_finalizar_proceso(int pid) {
 		estaba_activo = true;
 		estado_donde_estaba = string_from_format("READY");
 	}
-	else if (list_any_satisfy(cola_ready_plus, (void*)_es_el_proceso_buscado)) {
+	else if (cod_algoritmo_planif_corto == VRR && list_any_satisfy(cola_ready_plus, (void*)_es_el_proceso_buscado)) {
 		proceso = list_remove_by_condition(cola_ready_plus, (void*)_es_el_proceso_buscado);
 		estaba_activo = true;
 		estado_donde_estaba = string_from_format("READY");
@@ -254,12 +256,14 @@ void buscar_y_finalizar_proceso(int pid) {
 
 bool proceso_esta_en_ejecucion(int pid) {
 	if (hay_algun_proceso_en_exec) {
-		
+		if (proceso_exec != NULL) {
+			return proceso_exec->pid == pid;
+		}
+		else {
+			return false;
+		}
 	}
-	if (proceso_exec != NULL) {
-		return proceso_exec->pid == pid;
-	}
-    else {
+	else {
 		return false;
 	}
 }
@@ -505,10 +509,14 @@ void imprimir_pid_de_lista_de_pcb(t_list* lista_de_pcb) {
     }
 }
 
-void imprimir_pid_de_lista_de_pcb_sin_msj_si_esta_vacia(t_list* lista_de_pcb) {
-    if(!list_is_empty(lista_de_pcb)) {
-        list_iterate(lista_de_pcb, (void*)imprimir_pid_de_pcb);
+bool imprimir_pid_de_lista_de_pcb_sin_msj_si_esta_vacia(t_list* lista_de_pcb) {
+    if(list_is_empty(lista_de_pcb)) {
+		return true;
     }
+	else {
+		list_iterate(lista_de_pcb, (void*)imprimir_pid_de_pcb);
+		return false;
+	}
 }
 
 void imprimir_pid_de_estado_blocked() {

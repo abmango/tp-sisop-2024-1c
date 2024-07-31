@@ -157,7 +157,7 @@ resultado_operacion crear_proceso (t_list *solicitud, t_proceso *proceso)
     
     retardo_operacion();
     if (proceso->instrucciones == NULL){
-        printf("Script no cargo");
+        log_debug(log_memoria_gral, "Script no cargo");
         limpiar_estructura_proceso(proceso);
         proceso = NULL;
         return ERROR;

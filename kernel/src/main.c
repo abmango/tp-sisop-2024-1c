@@ -21,7 +21,7 @@ int main(int argc, char* argv[]) {
 
 	t_dictionary* diccionario_algoritmos_corto_plazo = crear_e_inicializar_diccionario_algoritmos_corto_plazo();
 	char* algoritmo_planificacion_corto = config_get_string_value(config, "ALGORITMO_PLANIFICACION");
-	algoritmo_corto_code cod_algoritmo_planif_corto = *(algoritmo_corto_code*)dictionary_get(diccionario_algoritmos_corto_plazo, algoritmo_planificacion_corto);
+	cod_algoritmo_planif_corto = *(algoritmo_corto_code*)dictionary_get(diccionario_algoritmos_corto_plazo, algoritmo_planificacion_corto);
 
 	if (cod_algoritmo_planif_corto == VRR) {
 		cola_ready_plus = list_create();
@@ -136,8 +136,8 @@ t_dictionary* crear_e_inicializar_diccionario_algoritmos_corto_plazo(void) {
     return diccionario;
 }
 
-void escuchar_y_atender_nuevas_io(algoritmo_corto_code cod_algoritmo_planif, int socket_de_escucha) {
-	if (cod_algoritmo_planif == FIFO || cod_algoritmo_planif == RR) {
+void escuchar_y_atender_nuevas_io(int socket_de_escucha) {
+	if (cod_algoritmo_planif_corto == FIFO || cod_algoritmo_planif_corto == RR) {
 		while(1) {
 			int socket_io = esperar_cliente(socket_de_escucha);
 			t_io_blocked* io = recibir_handshake_y_datos_de_nueva_io_y_responder(socket_io);
@@ -153,7 +153,7 @@ void escuchar_y_atender_nuevas_io(algoritmo_corto_code cod_algoritmo_planif, int
 			}
 		}
 	}
-	if (cod_algoritmo_planif == VRR) {
+	if (cod_algoritmo_planif_corto == VRR) {
 		while(1) {
 			int socket_io = esperar_cliente(socket_de_escucha);
 			t_io_blocked* io = recibir_handshake_y_datos_de_nueva_io_y_responder(socket_io);

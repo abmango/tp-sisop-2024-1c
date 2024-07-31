@@ -58,6 +58,8 @@ void* rutina_recepcion(void *nada)
 	int aux_socket_cliente_temp;
 	pthread_mutex_init(&mutex_socket_cliente_temp, NULL);
 
+	log_debug(log_memoria_gral, "Hilo recepcion listo.");
+
 	while (!fin_programa) {
 		// acá hice una pequenia modif. para que pueda esperar_cliente() más rápido.
 		aux_socket_cliente_temp = esperar_cliente(socket_escucha);
@@ -94,11 +96,15 @@ void* rutina_ejecucion(void *nada)
 	int socket_cliente = socket_cliente_temp;
 	pthread_mutex_unlock(&mutex_socket_cliente_temp);
 
+	log_debug(log_memoria_gral, "Hilo ejecucion creado");
+
 	// En caso de handshake fallido, termina la rutina_ejecucion().
 	bool handshake_aceptado = recibir_y_manejar_handshake_conexiones_temp(socket_cliente, &nombre);
 	if (!handshake_aceptado) {
 		return NULL;
 	}
+
+	log_debug(log_memoria_gral, "Hilo ejecucion listo para atender a %s", nombre);
 
 	// no es bucles porque plantee que IOs y Kernel hagan conexiones descartables
 	operacion = recibir_codigo(socket_cliente);
@@ -420,13 +426,13 @@ void terminar_programa(int socket_cpu)
 	config_destroy(config);
 }
 
-void iniciar_logger() // tendria q modificarse al tener 2 logs >> No Compila
+void iniciar_logger()
 {
 	log_memoria_oblig = log_create("memoria_oblig.log", "Memoria", true, LOG_LEVEL_INFO);
 	if(log_memoria_oblig == NULL){
 		printf("No se pudo crear un log");
 	}
-	log_memoria_gral = log_create("memoria_gral.log", "Memoria", true, LOG_LEVEL_INFO);
+	log_memoria_gral = log_create("memoria_gral.log", "Memoria", true, LOG_LEVEL_DEBUG);
 	if(log_memoria_gral == NULL){
 		printf("No se pudo crear un log");
 	}

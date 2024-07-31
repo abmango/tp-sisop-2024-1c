@@ -14,43 +14,7 @@ void *rutina_consola(void *puntero_NULL)
 
         if (strcmp(palabras_comando_ingresado[0], "EJECUTAR_SCRIPT") == 0)
         {
-            FILE *f = fopen(palabras_comando_ingresado[1], "r+b");
-
-            char *comando_a_ejecutar;
-            char **palabras_comando_a_ejecutar;
-
-            while (fgets(comando_a_ejecutar, 100, f) != NULL)
-            {
-                comando_a_ejecutar[strcspn(comando_a_ejecutar, "\n")] = 0;
-                palabras_comando_a_ejecutar = string_split(comando_a_ejecutar, " ");
-
-                if (strcmp(palabras_comando_a_ejecutar[0], "INICIAR_PROCESO") == 0)
-                {
-                    op_iniciar_proceso(palabras_comando_a_ejecutar[1], ip_memoria, puerto_memoria);
-                }
-                else if (strcmp(palabras_comando_a_ejecutar[0], "FINALIZAR_PROCESO") == 0)
-                {
-                    op_finalizar_proceso(atoi(palabras_comando_a_ejecutar[1]));
-                }
-                else if (strcmp(palabras_comando_a_ejecutar[0], "DETENER_PLANIFICACION") == 0)
-                {
-                }
-                else if (strcmp(palabras_comando_a_ejecutar[0], "INICIAR_PLANIFICACION") == 0)
-                {
-                }
-                else if (strcmp(palabras_comando_a_ejecutar[0], "MULTIPROGRAMACION") == 0)
-                {
-                }
-                else if (strcmp(palabras_comando_a_ejecutar[0], "PROCESO_ESTADO") == 0)
-                {
-                    op_proceso_estado();
-                }
-
-                string_array_destroy(palabras_comando_a_ejecutar);
-                free(comando_a_ejecutar);
-            }
-
-            fclose(f);
+            op_ejecutar_script(palabras_comando_ingresado[1], ip_memoria, puerto_memoria);
         }
         else if (strcmp(palabras_comando_ingresado[0], "INICIAR_PROCESO") == 0)
         {
@@ -62,9 +26,11 @@ void *rutina_consola(void *puntero_NULL)
         }
         else if (strcmp(palabras_comando_ingresado[0], "DETENER_PLANIFICACION") == 0)
         {
+            op_detener_planificacion();
         }
         else if (strcmp(palabras_comando_ingresado[0], "INICIAR_PLANIFICACION") == 0)
         {
+            op_iniciar_planificacion();
         }
         else if (strcmp(palabras_comando_ingresado[0], "MULTIPROGRAMACION") == 0)
         {
@@ -87,14 +53,55 @@ void *rutina_consola(void *puntero_NULL)
 
 ///////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////
+void op_ejecutar_script(char* path, char* ip_memoria, char* puerto_memoria)
+{
+    FILE *f = fopen(path, "r+b");
 
-void op_proceso_estado()
+    char *comando_a_ejecutar;
+    char **palabras_comando_a_ejecutar;
+
+    while (fgets(comando_a_ejecutar, 100, f) != NULL)
+    {
+        comando_a_ejecutar[strcspn(comando_a_ejecutar, "\n")] = 0;
+        palabras_comando_a_ejecutar = string_split(comando_a_ejecutar, " ");
+
+        if (strcmp(palabras_comando_a_ejecutar[0], "INICIAR_PROCESO") == 0)
+        {
+            op_iniciar_proceso(palabras_comando_a_ejecutar[1], ip_memoria, puerto_memoria);
+        }
+        else if (strcmp(palabras_comando_a_ejecutar[0], "FINALIZAR_PROCESO") == 0)
+        {
+            op_finalizar_proceso(atoi(palabras_comando_a_ejecutar[1]));
+        }
+        else if (strcmp(palabras_comando_a_ejecutar[0], "DETENER_PLANIFICACION") == 0)
+        {
+            op_detener_planificacion();
+        }
+        else if (strcmp(palabras_comando_a_ejecutar[0], "INICIAR_PLANIFICACION") == 0)
+        {
+            op_iniciar_planificacion();
+        }
+        else if (strcmp(palabras_comando_a_ejecutar[0], "MULTIPROGRAMACION") == 0)
+        {
+        }
+        else if (strcmp(palabras_comando_a_ejecutar[0], "PROCESO_ESTADO") == 0)
+        {
+            op_proceso_estado();
+        }
+
+        string_array_destroy(palabras_comando_a_ejecutar);
+        free(comando_a_ejecutar);
+    }
+
+    fclose(f);
+}
+
+void op_proceso_estado(void)
 {
     imprimir_mensaje("PROCESOS EN NEW:");
     imprimir_pid_de_lista_de_pcb(cola_new);
     imprimir_mensaje("PROCESOS EN READY:");
-    imprimir_pid_de_lista_de_pcb_sin_msj_si_esta_vacia(cola_ready_plus);
-    if (list_is_empty(cola_ready_plus))
+    if (imprimir_pid_de_lista_de_pcb_sin_msj_si_esta_vacia(cola_ready_plus);)
     {
         imprimir_pid_de_lista_de_pcb(cola_ready);
     }
@@ -103,7 +110,7 @@ void op_proceso_estado()
         imprimir_pid_de_lista_de_pcb_sin_msj_si_esta_vacia(cola_ready);
     }
     imprimir_mensaje("PROCESO EN EXEC:");
-    if (proceso_exec != NULL)
+    if (hay_algun_proceso_en_exec)
     {
         imprimir_pid_de_pcb(proceso_exec);
     }
@@ -176,7 +183,7 @@ void op_finalizar_proceso(int pid)
     pthread_mutex_lock(&mutex_proceso_exec);
     if (proceso_esta_en_ejecucion(pid))
     {
-        enviar_orden_de_interrupcion(FINALIZAR_PROCESO); // y luego lo maneja desde el planificador corto
+        enviar_orden_de_interrupcion(FINALIZAR); // y luego lo maneja desde el planificador corto
     }
     else
     {
@@ -197,6 +204,45 @@ void op_finalizar_proceso(int pid)
         pthread_mutex_unlock(&mutex_procesos_activos);
     }
     pthread_mutex_unlock(&mutex_proceso_exec);
+}
+
+void op_detener_planificacion(void)
+{
+    if(!planificacion_pausada) {
+        pthread_mutex_lock(&mutex_proceso_exec);
+        pthread_mutex_lock(&mutex_cola_new);
+        pthread_mutex_lock(&mutex_cola_ready);
+        pthread_mutex_lock(&mutex_cola_ready_plus);
+        pthread_mutex_lock(&mutex_lista_io_blocked);
+        pthread_mutex_lock(&mutex_lista_recurso_blocked);
+        pthread_mutex_lock(&mutex_cola_exit);
+
+        planificacion_pausada = true;
+
+        log_debug(log_kernel_gral, "Se pausó la planificación");
+    }
+    else {
+        log_warning(log_kernel_gral, "La planificación ya estaba pausada.");
+    }
+}
+
+void op_iniciar_planificacion(void) {
+    if(planificacion_pausada) {
+        pthread_mutex_unlock(&mutex_cola_exit);
+        pthread_mutex_unlock(&mutex_lista_recurso_blocked);
+        pthread_mutex_unlock(&mutex_lista_io_blocked);
+        pthread_mutex_unlock(&mutex_cola_ready_plus);
+        pthread_mutex_unlock(&mutex_cola_ready);
+        pthread_mutex_unlock(&mutex_cola_new);
+        pthread_mutex_unlock(&mutex_proceso_exec);
+
+        planificacion_pausada = false;
+
+        log_debug(log_kernel_gral, "Se reanudó la planificación");
+    }
+    else {
+        log_warning(log_kernel_gral, "La planificación no esta pausada.");
+    }
 }
 
 // ==========================================================================

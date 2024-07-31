@@ -13,13 +13,13 @@ void *rutina_consola(void *puntero_NULL);
 // ==========================================================================
 // ====  Operaciones:  ======================================================
 // ==========================================================================
-void op_ejecutar_script();
+void op_ejecutar_script(char* path, char* ip_memoria, char* puerto_memoria);
 void op_iniciar_proceso(char* path, char* ip_mem, char* puerto_mem);
 void op_finalizar_proceso(int pid);
-void op_detener_planificacion();
-void op_iniciar_planificacion();
+void op_detener_planificacion(void);
+void op_iniciar_planificacion(void);
 void op_multiprogramacion();
-void op_proceso_estado();
+void op_proceso_estado(void);
 
 // ==========================================================================
 // ====  Abortar operaciones:  ==============================================

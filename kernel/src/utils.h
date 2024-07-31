@@ -31,10 +31,12 @@ typedef enum
 // ==========================================================================
 // ====  Variables globales:  ===============================================
 // ==========================================================================
+extern algoritmo_corto_code cod_algoritmo_planif_corto; // cod algoritmo planif. Obtenido del diccionario con la key del archivo config
 extern int grado_multiprogramacion; // Viene del archivo config
 extern int procesos_activos; // Cantidad de procesos en READY, BLOCKED, o EXEC
 extern int contador_pid; // Contador. Para asignar diferente pid a cada nuevo proceso.
 extern bool hay_algun_proceso_en_exec;
+extern bool planificacion_pausada;
 
 extern t_list* cola_new; // Estado NEW. Es una lista de t_pcb*
 extern t_list* cola_ready; // Estado READY. Es una lista de t_pcb*
@@ -110,7 +112,7 @@ void liberar_recursos_retenidos(t_pcb* pcb);
 void buscar_y_finalizar_proceso(int pid);
 
 /// @brief Se fija si el proceso esta en EXEC.
-/// @param pid : pid del proceso a buscar y finalizar.
+/// @param pid : pid del proceso a buscar.
 /// @return    : retorna true si lo está, false si no lo está.
 bool proceso_esta_en_ejecucion(int pid);
 
@@ -157,7 +159,10 @@ char* string_lista_de_pid_de_lista_de_pcb(t_list* lista_de_pcb);
 // FUNCIONES AUXILIARES PARA MANEJAR LAS LISTAS DE ESTADOS:
 void imprimir_pid_de_pcb(t_pcb* pcb);
 void imprimir_pid_de_lista_de_pcb(t_list* lista_de_pcb);
-void imprimir_pid_de_lista_de_pcb_sin_msj_si_esta_vacia(t_list* lista_de_pcb);
+
+// retorna true si esta vacia, o false si no lo está.
+bool imprimir_pid_de_lista_de_pcb_sin_msj_si_esta_vacia(t_list* lista_de_pcb);
+
 void imprimir_pid_de_estado_blocked();
 
 #endif /* UTILS_H_ */

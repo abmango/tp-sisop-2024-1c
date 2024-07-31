@@ -13,7 +13,7 @@ void* rutina_quantum(void *puntero_null) {
     usleep(quantum_en_microsegs);
 
     pthread_mutex_lock(&mutex_rutina_quantum);
-    enviar_orden_de_interrupcion(INTERRUPCION);
+    enviar_orden_de_interrupcion(DESALOJAR);
     pthread_mutex_unlock(&mutex_rutina_quantum);
     
     return NULL;
