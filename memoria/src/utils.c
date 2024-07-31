@@ -321,7 +321,7 @@ t_list * cargar_instrucciones (char *directorio)
     char *lineaInstruccion; 
     char *dir_completa = config_get_string_value(config,"PATH_INSTRUCCIONES");
     strcat(dir_completa, directorio);
-    strcat(dir_completa, ".txt"); // si no encuentra archivo eliminar
+    //strcat(dir_completa, ".txt"); // si no encuentra archivo eliminar
 
     archivo = fopen(dir_completa, "r");
     free(dir_completa);
