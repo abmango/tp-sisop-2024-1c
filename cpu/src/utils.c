@@ -193,8 +193,8 @@ void* serializar_desalojo(t_desalojo desalojo)
 char* fetch(uint32_t PC, int pid)
 {
    t_paquete* paq = crear_paquete(SIGUIENTE_INSTRUCCION);
-   agregar_a_paquete(paq, &PC, sizeof(uint32_t));
    agregar_a_paquete(paq, &pid, sizeof(int));
+   agregar_a_paquete(paq, &PC, sizeof(uint32_t));
    enviar_paquete(paq, socket_memoria);
    eliminar_paquete(paq);
    t_list* list = list_create();

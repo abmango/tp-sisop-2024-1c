@@ -152,7 +152,7 @@ resultado_operacion crear_proceso (t_list *solicitud, t_proceso *proceso)
     data = list_get(solicitud, 0);
     proceso->pid = *(int*) data;
     data = list_get(solicitud, 1);
-    proceso->instrucciones = cargar_instrucciones(data);
+    proceso->instrucciones = cargar_instrucciones(data, proceso->pid);
     proceso->tabla_paginas = list_create();
     
     retardo_operacion();
@@ -315,11 +315,15 @@ void limpiar_estructura_proceso (t_proceso * proc)
     free(proc);
 }
 
-t_list *cargar_instrucciones(char *directorio)
+t_list *cargar_instrucciones(char *directorio, int pid)
 {
     FILE *archivo;
-    char *lineaInstruccion; 
+    size_t lineaSize = 0; // esto es necesario para que getline() funcione bien
+    char *lineaInstruccion = NULL; // esto es necesario para que getline() funcione bien
+    int cant_instrucciones_cargadas = 0;
     char *base_dir = config_get_string_value(config, "PATH_INSTRUCCIONES");
+
+    log_debug(log_memoria_gral, "Cargando instrucciones de proceso %d....", pid);
     
     // Crear una nueva cadena para la ruta completa
     size_t tamano_ruta = strlen(base_dir) + strlen(directorio) + 1;
@@ -334,28 +338,26 @@ t_list *cargar_instrucciones(char *directorio)
     free(dir_completa); // ahora podemos liberar la memoria de dir_completa
 
     if (archivo == NULL) {
-        return NULL;
-    }
-    
-    lineaInstruccion = malloc(LONGITUD_LINEA_ARCHIVOS);
-    if (lineaInstruccion == NULL) {
-        fclose(archivo);
+        log_error(log_memoria_gral, "No se pudo abrir el archivo de instrucciones");
         return NULL;
     }
 
     t_list *lista = list_create();
     if (lista == NULL) {
-        free(lineaInstruccion);
+        log_error(log_memoria_gral, "No se pudo crear la lista para cargar las instrucciones leidas");
         fclose(archivo);
         return NULL;
     }
 
-    while (fgets(lineaInstruccion, LONGITUD_LINEA_ARCHIVOS, archivo) != NULL) {
+    while (getline(&lineaInstruccion, &lineaSize, archivo) != -1) {
         char *instruccion_copia = strdup(lineaInstruccion); // Copiar la línea leída
         if (instruccion_copia != NULL) {
             list_add(lista, instruccion_copia);
+            cant_instrucciones_cargadas++;
         }
     }
+
+    log_debug(log_memoria_gral, "Se cargaron correctamente %d instrucciones para el proceso %d", cant_instrucciones_cargadas, pid);
 
     fclose(archivo);
     free(lineaInstruccion);

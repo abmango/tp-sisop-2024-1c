@@ -146,7 +146,7 @@ resultado_operacion acceso_espacio_usuario(t_buffer *data, t_list *solicitudes,t
 
 void liberar_memoria(void);
 void limpiar_estructura_proceso (t_proceso * proc);
-t_list * cargar_instrucciones (char *directorio);
+t_list * cargar_instrucciones (char *directorio, int pid); // le agrego pid para loguear mejor
 int obtener_indice_frame(void *ref_frame); // recibe ref frame y calcula numero marco
 void * obtener_frame_libre(void);
 int obtener_proceso(t_list *lista, int pid); // busca proceso x pid y retorna la posicion en lista

@@ -231,7 +231,9 @@ void atender_cpu(int socket)
 	t_proceso *proceso;
 	int frame; 
 
-	while (!fin_programa) { // INSTRUCCIONES - PEDIDO_PAGINA 
+	log_debug(log_memoria_gral, "Memoria lista para atender al cpu.");
+
+	while (!fin_programa) { // INSTRUCCIONES - PEDIDO_PAGINA
 		operacion = recibir_codigo(socket);
 		switch (operacion) {
 		case PAQUETE_TEMPORAL: // lo mantengo solo por si lo usaban para testeo... ideal seria borrarlo
@@ -241,6 +243,7 @@ void atender_cpu(int socket)
 			break;
 
 		case ACCESO_LECTURA:
+			log_debug(log_memoria_gral, "CPU ha Solicitado ACCESO_LECTURA");
 		
 			recibido = recibir_paquete(socket);
 			result = acceso_espacio_usuario(data, recibido, LECTURA);
@@ -264,6 +267,7 @@ void atender_cpu(int socket)
 			break;
 
 		case ACCESO_ESCRITURA:
+			log_debug(log_memoria_gral, "CPU ha Solicitado ACCESO_ESCRITURA");
 			
 			recibido = recibir_paquete(socket);
 			data->stream = list_remove(recibido, list_size(recibido)-1); // obtiene el string
@@ -289,6 +293,7 @@ void atender_cpu(int socket)
 			break;
 
 		case AJUSTAR_PROCESO:
+			log_debug(log_memoria_gral, "CPU ha Solicitado AJUSTAR_PROCESO");
 
 			recibido = recibir_paquete(socket);
 			// obtiene el proceso pedido
@@ -319,16 +324,18 @@ void atender_cpu(int socket)
 			break;
 
 		case SIGUIENTE_INSTRUCCION:
+			log_debug(log_memoria_gral, "CPU ha Solicitado SIGUIENTE_INSTRUCCION");
 
 			recibido = recibir_paquete(socket);
 			aux = list_get(recibido, 0);
+			int backup_pid_proceso = *(int*)aux; // agrego esto para poder loguear mas abajo
 			// verifica si tiene el proceso en variable
 			if (proceso == NULL || proceso->pid != *(int*)aux ){
 				proceso = proceso_en_ejecucion(procesos_cargados, *(int*)aux );
 			}
 			// chequea q instruccion sea valida
 			aux2 = list_get(recibido, 1);
-			if (*(int*)aux2 < 0 || *(int*)aux2 > list_size(proceso->instrucciones) ){
+			if (*(uint32_t*)aux2 < 0 || *(uint32_t*)aux2 > list_size(proceso->instrucciones) ){
 				paquete = crear_paquete(MENSAJE_ERROR);
 				enviar_paquete(paquete, socket);
 				eliminar_paquete(paquete);
@@ -336,13 +343,14 @@ void atender_cpu(int socket)
 					aux = list_remove(recibido, 0);
 					free(aux);
 				}
+				log_error(log_memoria_gral, "El proceso %d pidio una instruccion que no es posible darle", backup_pid_proceso);
 				list_clean(recibido);
 				continue;
 			}
 			// obtiene instruccion
-			aux = list_get(proceso->instrucciones, *(int*)aux2 );
+			aux = list_get(proceso->instrucciones, *(uint32_t*)aux2 );
 			paquete = crear_paquete(SIGUIENTE_INSTRUCCION);
-			agregar_a_paquete(paquete, aux, strlen(aux));
+			agregar_a_paquete(paquete, aux, strlen(aux)+1); // agrego +1 al strlen(), para no comernos el '/0' XD
 			
 			enviar_paquete(paquete, socket);
 
@@ -356,6 +364,7 @@ void atender_cpu(int socket)
 			break;
 
 		case PEDIDO_PAGINA:
+			log_debug(log_memoria_gral, "CPU ha Solicitado PEDIDO_PAGINA");
 
 			recibido = recibir_paquete(socket);
 			aux = list_get(recibido, 0);
@@ -401,11 +410,11 @@ void atender_cpu(int socket)
 			break;
 
 		case -1:
-			log_debug(log_memoria_gral, "el cpu se desconecto.");
+			log_debug(log_memoria_gral, "El CPU se desconecto.");
 			fin_programa = true;
 			break;
 		default:
-			log_warning(log_memoria_gral, "Operacion desconocida recibida de cpu. No quieras meter la pata");
+			log_warning(log_memoria_gral, "Operacion desconocida recibida de CPU. No quieras meter la pata");
 			break;
 		}
 	}
