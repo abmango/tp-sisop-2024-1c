@@ -3,8 +3,6 @@
 // ==========================================================================
 // ====  Variables globales:  ===============================================
 // ==========================================================================
-int socket_escucha_dispatch = 1;
-int socket_escucha_interrupt = 1;
 
 t_contexto_de_ejecucion reg;
 int tamanio_pagina;
@@ -14,8 +12,9 @@ t_config* config;
 int socket_memoria = 1;
 int socket_kernel_dispatch = 1;
 int socket_kernel_interrupt = 1;
+t_interrupt_code interrupcion = 0;
 
-t_interrupt_code interrupcion = NADA;
+pthread_mutex_t mutex_interrupcion;
 
 t_log* log_cpu_oblig;
 t_log* log_cpu_gral;
@@ -60,7 +59,7 @@ bool recibir_y_manejar_handshake_kernel(int socket) {
     return exito_handshake;
 }
 
-t_paquete* desalojar_registros(t_contexto_de_ejecucion reg, int motiv)
+t_paquete* desalojar_registros(int motiv)
 {
    t_desalojo desalojo;
    desalojo.contexto = reg;
@@ -74,22 +73,23 @@ t_paquete* desalojar_registros(t_contexto_de_ejecucion reg, int motiv)
 
 void* interrupt(void)
 {
-   int cod;
-   while(1)
-   {
-      cod = recibir_codigo(socket_kernel_interrupt);
-      if(cod == FINALIZAR){
-         pthread_mutex_lock(&mutex_interrupt);
-         interrupcion = cod;
-         pthread_mutex_unlock(&mutex_interrupt); 
+   while(1){ //cambiar a fin de programa
+      t_list* interrupt = list_create();
+      if(recibir_codigo(socket_kernel_interrupt) != INTERRUPCION){
+         log_debug(log_cpu_gral, "Error al recibir interrupcion");
+         exit(3);
       }
-      if(cod == DESALOJAR){
-         if(interrupcion != FINALIZAR){
-            pthread_mutex_lock(&mutex_interrupt);
-            interrupcion = cod;
-            pthread_mutex_unlock(&mutex_interrupt);
-         }
+      interrupt = recibir_paquete(socket_kernel_interrupt);
+      int* pid = list_take(interrupt, 1);
+      int* interrupcion_recibida = list_take(interrupt, 0);
+      list_destroy(interrupt);
+      pthread_mutex_lock(&mutex_interrupcion);
+      if(*pid == reg.pid){
+         interrupcion = *interrupcion_recibida;
       }
+      pthread_mutex_unlock(&mutex_interrupcion);
+      free(pid);
+      free(interrupcion_recibida);
    }
 } 
 
@@ -160,12 +160,15 @@ t_contexto_de_ejecucion recibir_contexto_ejecucion(void)
       imprimir_mensaje("error: operacion desconocida.");
       exit(3);
    }
+   pthread_mutex_lock(&mutex_interrupcion);
    int size = 0;
    void* buffer;
    buffer = recibir_buffer(&size, socket_kernel_dispatch);
    int desplazamiento = 0;
    t_contexto_de_ejecucion ce = deserializar_contexto_de_ejecucion(buffer, desplazamiento); 
    free(buffer);
+   interrupcion = NADA;
+   pthread_mutex_unlock(&mutex_interrupcion);
    return ce;
 }
 
@@ -212,7 +215,7 @@ void* leer_memoria(int dir_logica, int tamanio)
    t_list* aux = list_create();
    int codigo_paq = recibir_codigo(socket_memoria);
    if (codigo_paq != ACCESO_LECTURA){
-      //error
+      log_debug(log_cpu_gral,"Error con respuesta de acceso de lectura");
    }
    aux = recibir_paquete(socket_memoria);
    void* resultado = list_remove(aux, 0);
@@ -222,21 +225,21 @@ void* leer_memoria(int dir_logica, int tamanio)
    
 }
 
-void check_interrupt(t_contexto_de_ejecucion reg)
+void check_interrupt()
 {
    switch (interrupcion){
-      case NADA:
-      break;
-      case DESALOJAR:
-      t_paquete* paq = desalojar_registros(reg, INTERRUPTED_BY_QUANTUM); //desalojar mal llamado
-      enviar_paquete(paq,socket_kernel_dispatch);
-      eliminar_paquete(paq);
-      break;
-      case FINALIZAR:
-      paq = desalojar_registros(reg, INTERRUPTED_BY_USER);
-      enviar_paquete(paq,socket_kernel_dispatch);
-      eliminar_paquete(paq);
-      break;
+      case DESALOJAR:{
+         t_paquete* paq = desalojar_registros(INTERRUPTED_BY_QUANTUM);
+         enviar_paquete(paq, socket_kernel_dispatch);
+         eliminar_paquete(paq);
+         break;
+      }
+      case FINALIZAR:{
+         t_paquete* paq = desalojar_registros(INTERRUPTED_BY_USER);
+         enviar_paquete(paq, socket_kernel_interrupt);
+         eliminar_paquete(paq);
+         break;
+      }
    }
 }
 
@@ -401,8 +404,6 @@ void terminar_programa(t_config *config)
 	liberar_conexion(log_cpu_gral, "Memoria", socket_memoria);
 	liberar_conexion(log_cpu_gral, "Kernel del puerto Dispatch", socket_kernel_dispatch);
 	liberar_conexion(log_cpu_gral, "Kernel del puerto Interrupt", socket_kernel_interrupt);
-	liberar_conexion(log_cpu_gral, "Mi propio servidor escucha del puerto Dispatch", socket_escucha_dispatch);
-	liberar_conexion(log_cpu_gral, "Mi propio servidor escucha del puerto Interrupt", socket_escucha_interrupt);
 	log_destroy(log_cpu_oblig);
 	log_destroy(log_cpu_gral);
 	config_destroy(config);
@@ -493,18 +494,18 @@ void tlb_flush() {
 
 void agregar_mmu_paquete(t_paquete* paq, int direccion_logica, int tamanio){
    t_list* aux = list_create();
-			aux = mmu(direccion_logica,tamanio);
-			t_mmu* aux2;
+	aux = mmu(direccion_logica,tamanio);
+	t_mmu* aux2;
 
-         int contador = 0;
-			while(!list_is_empty(aux))
-			{
-				aux2 = list_remove(aux,contador);
-				agregar_a_paquete(paq, &(aux2->direccion), sizeof(int));
-				agregar_a_paquete(paq, &(aux2->tamanio), sizeof(int));
-            contador++;
-				free(aux2);
-			}
+   int contador = 0;
+	while(!list_is_empty(aux))
+	{
+		aux2 = list_remove(aux,contador);
+		agregar_a_paquete(paq, &(aux2->direccion), sizeof(int));
+		agregar_a_paquete(paq, &(aux2->tamanio), sizeof(int));
+      contador++;
+		free(aux2);
+   }
 
-			list_destroy(aux);
+	list_destroy(aux);
 }
