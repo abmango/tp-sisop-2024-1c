@@ -5,27 +5,19 @@
 
 #include "main.h"
 
-// falta agregar pid en recibir contexto, es necesario para comunicarse con memoria, tambien hay q enviarlo en kernel
-//  tambien necesito el tamanio de la pag
-// falta TLB
-
 int main(int argc, char *argv[])
 {
-
 	decir_hola("CPU");
-
 	config = iniciar_config("default");
-
 	log_cpu_gral = log_create("cpu_general.log", "CPU", true, LOG_LEVEL_DEBUG);
 	log_cpu_oblig = log_create("cpu_obligatorio.log", "CPU", true, LOG_LEVEL_DEBUG);
-
 	pthread_mutex_init(&mutex_interrupcion, NULL);
 
-	// Me conecto con Memoria
+	// CONEXION MEMORIA
 	char *ip = config_get_string_value(config, "IP_MEMORIA");
 	char *puerto = config_get_string_value(config, "PUERTO_MEMORIA");
 	socket_memoria = crear_conexion(ip, puerto);
-	// Envio y recibo contestacion de handshake. En caso de no ser exitoso, termina la ejecucion del módulo.
+
 	enviar_handshake(CPU, socket_memoria);
 	bool handshake_memoria_exitoso = recibir_y_manejar_rta_handshake(log_cpu_gral, "Memoria", socket_memoria);
 	if (!handshake_memoria_exitoso) {
@@ -44,13 +36,13 @@ int main(int argc, char *argv[])
 
 	// Espero que se conecte el Kernel en puerto Dispatch
 	socket_kernel_dispatch = esperar_cliente(socket_escucha_dispatch);
-	// Recibo y contesto handshake. En caso de no ser aceptado, termina la ejecucion del módulo.
+
 	bool handshake_kernel_dispatch_aceptado = recibir_y_manejar_handshake_kernel(socket_kernel_dispatch);
 	if (!handshake_kernel_dispatch_aceptado) {
 		terminar_programa(config);
 		return EXIT_FAILURE;
 	}
-	close(socket_escucha_dispatch);
+	liberar_conexion(log_cpu_gral, "escucha_dispatch", socket_escucha_dispatch);
 
 	// Espero que se conecte el Kernel en puerto Interrupt
 	socket_kernel_interrupt = esperar_cliente(socket_escucha_interrupt);
@@ -60,7 +52,7 @@ int main(int argc, char *argv[])
 		terminar_programa(config);
 		return EXIT_FAILURE;
 	}
-	close(socket_escucha_interrupt);
+	liberar_conexion(log_cpu_gral, "escucha_interrupt", socket_escucha_interrupt);
 
 	pthread_t interrupciones;
 	pthread_create(&interrupciones, NULL, (void *)interrupt, NULL); // hilo pendiente de escuchar las interrupciones
