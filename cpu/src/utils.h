@@ -26,13 +26,9 @@
 extern t_contexto_de_ejecucion reg;
 extern int tamanio_pagina;
 
-extern int socket_escucha_dispatch;
-extern int socket_escucha_interrupt;
-
 extern int socket_memoria;
 extern int socket_kernel_dispatch;
 extern int socket_kernel_interrupt;
-
 extern t_interrupt_code interrupcion;
 
 extern t_log* log_cpu_oblig; // logger para los logs obligatorios
@@ -40,6 +36,7 @@ extern t_log* log_cpu_gral; // logger para los logs nuestros. Loguear con criter
 
 extern t_config* config;
 
+extern pthread_mutex_t mutex_interrupcion;
 
 
 // ==========================================================================
@@ -94,6 +91,7 @@ typedef struct{
 } t_mmu;
 
 
+
 // void SET (void* registro, void* elemento);
 // void MOV_IN (Registro Datos, Registro Dirección);
 // void MOV_OUT (Registro Dirección, Registro Datos);
@@ -123,12 +121,12 @@ typedef struct{
 
 bool recibir_y_manejar_handshake_kernel(int socket);
 
-void desalojar(t_contexto_de_ejecucion ce, motivo_desalojo_code motiv, char** arg);
+t_paquete* desalojar_registros(int motiv);
 t_contexto_de_ejecucion recibir_contexto_ejecucion(void);
 void* serializar_desalojo(t_desalojo desalojo);
 char* fetch(uint32_t PC, int pid);
 void* leer_memoria(int dir_logica, int tamanio);
-void check_interrupt(t_contexto_de_ejecucion reg);
+void check_interrupt();
 void pedir_io(t_contexto_de_ejecucion reg, motivo_desalojo_code opcode, char** arg);
 t_list* mmu(int dir_logica, int tamanio);
 void enviar_memoria(int direccion, int tamanio, void* valor);

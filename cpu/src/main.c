@@ -16,10 +16,10 @@ int main(int argc, char *argv[])
 
 	config = iniciar_config("default");
 
-	pthread_mutex_init(&mutex_interrupt, NULL);
-
 	log_cpu_gral = log_create("cpu_general.log", "CPU", true, LOG_LEVEL_DEBUG);
 	log_cpu_oblig = log_create("cpu_obligatorio.log", "CPU", true, LOG_LEVEL_DEBUG);
+
+	pthread_mutex_init(&mutex_interrupcion, NULL);
 
 	// Me conecto con Memoria
 	char *ip = config_get_string_value(config, "IP_MEMORIA");
@@ -35,30 +35,32 @@ int main(int argc, char *argv[])
 
 	// Inicio servidor de escucha en puerto Dispatch
 	puerto = config_get_string_value(config, "PUERTO_ESCUCHA_DISPATCH");
-	socket_escucha_dispatch = iniciar_servidor(puerto);
+	int socket_escucha_dispatch = iniciar_servidor(puerto);
 
 	// Inicio servidor de escucha en puerto Interrupt
 	puerto = config_get_string_value(config, "PUERTO_ESCUCHA_INTERRUPT");
-	socket_escucha_interrupt = iniciar_servidor(puerto);
+	int socket_escucha_interrupt = iniciar_servidor(puerto);
 
 
 	// Espero que se conecte el Kernel en puerto Dispatch
-	int socket_kernel_dispatch = esperar_cliente(socket_escucha_dispatch);
+	socket_kernel_dispatch = esperar_cliente(socket_escucha_dispatch);
 	// Recibo y contesto handshake. En caso de no ser aceptado, termina la ejecucion del módulo.
 	bool handshake_kernel_dispatch_aceptado = recibir_y_manejar_handshake_kernel(socket_kernel_dispatch);
 	if (!handshake_kernel_dispatch_aceptado) {
 		terminar_programa(config);
 		return EXIT_FAILURE;
 	}
+	close(socket_escucha_dispatch);
 
 	// Espero que se conecte el Kernel en puerto Interrupt
-	int socket_kernel_interrupt = esperar_cliente(socket_escucha_interrupt);
+	socket_kernel_interrupt = esperar_cliente(socket_escucha_interrupt);
 	// Recibo y contesto handshake. En caso de no ser aceptado, termina la ejecucion del módulo.
 	bool handshake_kernel_interrupt_aceptado = recibir_y_manejar_handshake_kernel(socket_kernel_interrupt);
 	if (!handshake_kernel_interrupt_aceptado) {
 		terminar_programa(config);
 		return EXIT_FAILURE;
 	}
+	close(socket_escucha_interrupt);
 
 	pthread_t interrupciones;
 	pthread_create(&interrupciones, NULL, (void *)interrupt, NULL); // hilo pendiente de escuchar las interrupciones
@@ -76,83 +78,84 @@ int main(int argc, char *argv[])
 		instruccion = fetch(reg.PC, pid);
 		char **arg = string_split(instruccion, " ");
 		execute_op_code op_code = decode(arg[0]);
-		void *a, *b, *c;
 		switch (op_code)
 		{ // las de enviar y recibir memoria hay que modificar, para hacerlas genericas
-		case SET:
-			a = dictionary_get(diccionario, arg[1]);
-			*(int*)a = atoi(arg[2]);
-			break;
-		case MOV_IN:
-			a = dictionary_get(diccionario, arg[1]);
-			b = dictionary_get(diccionario, arg[2]);
-			*(int*)a = *(int*)leer_memoria(*(int*)b, sizeof(*a));
-
-		case MOV_OUT:
-			a = dictionary_get(diccionario, arg[1]);
-			b = dictionary_get(diccionario, arg[2]);
-			enviar_memoria(*(int*)a, sizeof(*b), b);
-			break;
-		case SUM:
-			a = dictionary_get(diccionario, arg[1]);
-			b = dictionary_get(diccionario, arg[2]);
-			*(int*)a = *(int*)a + *(int*)b;
-			break;
-		case SUB:
-			a = dictionary_get(diccionario, arg[1]);
-			b = dictionary_get(diccionario, arg[2]);
-			*(int*)a = *(int*)a - *(int*)b;
-			break;
-		case JNZ:
-			a = dictionary_get(diccionario, arg[1]);
-			if (*(int*)a == 0)
+		case SET:{
+			int* registro = dictionary_get(diccionario, arg[1]);
+			*(int*)registro = atoi(arg[2]);
+			break;}
+		case MOV_IN:{
+			int* registro_dato = dictionary_get(diccionario, arg[1]);
+			int* registro_direccion = dictionary_get(diccionario, arg[2]);
+			*(int*)registro_dato = *(int*)leer_memoria(*(int*)registro_direccion, sizeof(*registro_dato));
+			break;}
+		case MOV_OUT:{
+			int* registro_direccion = dictionary_get(diccionario, arg[1]);
+			int* registro_dato = dictionary_get(diccionario, arg[2]);
+			enviar_memoria(*(int*)registro_direccion, sizeof(*registro_dato), registro_dato);
+			break;}
+		case SUM:{
+			int* registro_destino = dictionary_get(diccionario, arg[1]);
+			int* registro_origen = dictionary_get(diccionario, arg[2]);
+			*(int*)registro_destino = *(int*)registro_destino + *(int*)registro_origen;
+			break;}
+		case SUB:{
+			int* registro_destino = dictionary_get(diccionario, arg[1]);
+			int* registro_origen = dictionary_get(diccionario, arg[2]);
+			*(int*)registro_destino = *(int*)registro_destino - *(int*)registro_origen;
+			break;}
+		case JNZ:{
+			int* registro = dictionary_get(diccionario, arg[1]);
+			if (*(int*)registro == 0)
 			{
 				reg.PC = atoi(arg[2]);
 			}
-			break;
-		case RESIZE:
+			break;}
+		case RESIZE:{// FALTA
 			t_paquete* paq = crear_paquete(AJUSTAR_PROCESO);
 			int tamanio = atoi(arg[1]);
 			agregar_a_paquete(paq, &tamanio, sizeof(int));
+			enviar_paquete(paq, socket_memoria);
 			eliminar_paquete(paq);
-			int codigo_paquete = recibir_codigo(socket_memoria);
+			if(recibir_codigo(socket_memoria) != AJUSTAR_PROCESO){
+				log_debug(log_cpu_gral,"Error al recibir respuesta de resize");
+			};
 			t_list* aux = list_create();
 			aux = recibir_paquete(socket_memoria);
+			int* respuesta = list_take(aux, 0);
 			list_destroy(aux);
-			switch(codigo_paquete){
-				//falta comunicacion out_of_memory_succes
-			}
+			//falta estructura de respuesta.
 
-			break;
-		case COPY_STRING:
+			break;}
+		case COPY_STRING:{
 			void* leido = leer_memoria(reg.reg_cpu_uso_general.SI, atoi(arg[1]));
-			memcpy(&(reg.reg_cpu_uso_general.DI), aux, sizeof(uint32_t));
-			break;
-		case WAIT_INSTRUCTION:
-			paq = desalojar_registros(reg, WAIT);
+			memcpy(&(reg.reg_cpu_uso_general.DI), leido, sizeof(uint32_t));
+			break;}
+		case WAIT_INSTRUCTION:{
+			t_paquete* paq = desalojar_registros(WAIT);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			enviar_paquete(paq, socket_kernel_dispatch);
 			eliminar_paquete(paq);
 			reg = recibir_contexto_ejecucion();
-			break;
-		case SIGNAL_INSTRUCTION:
-			paq = desalojar_registros(reg, SIGNAL);
+			break;}
+		case SIGNAL_INSTRUCTION:{
+			t_paquete* paq = desalojar_registros(SIGNAL);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			enviar_paquete(paq, socket_kernel_dispatch);
 			eliminar_paquete(paq);
 			reg = recibir_contexto_ejecucion();
-			break;
-		case IO_GEN_SLEEP:
-			paq = desalojar_registros(reg, GEN_SLEEP);
+			break;}
+		case IO_GEN_SLEEP:{
+			t_paquete* paq = desalojar_registros(GEN_SLEEP);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			int unidades = atoi(arg[2]);
 			agregar_a_paquete(paq, &unidades, sizeof(int));
 			enviar_paquete(paq, socket_kernel_dispatch);
 			eliminar_paquete(paq);
 			reg = recibir_contexto_ejecucion();
-			break;
-		case IO_STDIN_READ:
-			paq = desalojar_registros(reg, STDIN_READ);
+			break;}
+		case IO_STDIN_READ:{
+			t_paquete* paq = desalojar_registros(STDIN_READ);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			agregar_mmu_paquete(paq, atoi(arg[2]), atoi(arg[3]));
 			
@@ -160,9 +163,9 @@ int main(int argc, char *argv[])
 			eliminar_paquete(paq);
 
 			reg = recibir_contexto_ejecucion();
-			break;
-		case IO_STDOUT_WRITE:
-			paq = desalojar_registros(reg, STDOUT_WRITE);
+			break;}
+		case IO_STDOUT_WRITE:{
+			t_paquete* paq = desalojar_registros(STDOUT_WRITE);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			agregar_mmu_paquete(paq, atoi(arg[2]), atoi(arg[3]));
 			
@@ -170,67 +173,73 @@ int main(int argc, char *argv[])
 			eliminar_paquete(paq);
 
 			reg = recibir_contexto_ejecucion();
-			break;
-		case IO_FS_CREATE:
-			paq = desalojar_registros(reg, FS_CREATE);
+			break;}
+		case IO_FS_CREATE:{
+			t_paquete* paq = desalojar_registros(FS_CREATE);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			agregar_a_paquete(paq, arg[2], strlen(arg[2]) + 1);
 			enviar_paquete(paq, socket_kernel_dispatch);
 			eliminar_paquete(paq);
 
 			reg = recibir_contexto_ejecucion();
-			break;
-		case IO_FS_DELETE:
-			paq = desalojar_registros(reg, FS_DELETE);
+			break;}
+		case IO_FS_DELETE:{
+			t_paquete* paq = desalojar_registros(FS_DELETE);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			agregar_a_paquete(paq, arg[2], strlen(arg[2]) + 1);
 			enviar_paquete(paq, socket_kernel_dispatch);
 			eliminar_paquete(paq);
 
 			reg = recibir_contexto_ejecucion();
-			break;
-		case IO_FS_TRUNCATE:
-			paq = desalojar_registros(reg, FS_TRUNCATE);
+			break;}
+		case IO_FS_TRUNCATE:{
+			t_paquete* paq = desalojar_registros(FS_TRUNCATE);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			agregar_a_paquete(paq, arg[2], strlen(arg[2]) + 1);
-			int aux2 = atoi(arg[3]);
-			agregar_a_paquete(paq, &aux, sizeof(int));
+			int* registro_tamanio = dictionary_get(diccionario, arg[3]);
+			agregar_a_paquete(paq, registro_tamanio, sizeof(*registro_tamanio));
 			enviar_paquete(paq, socket_kernel_dispatch);
 			eliminar_paquete(paq);
 
 			reg = recibir_contexto_ejecucion();
-			break;
-		case IO_FS_WRITE:
-			paq = desalojar_registros(reg, FS_WRITE);
+			break;}
+		case IO_FS_WRITE:{
+			t_paquete* paq = desalojar_registros(FS_WRITE);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			agregar_a_paquete(paq, arg[2], strlen(arg[2]) + 1);
-			agregar_mmu_paquete(paq, atoi(arg[3]), atoi(arg[4]));
-			agregar_a_paquete(paq, arg[5], strlen(arg[5]) + 1);
+			int* registro_direccion = dictionary_get(diccionario, arg[3]);
+			int* registro_tamanio = dictionary_get(diccionario, arg[4]);
+			int* registro_archivo = dictionary_get(diccionario, arg[5]);
+			agregar_mmu_paquete(paq, *registro_direccion, *registro_tamanio);
+			agregar_a_paquete(paq, registro_archivo, sizeof(*registro_archivo));
 
 			enviar_paquete(paq, socket_kernel_dispatch);
 			eliminar_paquete(paq);
 
 			reg = recibir_contexto_ejecucion();
-			break;
-		case IO_FS_READ:
-			paq = desalojar_registros(reg, FS_READ);
+			break;}
+		case IO_FS_READ:{
+			t_paquete* paq = desalojar_registros(FS_READ);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			agregar_a_paquete(paq, arg[2], strlen(arg[2]) + 1);
-			agregar_mmu_paquete(paq, atoi(arg[3]), atoi(arg[4]));
-			agregar_a_paquete(paq, arg[5], strlen(arg[5]) + 1);
+			int* registro_direccion = dictionary_get(diccionario, arg[3]);
+			int* registro_tamanio = dictionary_get(diccionario, arg[4]);
+			int* registro_archivo = dictionary_get(diccionario, arg[5]);
+			agregar_mmu_paquete(paq, *registro_direccion, *registro_tamanio);
+			agregar_a_paquete(paq, registro_archivo, sizeof(*registro_archivo));
 
 			enviar_paquete(paq, socket_kernel_dispatch);
 			eliminar_paquete(paq);
 
 			reg = recibir_contexto_ejecucion();
 
-			break;
-		case EXIT:
-			paq = desalojar_registros(reg, SUCCESS);
+			break;}
+		case EXIT:{
+			t_paquete* paq = desalojar_registros(SUCCESS);
 			enviar_paquete(paq, socket_kernel_dispatch);
 			eliminar_paquete(paq);
 			reg = recibir_contexto_ejecucion();
-			break;
+			break;}
 		default:
 			break;
 		}
