@@ -315,31 +315,53 @@ void limpiar_estructura_proceso (t_proceso * proc)
     free(proc);
 }
 
-t_list * cargar_instrucciones (char *directorio)
+t_list *cargar_instrucciones(char *directorio)
 {
     FILE *archivo;
     char *lineaInstruccion; 
-    char *dir_completa = config_get_string_value(config,"PATH_INSTRUCCIONES");
-    strcat(dir_completa, directorio);
-    //strcat(dir_completa, ".txt"); // si no encuentra archivo eliminar
-
-    archivo = fopen(dir_completa, "r");
-    free(dir_completa);
-    if (archivo == NULL){
+    char *base_dir = config_get_string_value(config, "PATH_INSTRUCCIONES");
+    
+    // Crear una nueva cadena para la ruta completa
+    size_t tamano_ruta = strlen(base_dir) + strlen(directorio) + 1;
+    char *dir_completa = malloc(tamano_ruta);
+    if (dir_completa == NULL) {
         return NULL;
     }
-    lineaInstruccion = malloc (LONGITUD_LINEA_ARCHIVOS); // nose si fgets hace malloc o no?
+    strcpy(dir_completa, base_dir);
+    strcat(dir_completa, directorio);
     
-    t_list *lista;
-    lista = list_create();
+    archivo = fopen(dir_completa, "r");
+    free(dir_completa); // ahora podemos liberar la memoria de dir_completa
 
-    while (fgets(lineaInstruccion, LONGITUD_LINEA_ARCHIVOS, archivo) != NULL){
-        list_add(lista, lineaInstruccion);
+    if (archivo == NULL) {
+        return NULL;
     }
+    
+    lineaInstruccion = malloc(LONGITUD_LINEA_ARCHIVOS);
+    if (lineaInstruccion == NULL) {
+        fclose(archivo);
+        return NULL;
+    }
+
+    t_list *lista = list_create();
+    if (lista == NULL) {
+        free(lineaInstruccion);
+        fclose(archivo);
+        return NULL;
+    }
+
+    while (fgets(lineaInstruccion, LONGITUD_LINEA_ARCHIVOS, archivo) != NULL) {
+        char *instruccion_copia = strdup(lineaInstruccion); // Copiar la línea leída
+        if (instruccion_copia != NULL) {
+            list_add(lista, instruccion_copia);
+        }
+    }
+
     fclose(archivo);
     free(lineaInstruccion);
     return lista;
 }
+
 
 int obtener_indice_frame(void *ref_frame)
 {
