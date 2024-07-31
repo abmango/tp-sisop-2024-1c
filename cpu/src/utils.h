@@ -145,7 +145,7 @@ void terminar_programa(t_config *config);
 // ====  Todo lo de la TLB:  ================================================
 // ==========================================================================
 typedef struct {
-    int valid;            // Indicador de validez de la entrada (0: no válida, 1: válida)
+    int valid;
     int pid;              // ID del proceso
     int page;    // Número de página virtual
     int frame;   // Número de marco físico correspondiente
@@ -162,7 +162,7 @@ typedef struct {
 extern t_tlb tlb;
 
 void init_tlb();
-int tlb_lookup(int dir_logica, int* frame);
+int tlb_lookup(int pid, int dir_logica, int* frame);
 void tlb_update(int pid, int virtual_page, int physical_page);
 void tlb_update_fifo(int pid, int virtual_page, int physical_page);
 void tlb_update_lru(int pid, int virtual_page, int physical_page);

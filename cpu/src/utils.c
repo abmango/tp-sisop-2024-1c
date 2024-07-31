@@ -249,7 +249,7 @@ t_list* mmu(int dir_logica, int tamanio)
    int desplazamiento = dir_logica - num_pag*tamanio_pagina;
 
    int marco;
-   if (!tlb_lookup(num_pag, &marco)) {
+   if (!tlb_lookup(reg.pid,num_pag, &marco)) {
       log_debug(log_cpu_gral, "TLB Miss: PID %d, Virtual page %u is not in TLB\n", reg.pid, dir_logica);
       t_paquete* paq = crear_paquete(PEDIDO_PAGINA);
       agregar_a_paquete(paq, &(reg.pid), sizeof(int));
@@ -266,7 +266,7 @@ t_list* mmu(int dir_logica, int tamanio)
       list_destroy(aux);
 
       // Actualizar la TLB
-      tlb_update(&(reg.pid), num_pag, marco); // O usar tlb_update_lru(pid, num_pag, marco);
+      tlb_update(&(reg.pid), num_pag, marco);
     }
     else
     {
@@ -307,26 +307,20 @@ void enviar_memoria(int dir_logica, int tamanio, void* valor) //hay q adaptar va
    t_paquete* paq = crear_paquete(ACCESO_ESCRITURA);
    agregar_a_paquete(paq,&(reg.pid),sizeof(int));
    
-   t_list* aux = list_create();
-   aux = mmu(dir_logica, tamanio);
-   t_mmu* aux2;
-
-   while(!list_is_empty(aux))
-   {
-      aux2 = list_remove(aux,0);
-      agregar_a_paquete(paq, &(aux2->direccion), sizeof(int));
-      agregar_a_paquete(paq, &(aux2->tamanio), sizeof(int));
-      free(aux2);
-   }
+   agregar_mmu_paquete(paq, dir_logica, tamanio);
 
    agregar_a_paquete(paq, &valor, tamanio);
    
    enviar_paquete(paq,socket_memoria);
    eliminar_paquete(paq);
-   free(aux);
-
-   // falta recibir el ok o la falla
-   
+  
+   if(recibir_codigo(socket_memoria != ACCESO_ESCRITURA)){
+      log_error(log_cpu_gral, "Error en respuesta de escritura");
+      exit(3);
+   }
+   t_list* list = list_create();
+   list = recibir_paquete(socket_memoria);
+   list_destroy(list);
 }
 
 
@@ -399,8 +393,6 @@ int tamanio_de_desalojo(void) {
 
 void terminar_programa(t_config *config)
 {
-	// Y por ultimo, hay que liberar lo que utilizamos (conexion, log y config)
-	// con las funciones de las commons y del TP mencionadas en el enunciado /
 	liberar_conexion(log_cpu_gral, "Memoria", socket_memoria);
 	liberar_conexion(log_cpu_gral, "Kernel del puerto Dispatch", socket_kernel_dispatch);
 	liberar_conexion(log_cpu_gral, "Kernel del puerto Interrupt", socket_kernel_interrupt);
@@ -414,17 +406,25 @@ void terminar_programa(t_config *config)
 
 // Función para inicializar la TLB
 void init_tlb() {
-    for (int i = 0; i < tlb.size; ++i) {
-        tlb.tlb_entry[i].valid = 0;  // Inicialmente, todas las entradas son inválidas
-    }
-    tlb.planificacion = config_get_string_value(config,"ALGORITMO_TLB");
+   tlb.size = config_get_int_value(config,"CANTIDAD_ENTRADAS_TLB");
+   for (int i = 0; i < tlb.size; ++i) {
+       tlb.tlb_entry[i].valid = 0;  // Inicialmente, todas las entradas son inválidas
+   }
+   tlb.planificacion = config_get_string_value(config,"ALGORITMO_TLB");
+   log_debug(log_cpu_gral,"TLB INICIALIZADA - SIZE: %d - ALGORITMO: %s", tlb.size, tlb.planificacion);
 }
 
 // Función para buscar en la TLB
-int tlb_lookup(int virtual_page,int* frame) {
+int tlb_lookup(int pid, int virtual_page,int* frame) {
     for (int i = 0; i < tlb.size; ++i) {
-        if (tlb.tlb_entry[i].valid && tlb.tlb_entry[i].page == virtual_page) {
+        if (tlb.tlb_entry[i].page == virtual_page && pid == tlb.tlb_entry[i].pid && tlb.tlb_entry[i].valid == 1) {
             *frame = tlb.tlb_entry[i].frame;
+            if(tlb.planificacion == "LRU"){
+               tlb.tlb_entry[i].access_time = 0;
+               for(int i = 0; i<tlb.size; i++){
+                  tlb.tlb_entry[i].access_time += 1;
+               }
+            }
             return 1;  // Éxito: entrada encontrada en la TLB
         }
     }
@@ -446,8 +446,9 @@ void tlb_update(int pid, int virtual_page, int physical_page) {
 void tlb_update_fifo(int pid, int virtual_page, int physical_page) {
     // Encontrar la entrada más antigua (FIFO)
     int oldest_index = 0;
+
     for (int i = 1; i < tlb.size; ++i) {
-        if (!tlb.tlb_entry[i].valid) {
+         if (!tlb.tlb_entry[i].valid) {
             oldest_index = i;
             break;
         }
@@ -457,7 +458,6 @@ void tlb_update_fifo(int pid, int virtual_page, int physical_page) {
     }
 
     // Actualizar la entrada
-    tlb.tlb_entry[oldest_index].valid = 1;
     tlb.tlb_entry[oldest_index].pid = pid;
     tlb.tlb_entry[oldest_index].page = virtual_page;
     tlb.tlb_entry[oldest_index].frame = physical_page;
