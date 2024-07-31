@@ -88,7 +88,7 @@ int main(int argc, char* argv[]) {
 
 
 	// Servidor en bucle que espera y atiende conexiones de nuevas interfaces.
-	escuchar_y_atender_nuevas_io(cod_algoritmo_planif_corto, socket_escucha);
+	escuchar_y_atender_nuevas_io(socket_escucha);
 
 
 	pthread_join(hilo_new, NULL);
