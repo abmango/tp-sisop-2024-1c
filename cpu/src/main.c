@@ -61,13 +61,12 @@ int main(int argc, char *argv[])
 	// Inicializar la TLB
 	init_tlb();
 
-	int pid;
 	t_dictionary *diccionario = crear_diccionario(reg);
 	char *instruccion;
 	reg = recibir_contexto_ejecucion();
 	while (1)
 	{
-		instruccion = fetch(reg.PC, pid);
+		instruccion = fetch(reg.PC, reg.pid);
 		char **arg = string_split(instruccion, " ");
 		execute_op_code op_code = decode(arg[0]);
 		switch (op_code)

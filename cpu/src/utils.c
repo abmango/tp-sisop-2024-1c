@@ -86,7 +86,8 @@ void* interrupt(void)
       pthread_mutex_lock(&mutex_interrupcion);
       if(*pid == reg.pid){
          interrupcion = *interrupcion_recibida;
-      }
+         log_debug(log_cpu_gral, "Se registro interrupcion al PID: %d", *pid);
+      }else{log_debug(log_cpu_gral, "Se descarto interrupcion al PID: %d", *pid);}
       pthread_mutex_unlock(&mutex_interrupcion);
       free(pid);
       free(interrupcion_recibida);
@@ -157,7 +158,7 @@ execute_op_code decode(char* instruc)
 t_contexto_de_ejecucion recibir_contexto_ejecucion(void)
 {
    if(recibir_codigo(socket_kernel_dispatch) != CONTEXTO_EJECUCION){
-      imprimir_mensaje("error: operacion desconocida.");
+      imprimir_mensaje("Error al recibir contexto de ejecucion");
       exit(3);
    }
    pthread_mutex_lock(&mutex_interrupcion);
@@ -165,9 +166,10 @@ t_contexto_de_ejecucion recibir_contexto_ejecucion(void)
    void* buffer;
    buffer = recibir_buffer(&size, socket_kernel_dispatch);
    int desplazamiento = 0;
-   t_contexto_de_ejecucion ce = deserializar_contexto_de_ejecucion(buffer, desplazamiento); 
+   t_contexto_de_ejecucion ce = deserializar_contexto_de_ejecucion(buffer, &desplazamiento); 
    free(buffer);
    interrupcion = NADA;
+   log_info(log_cpu_gral,"Recibi contexto de ejecucion.");
    pthread_mutex_unlock(&mutex_interrupcion);
    return ce;
 }
@@ -196,9 +198,13 @@ char* fetch(uint32_t PC, int pid)
    enviar_paquete(paq, socket_memoria);
    eliminar_paquete(paq);
    t_list* list = list_create();
+   if(recibir_codigo(socket_memoria) != SIGUIENTE_INSTRUCCION){
+      log_error(log_cpu_gral,"Error en respuesta de siguiente instruccion");
+   }
    list = recibir_paquete(socket_memoria);
    char* instruccion = list_get(list,0);
    list_destroy(list);
+   log_info(log_cpu_gral, "Instruccion recibida: %s", instruccion);
    return instruccion;
 }
 
@@ -211,11 +217,12 @@ void* leer_memoria(int dir_logica, int tamanio)
    
    enviar_paquete(paq,socket_memoria);
    eliminar_paquete(paq);
+   log_info(log_cpu_gral,"Envio pedido de lectura");
 
    t_list* aux = list_create();
-   int codigo_paq = recibir_codigo(socket_memoria);
-   if (codigo_paq != ACCESO_LECTURA){
+   if (recibir_codigo(socket_memoria) != ACCESO_LECTURA){
       log_debug(log_cpu_gral,"Error con respuesta de acceso de lectura");
+      exit(3);
    }
    aux = recibir_paquete(socket_memoria);
    void* resultado = list_remove(aux, 0);
@@ -227,20 +234,26 @@ void* leer_memoria(int dir_logica, int tamanio)
 
 void check_interrupt()
 {
+   pthread_mutex_lock(&mutex_interrupcion);
    switch (interrupcion){
       case DESALOJAR:{
          t_paquete* paq = desalojar_registros(INTERRUPTED_BY_QUANTUM);
          enviar_paquete(paq, socket_kernel_dispatch);
          eliminar_paquete(paq);
+         interrupcion = NADA;
+         log_info(log_cpu_gral,"Interrupcion detectada, DESALOJAR PID:%d",reg.pid);
          break;
       }
       case FINALIZAR:{
          t_paquete* paq = desalojar_registros(INTERRUPTED_BY_USER);
          enviar_paquete(paq, socket_kernel_interrupt);
          eliminar_paquete(paq);
+         interrupcion = NADA;
+         log_info(log_cpu_gral,"Interrupcion detectada, FINALIZAR PID:%d",reg.pid);
          break;
       }
    }
+   pthread_mutex_unlock(&mutex_interrupcion);
 }
 
 t_list* mmu(int dir_logica, int tamanio)
@@ -313,6 +326,7 @@ void enviar_memoria(int dir_logica, int tamanio, void* valor) //hay q adaptar va
    
    enviar_paquete(paq,socket_memoria);
    eliminar_paquete(paq);
+   log_info(log_cpu_gral, "Envio pedido de escritura");
   
    if(recibir_codigo(socket_memoria != ACCESO_ESCRITURA)){
       log_error(log_cpu_gral, "Error en respuesta de escritura");
