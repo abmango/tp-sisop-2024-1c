@@ -145,24 +145,25 @@ MemoriaPaginada* inicializar_memoria(int tamano_memoria, int tamano_pagina) {
 
 // recibe la lista asi como se descarga x conexion (se podria verificar que tenga
 // solo 2 elementos antes de mandarla... proceso se recibe sin iniciar)
-resultado_operacion crear_proceso (t_list *solicitud, t_proceso *proceso)
-{   
+resultado_operacion crear_proceso (t_list *solicitud, t_proceso **proceso)
+{
     char *data = NULL;
-    proceso = malloc(sizeof(t_proceso));
+    *proceso = malloc(sizeof(t_proceso));
     data = list_get(solicitud, 0);
-    proceso->pid = *(int*) data;
+    (*proceso)->pid = *(int*) data;
     data = list_get(solicitud, 1);
-    proceso->instrucciones = cargar_instrucciones(data, proceso->pid);
-    proceso->tabla_paginas = list_create();
+    log_debug(log_memoria_gral, "Se solicito crear un nuevo proceso con PID: %d", (*proceso)->pid);
+    (*proceso)->instrucciones = cargar_instrucciones(data, (*proceso)->pid);
+    (*proceso)->tabla_paginas = list_create();
     
     retardo_operacion();
-    if (proceso->instrucciones == NULL){
+    if ((*proceso)->instrucciones == NULL){
         log_debug(log_memoria_gral, "Script no cargo");
-        limpiar_estructura_proceso(proceso);
-        proceso = NULL;
+        limpiar_estructura_proceso(*proceso);
+        *proceso = NULL;
         return ERROR;
     }
-    log_info(log_memoria_oblig, "PID: %i - Tamaño: 0",proceso->pid);
+    log_info(log_memoria_oblig, "PID: %i - Tamaño: 0",(*proceso)->pid);
     return CORRECTA;
 }
 
@@ -399,8 +400,9 @@ int obtener_proceso(t_list *lista, int pid)
     t_proceso *temp;
     for (int i=0; i< list_size(lista); i++){
         temp = list_get(lista, i);
-        if (temp->pid == pid)
+        if (temp->pid == pid) {
             return i;
+        }
     }
     return -1;
 }

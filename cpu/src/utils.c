@@ -158,16 +158,17 @@ execute_op_code decode(char* instruc)
 t_contexto_de_ejecucion recibir_contexto_ejecucion(void)
 {
    if(recibir_codigo(socket_kernel_dispatch) != CONTEXTO_EJECUCION){
-      imprimir_mensaje("Error al recibir contexto de ejecucion");
+      log_error(log_cpu_gral, "Error al recibir contexto de ejecucion");
       exit(3);
    }
    pthread_mutex_lock(&mutex_interrupcion);
-   int size = 0;
-   void* buffer;
-   buffer = recibir_buffer(&size, socket_kernel_dispatch);
+   t_list* lista_buffer;
+   lista_buffer = recibir_paquete(socket_kernel_dispatch);
+   void* buffer = list_remove(lista_buffer, 0);
    int desplazamiento = 0;
    t_contexto_de_ejecucion ce = deserializar_contexto_de_ejecucion(buffer, &desplazamiento); 
    free(buffer);
+   list_destroy(lista_buffer);
    interrupcion = NADA;
    log_info(log_cpu_gral,"Recibi contexto de ejecucion.");
    pthread_mutex_unlock(&mutex_interrupcion);

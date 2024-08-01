@@ -52,6 +52,7 @@ void planific_corto_fifo(void) {
             pthread_mutex_lock(&mutex_cola_ready);
             // pone proceso de estado READY a estado EXEC. Y envia contexto de ejecucion al cpu.
             ejecutar_sig_proceso();
+            log_info(log_kernel_oblig, "PID: %d - Estado Anterior: READY - Estado Actual: EXEC", proceso_exec->pid);
             hay_algun_proceso_en_exec = true;
             pthread_mutex_unlock(&mutex_cola_ready);
             pthread_mutex_unlock(&mutex_proceso_exec);
@@ -486,6 +487,7 @@ void planific_corto_rr(void) {
             pthread_mutex_lock(&mutex_cola_ready);
             // pone proceso de estado READY a estado EXEC. Y envia contexto de ejecucion al cpu.
             ejecutar_sig_proceso();
+            log_info(log_kernel_oblig, "PID: %d - Estado Anterior: READY - Estado Actual: EXEC", proceso_exec->pid);
             hay_algun_proceso_en_exec = true;
             backup_pid_de_proceso_en_exec = proceso_exec->pid;
             pthread_mutex_unlock(&mutex_cola_ready);

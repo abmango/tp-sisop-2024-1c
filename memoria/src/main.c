@@ -111,9 +111,9 @@ void* rutina_ejecucion(void *nada)
 	switch (operacion)
 	{
 	case INICIAR_PROCESO:
-		t_proceso *new_proceso = NULL;
+		t_proceso* new_proceso = NULL;
 		recibido = recibir_paquete(socket_cliente);
-		result = crear_proceso(recibido, new_proceso);
+		result = crear_proceso(recibido, &new_proceso);
 
 		if (result == CORRECTA){
 			pthread_mutex_lock(&mutex_procesos_cargados);
@@ -327,10 +327,18 @@ void atender_cpu(int socket)
 			log_debug(log_memoria_gral, "CPU ha Solicitado SIGUIENTE_INSTRUCCION");
 
 			recibido = recibir_paquete(socket);
+			log_debug(log_memoria_gral, "se recibieron %d elementos", list_size(recibido)); // temporal. sacar luego.
+
 			aux = list_get(recibido, 0);
 			int backup_pid_proceso = *(int*)aux; // agrego esto para poder loguear mas abajo
+
+			log_debug(log_memoria_gral, "pid: %d", backup_pid_proceso); // temporal. sacar luego.
+
 			// verifica si tiene el proceso en variable
-			if (proceso == NULL || proceso->pid != *(int*)aux ){
+			if (proceso == NULL){
+				proceso = proceso_en_ejecucion(procesos_cargados, *(int*)aux );
+			} // modifiqué esto porque sino no andaba
+			else if (proceso->pid != *(int*)aux) {
 				proceso = proceso_en_ejecucion(procesos_cargados, *(int*)aux );
 			}
 			// chequea q instruccion sea valida

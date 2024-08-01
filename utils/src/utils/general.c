@@ -94,6 +94,7 @@ t_contexto_de_ejecucion deserializar_contexto_de_ejecucion(void* buffer, int* de
 	t_contexto_de_ejecucion contexto;
 
 	memcpy(&(contexto.pid), buffer + *desplazamiento, sizeof(int));
+	*desplazamiento += sizeof(int);
 	memcpy(&(contexto.PC), buffer + *desplazamiento, sizeof(uint32_t));
 	*desplazamiento += sizeof(uint32_t);
 	memcpy(&(contexto.reg_cpu_uso_general.AX), buffer + *desplazamiento, sizeof(uint8_t));

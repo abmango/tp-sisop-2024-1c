@@ -65,7 +65,9 @@ int main(int argc, char *argv[])
 	char *instruccion;
 	reg = recibir_contexto_ejecucion();
 	while (1)
-	{
+	{	
+		log_debug(log_cpu_gral, "pid: %d", reg.pid); // temporal. sacar luego
+
 		instruccion = fetch(reg.PC, reg.pid);
 		char **arg = string_split(instruccion, " ");
 		execute_op_code op_code = decode(arg[0]);

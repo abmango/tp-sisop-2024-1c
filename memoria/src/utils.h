@@ -115,7 +115,7 @@ MemoriaPaginada* inicializar_memoria(int tamano_memoria, int tamano_pagina);
 /// @param solicitud      : lista recibida de recibir_paquete() por conexion
 /// @param proceso        : puntero a estructura proceso, recibido en NULL
 /// @return               : retorna valor de resultado_operacion
-resultado_operacion crear_proceso (t_list *solicitud, t_proceso *proceso);
+resultado_operacion crear_proceso (t_list *solicitud, t_proceso **proceso);
 
 /// @brief Marca como libres las paginas del proceso (bitmap) y libera estructura proceso
 /// @param proceso        : puntero a estructura proceso
