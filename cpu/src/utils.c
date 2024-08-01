@@ -205,8 +205,9 @@ void* leer_memoria(int dir_logica, int tamanio)
    
 }
 
-int check_interrupt(){
+bool check_interrupt(){
    int codigo_paquete;
+   bool desalojado;
    while((codigo_paquete = recibir_codigo_sin_espera(socket_kernel_interrupt)) > 0){
       if(codigo_paquete != INTERRUPCION){
          log_error(log_cpu_gral, "Error al recibir interrupcion");
@@ -236,13 +237,16 @@ int check_interrupt(){
             default:
             break;
          }
-         return 1;
+         free(pid_recibido);
+         free(interrupcion_recibida);
+         return true
       }else{
          log_debug(log_cpu_gral, "Interrupcion descartada al pid: %d", *pid_recibido);
       }
       free(pid_recibido);
       free(interrupcion_recibida);
    }
+   return false;
 }
 
 recibir_codigo_sin_espera(int socket){

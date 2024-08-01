@@ -264,7 +264,7 @@ int main(int argc, char *argv[])
 		default:
 			break;
 		}
-		check_interrupt(reg);
+		desalojado = check_interrupt(reg);
 	}
 
 	// Liberar memoria de la TLB
