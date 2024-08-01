@@ -388,6 +388,7 @@ void sub_uint32(uint32_t* registro1, uint32_t* registro2) {
 t_dictionary* crear_diccionario(t_contexto_de_ejecucion* reg)
 {
    t_dictionary* dicc = dictionary_create();
+   dictionary_put(dicc, "PC", &(reg->PC));
    dictionary_put(dicc, "AX", &(reg->reg_cpu_uso_general.AX));
    dictionary_put(dicc, "BX", &(reg->reg_cpu_uso_general.BX));
    dictionary_put(dicc, "CX", &(reg->reg_cpu_uso_general.CX));
@@ -408,6 +409,7 @@ t_dictionary* crear_diccionario_tipos_registros(void)
    *de_8 = U_DE_8;
    reg_type_code* de_32 = malloc(sizeof(reg_type_code));
    *de_32 = U_DE_32;
+   dictionary_put(dicc, "PC", de_32);
    dictionary_put(dicc, "AX", de_8);
    dictionary_put(dicc, "BX", de_8);
    dictionary_put(dicc, "CX", de_8);
