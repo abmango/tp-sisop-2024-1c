@@ -159,10 +159,15 @@ void destruir_pcb(t_pcb* pcb) {
 }
 
 void liberar_recursos_retenidos(t_pcb* pcb) {
-	list_destroy_and_destroy_elements(pcb->recursos_ocupados, (void*)destruir_recurso_ocupado);
+	if (cod_algoritmo_planif_corto == VRR) {
+		list_destroy_and_destroy_elements(pcb->recursos_ocupados, (void*)destruir_recurso_ocupado_vrr);
+	}
+	else {
+		list_destroy_and_destroy_elements(pcb->recursos_ocupados, (void*)destruir_recurso_ocupado);
+	}
 }
 
-/*
+/* OBSOLETO. YA NO HACE FALTA.
 void enviar_pcb(t_pcb* pcb, int conexion) {
 	t_paquete* paquete = crear_paquete(PCB);
 	int tamanio = tamanio_de_pcb(pcb);
@@ -287,11 +292,57 @@ void destruir_recurso_ocupado(t_recurso_ocupado* recurso_ocupado) {
 			t_pcb* proceso_desbloqueado = list_remove(recurso_blocked->cola_blocked, 0);
 			asignar_recurso_ocupado(proceso_desbloqueado, recurso_blocked->nombre);
 			list_add(cola_ready, proceso_desbloqueado);
+			sem_post(&sem_procesos_ready);
 			char* pids_en_cola_ready = string_lista_de_pid_de_lista_de_pcb(cola_ready);
 			log_info(log_kernel_oblig, "PID: %d - Estado Anterior: BLOCKED - Estado Actual: READY", proceso_desbloqueado->pid); // log Obligatorio
 			log_info(log_kernel_oblig, "Cola Ready: [%s]", pids_en_cola_ready); // log Obligatorio
 			log_debug(log_kernel_gral, "Una instancia del recurso %s fue asignada al proceso %d", recurso_blocked->nombre, proceso_desbloqueado->pid);
 			free(pids_en_cola_ready);
+		}
+
+	}
+
+	free(recurso_ocupado->nombre);
+	free(recurso_ocupado);
+}
+
+void destruir_recurso_ocupado_vrr(t_recurso_ocupado* recurso_ocupado) {
+
+	bool _es_mi_re_querido_recurso_blocked (t_recurso_blocked* recurso) {
+		return strcmp(recurso->nombre, recurso_ocupado->nombre) == 0;
+	}
+
+	t_recurso_blocked* recurso_blocked = list_find(lista_recurso_blocked, (void*)_es_mi_re_querido_recurso_blocked);
+	
+	// libero una instancia, por cada una retenida
+	for (int instancias_retenidas = recurso_ocupado->instancias; instancias_retenidas > 0; instancias_retenidas--) {
+		(recurso_ocupado->instancias)--;
+		recurso_blocked->instancias_disponibles++;
+		log_debug(log_kernel_gral, "Instancia del recurso %s liberada", recurso_ocupado->nombre);
+
+		// Si hay procesos bloqueados por el recurso, desbloqueo al primero de ellos:
+		if (!list_is_empty(recurso_blocked->cola_blocked)) {
+			t_pcb* proceso_desbloqueado = list_remove(recurso_blocked->cola_blocked, 0);
+			asignar_recurso_ocupado(proceso_desbloqueado, recurso_blocked->nombre);
+			char* pids_en_cola_ready_o_ready_plus = NULL;
+			char* nombre_cola = NULL;
+			if (proceso_desbloqueado->quantum <= 0) {
+				proceso_desbloqueado->quantum = quantum_de_config;
+				list_add(cola_ready, proceso_desbloqueado);
+				pids_en_cola_ready_o_ready_plus = string_lista_de_pid_de_lista_de_pcb(cola_ready);
+				nombre_cola = string_from_format("Ready");
+			}
+			else {
+				list_add(cola_ready_plus, proceso_desbloqueado);
+				pids_en_cola_ready_o_ready_plus = string_lista_de_pid_de_lista_de_pcb(cola_ready_plus);
+				nombre_cola = string_from_format("Ready Prioridad");
+			}
+			sem_post(&sem_procesos_ready);
+			log_info(log_kernel_oblig, "PID: %d - Estado Anterior: BLOCKED - Estado Actual: READY", proceso_desbloqueado->pid); // log Obligatorio
+			log_info(log_kernel_oblig, "Cola %s: [%s]", nombre_cola, pids_en_cola_ready_o_ready_plus); // log Obligatorio
+			log_debug(log_kernel_gral, "Una instancia del recurso %s fue asignada al proceso %d", recurso_blocked->nombre, proceso_desbloqueado->pid);
+			free(pids_en_cola_ready_o_ready_plus);
+			free(nombre_cola);
 		}
 
 	}
@@ -495,6 +546,10 @@ char* string_lista_de_pid_de_lista_de_pcb(t_list* lista_de_pcb) {
 	}
 
 	return lista_de_pid;
+}
+
+int pid_de_proceso(t_pcb* pcb) {
+	return pcb->pid;
 }
 
 void imprimir_pid_de_pcb(t_pcb* pcb) {

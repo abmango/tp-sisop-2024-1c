@@ -120,6 +120,10 @@ bool proceso_esta_en_ejecucion(int pid);
 /// @param recurso_ocupado : puntero al recurso ocupado.
 void destruir_recurso_ocupado(t_recurso_ocupado* recurso_ocupado);
 
+/// @brief Solo para VRR. Libera las instancias retenidas de un recurso ocupado, y destruye la estructura (t_recurso_ocupado).
+/// @param recurso_ocupado : puntero al recurso ocupado.
+void destruir_recurso_ocupado_vrr(t_recurso_ocupado* recurso_ocupado);
+
 t_contexto_de_ejecucion contexto_de_ejecucion_de_pcb(t_pcb* pcb);
 void actualizar_contexto_de_ejecucion_de_pcb(t_contexto_de_ejecucion nuevo_contexto_de_ejecucion, t_pcb* pcb);
 
@@ -155,6 +159,11 @@ void destruir_io(t_io_blocked* io); // DESARROLLANDO
 t_io_blocked* encontrar_io(char* nombre);
 
 char* string_lista_de_pid_de_lista_de_pcb(t_list* lista_de_pcb);
+
+/// @brief Simplemente obtiene el pid de un proceso.
+/// @param pcb : puntero a pcb del proceso.
+/// @return    : retorna el pid del proceso.
+int pid_de_proceso(t_pcb* pcb);
 
 // FUNCIONES AUXILIARES PARA MANEJAR LAS LISTAS DE ESTADOS:
 void imprimir_pid_de_pcb(t_pcb* pcb);
