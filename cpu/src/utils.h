@@ -29,23 +29,12 @@ extern int tamanio_pagina;
 extern int socket_memoria;
 extern int socket_kernel_dispatch;
 extern int socket_kernel_interrupt;
-extern t_interrupt_code interrupcion;
 
 extern t_log* log_cpu_oblig; // logger para los logs obligatorios
 extern t_log* log_cpu_gral; // logger para los logs nuestros. Loguear con criterio de niveles.
 
 extern t_config* config;
 
-extern pthread_mutex_t mutex_interrupcion;
-
-
-// ==========================================================================
-// ====  Semáforos globales:  ===============================================
-// ==========================================================================
-extern pthread_mutex_t mutex_interrupt;
-
-// ==========================================================================
-// ==========================================================================
 
 typedef enum {
     SET,
@@ -130,13 +119,11 @@ t_contexto_de_ejecucion recibir_contexto_ejecucion(void);
 void* serializar_desalojo(t_desalojo desalojo);
 char* fetch(uint32_t PC, int pid);
 void* leer_memoria(int dir_logica, int tamanio);
-void check_interrupt();
-void pedir_io(t_contexto_de_ejecucion reg, motivo_desalojo_code opcode, char** arg);
+int check_interrupt();
 t_list* mmu(int dir_logica, int tamanio);
 void enviar_memoria(int direccion, int tamanio, void* valor);
 void agregar_mmu_paquete(t_paquete* paq, int direccion_logica, int tamanio);
 
-void* interrupt(void);
 
 execute_op_code decode(char* instruc);
 

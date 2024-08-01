@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
 	config = iniciar_config("default");
 	log_cpu_gral = log_create("cpu_general.log", "CPU", true, LOG_LEVEL_DEBUG);
 	log_cpu_oblig = log_create("cpu_obligatorio.log", "CPU", true, LOG_LEVEL_DEBUG);
-	pthread_mutex_init(&mutex_interrupcion, NULL);
+
 
 	// CONEXION MEMORIA
 	char *ip = config_get_string_value(config, "IP_MEMORIA");
@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
 		terminar_programa(config);
 		return EXIT_FAILURE;
 	}
-	//liberar_conexion(log_cpu_gral, "escucha_dispatch", socket_escucha_dispatch);
+	liberar_conexion(log_cpu_gral, "escucha_dispatch", socket_escucha_dispatch);
 
 	// Espero que se conecte el Kernel en puerto Interrupt
 	socket_kernel_interrupt = esperar_cliente(socket_escucha_interrupt);
@@ -52,11 +52,7 @@ int main(int argc, char *argv[])
 		terminar_programa(config);
 		return EXIT_FAILURE;
 	}
-	//liberar_conexion(log_cpu_gral, "escucha_interrupt", socket_escucha_interrupt);
-
-	pthread_t interrupciones;
-	pthread_create(&interrupciones, NULL, (void *)interrupt, NULL); // hilo pendiente de escuchar las interrupciones
-	pthread_detach(interrupciones);
+	liberar_conexion(log_cpu_gral, "escucha_interrupt", socket_escucha_interrupt);
 
 	// Inicializar la TLB
 	init_tlb();
@@ -64,9 +60,12 @@ int main(int argc, char *argv[])
 	t_dictionary *diccionario = crear_diccionario(&reg);
 	t_dictionary *diccionario_tipo_registro = crear_diccionario_tipos_registros();
 	char *instruccion;
-	reg = recibir_contexto_ejecucion();
+	bool desalojado = true;
 	while (1)
 	{	
+		if(desalojado){
+			reg = recibir_contexto_ejecucion();
+		}	
 		log_debug(log_cpu_gral, "pid: %d", reg.pid); // temporal. sacar luego
 
 		instruccion = fetch(reg.PC, reg.pid);
@@ -87,6 +86,7 @@ int main(int argc, char *argv[])
 			}
 			break;}
 		case MOV_IN:{
+			reg_type_code tipo_registro = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[1]);
 			int* registro_dato = dictionary_get(diccionario, arg[1]);
 			int* registro_direccion = dictionary_get(diccionario, arg[2]);
 			*(int*)registro_dato = *(int*)leer_memoria(*(int*)registro_direccion, sizeof(*registro_dato));
@@ -157,14 +157,14 @@ int main(int argc, char *argv[])
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			enviar_paquete(paq, socket_kernel_dispatch);
 			eliminar_paquete(paq);
-			reg = recibir_contexto_ejecucion();
+			desalojado = true;
 			break;}
 		case SIGNAL_INSTRUCTION:{
 			t_paquete* paq = desalojar_registros(SIGNAL);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			enviar_paquete(paq, socket_kernel_dispatch);
 			eliminar_paquete(paq);
-			reg = recibir_contexto_ejecucion();
+			desalojado = true;
 			break;}
 		case IO_GEN_SLEEP:{
 			t_paquete* paq = desalojar_registros(GEN_SLEEP);
@@ -173,7 +173,7 @@ int main(int argc, char *argv[])
 			agregar_a_paquete(paq, &unidades, sizeof(int));
 			enviar_paquete(paq, socket_kernel_dispatch);
 			eliminar_paquete(paq);
-			reg = recibir_contexto_ejecucion();
+			desalojado = true;
 			break;}
 		case IO_STDIN_READ:{
 			t_paquete* paq = desalojar_registros(STDIN_READ);
@@ -183,7 +183,7 @@ int main(int argc, char *argv[])
 			enviar_paquete(paq, socket_kernel_dispatch);
 			eliminar_paquete(paq);
 
-			reg = recibir_contexto_ejecucion();
+			desalojado = true;
 			break;}
 		case IO_STDOUT_WRITE:{
 			t_paquete* paq = desalojar_registros(STDOUT_WRITE);
@@ -193,7 +193,7 @@ int main(int argc, char *argv[])
 			enviar_paquete(paq, socket_kernel_dispatch);
 			eliminar_paquete(paq);
 
-			reg = recibir_contexto_ejecucion();
+			desalojado = true;
 			break;}
 		case IO_FS_CREATE:{
 			t_paquete* paq = desalojar_registros(FS_CREATE);
@@ -202,7 +202,7 @@ int main(int argc, char *argv[])
 			enviar_paquete(paq, socket_kernel_dispatch);
 			eliminar_paquete(paq);
 
-			reg = recibir_contexto_ejecucion();
+			desalojado = true;
 			break;}
 		case IO_FS_DELETE:{
 			t_paquete* paq = desalojar_registros(FS_DELETE);
@@ -211,7 +211,7 @@ int main(int argc, char *argv[])
 			enviar_paquete(paq, socket_kernel_dispatch);
 			eliminar_paquete(paq);
 
-			reg = recibir_contexto_ejecucion();
+			desalojado = true;
 			break;}
 		case IO_FS_TRUNCATE:{
 			t_paquete* paq = desalojar_registros(FS_TRUNCATE);
@@ -222,7 +222,7 @@ int main(int argc, char *argv[])
 			enviar_paquete(paq, socket_kernel_dispatch);
 			eliminar_paquete(paq);
 
-			reg = recibir_contexto_ejecucion();
+			desalojado = true;
 			break;}
 		case IO_FS_WRITE:{
 			t_paquete* paq = desalojar_registros(FS_WRITE);
@@ -237,7 +237,7 @@ int main(int argc, char *argv[])
 			enviar_paquete(paq, socket_kernel_dispatch);
 			eliminar_paquete(paq);
 
-			reg = recibir_contexto_ejecucion();
+			desalojado = true;
 			break;}
 		case IO_FS_READ:{
 			t_paquete* paq = desalojar_registros(FS_READ);
@@ -252,19 +252,18 @@ int main(int argc, char *argv[])
 			enviar_paquete(paq, socket_kernel_dispatch);
 			eliminar_paquete(paq);
 
-			reg = recibir_contexto_ejecucion();
+			desalojado = true;
 
 			break;}
 		case EXIT:{
 			t_paquete* paq = desalojar_registros(SUCCESS);
 			enviar_paquete(paq, socket_kernel_dispatch);
 			eliminar_paquete(paq);
-			reg = recibir_contexto_ejecucion();
+			desalojado = true;
 			break;}
 		default:
 			break;
 		}
-		reg.PC++;
 		check_interrupt(reg);
 	}
 

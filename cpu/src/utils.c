@@ -12,9 +12,6 @@ t_config* config;
 int socket_memoria = 1;
 int socket_kernel_dispatch = 1;
 int socket_kernel_interrupt = 1;
-t_interrupt_code interrupcion = 0;
-
-pthread_mutex_t mutex_interrupcion;
 
 t_log* log_cpu_oblig;
 t_log* log_cpu_gral;
@@ -61,6 +58,7 @@ bool recibir_y_manejar_handshake_kernel(int socket) {
 
 t_paquete* desalojar_registros(int motiv)
 {
+   reg.PC++;
    t_desalojo desalojo;
    desalojo.contexto = reg;
    desalojo.motiv = motiv;
@@ -70,29 +68,6 @@ t_paquete* desalojar_registros(int motiv)
    free(buffer_desalojo);
    return paq;
 }
-
-void* interrupt(void)
-{
-   while(1){ //cambiar a fin de programa
-      t_list* interrupt = list_create();
-      if(recibir_codigo(socket_kernel_interrupt) != INTERRUPCION){
-         log_debug(log_cpu_gral, "Error al recibir interrupcion");
-         exit(3);
-      }
-      interrupt = recibir_paquete(socket_kernel_interrupt);
-      int* pid = list_take(interrupt, 1);
-      int* interrupcion_recibida = list_take(interrupt, 0);
-      list_destroy(interrupt);
-      pthread_mutex_lock(&mutex_interrupcion);
-      if(*pid == reg.pid){
-         interrupcion = *interrupcion_recibida;
-         log_debug(log_cpu_gral, "Se registro interrupcion al PID: %d", *pid);
-      }else{log_debug(log_cpu_gral, "Se descarto interrupcion al PID: %d", *pid);}
-      pthread_mutex_unlock(&mutex_interrupcion);
-      free(pid);
-      free(interrupcion_recibida);
-   }
-} 
 
 execute_op_code decode(char* instruc)
 {
@@ -161,17 +136,14 @@ t_contexto_de_ejecucion recibir_contexto_ejecucion(void)
       log_error(log_cpu_gral, "Error al recibir contexto de ejecucion");
       exit(3);
    }
-   pthread_mutex_lock(&mutex_interrupcion);
-   t_list* lista_buffer;
+   t_list* lista_buffer = list_create();
    lista_buffer = recibir_paquete(socket_kernel_dispatch);
    void* buffer = list_remove(lista_buffer, 0);
    int desplazamiento = 0;
    t_contexto_de_ejecucion ce = deserializar_contexto_de_ejecucion(buffer, &desplazamiento); 
    free(buffer);
    list_destroy(lista_buffer);
-   interrupcion = NADA;
-   log_info(log_cpu_gral,"Recibi contexto de ejecucion.");
-   pthread_mutex_unlock(&mutex_interrupcion);
+   log_info(log_cpu_gral,"Recibi contexto de ejecucion, PID: %d", ce.pid);
    return ce;
 }
 
@@ -233,28 +205,55 @@ void* leer_memoria(int dir_logica, int tamanio)
    
 }
 
-void check_interrupt()
-{
-   pthread_mutex_lock(&mutex_interrupcion);
-   switch (interrupcion){
-      case DESALOJAR:{
-         t_paquete* paq = desalojar_registros(INTERRUPTED_BY_QUANTUM);
-         enviar_paquete(paq, socket_kernel_dispatch);
-         eliminar_paquete(paq);
-         interrupcion = NADA;
-         log_info(log_cpu_gral,"Interrupcion detectada, DESALOJAR PID:%d",reg.pid);
-         break;
+int check_interrupt(){
+   int codigo_paquete;
+   while((codigo_paquete = recibir_codigo_sin_espera(socket_kernel_interrupt)) > 0){
+      if(codigo_paquete != INTERRUPCION){
+         log_error(log_cpu_gral, "Error al recibir interrupcion");
+         exit(3);
       }
-      case FINALIZAR:{
-         t_paquete* paq = desalojar_registros(INTERRUPTED_BY_USER);
-         enviar_paquete(paq, socket_kernel_interrupt);
-         eliminar_paquete(paq);
-         interrupcion = NADA;
-         log_info(log_cpu_gral,"Interrupcion detectada, FINALIZAR PID:%d",reg.pid);
-         break;
+      t_list* recibido = list_create();
+      recibido = recibir_paquete(socket_kernel_interrupt);
+      t_interrupt_code* interrupcion_recibida = list_take(recibido, 0);
+      int* pid_recibido = list_take(recibido, 1);
+      list_destroy(recibido);
+      if(*pid_recibido == reg.pid){
+         switch(*interrupcion_recibida){
+            case DESALOJAR:{
+               log_debug(log_cpu_gral, "Interrupcion recibida, desalojando pid: %d", reg.pid);
+               t_paquete* paq = desalojar_registros(INTERRUPTED_BY_QUANTUM);
+               enviar_paquete(paq, socket_kernel_dispatch);
+               eliminar_paquete(paq);
+               break;
+            }
+            case FINALIZAR:{
+               log_debug(log_cpu_gral, "Interrupcion recibida, finalizando pid: %d", reg.pid);
+               t_paquete* paq = desalojar_registros(INTERRUPTED_BY_USER);
+               enviar_paquete(paq, socket_kernel_interrupt);
+               eliminar_paquete(paq);
+               break;
+            }
+            default:
+            break;
+         }
+         return 1;
+      }else{
+         log_debug(log_cpu_gral, "Interrupcion descartada al pid: %d", *pid_recibido);
       }
+      free(pid_recibido);
+      free(interrupcion_recibida);
    }
-   pthread_mutex_unlock(&mutex_interrupcion);
+}
+
+recibir_codigo_sin_espera(int socket){
+   int cod;
+	if(recv(socket, &cod, sizeof(int), NULL) > 0)
+		return cod;
+	else
+	{
+		close(socket);
+		return -1;
+	}
 }
 
 t_list* mmu(int dir_logica, int tamanio)
@@ -546,3 +545,4 @@ void agregar_mmu_paquete(t_paquete* paq, int direccion_logica, int tamanio){
 
 	list_destroy(aux);
 }
+
