@@ -353,6 +353,7 @@ t_list *cargar_instrucciones(char *directorio, int pid)
     while (getline(&lineaInstruccion, &lineaSize, archivo) != -1) {
         char *instruccion_copia = strdup(lineaInstruccion); // Copiar la línea leída
         if (instruccion_copia != NULL) {
+            string_trim_right(&instruccion_copia);
             list_add(lista, instruccion_copia);
             cant_instrucciones_cargadas++;
         }

@@ -402,6 +402,26 @@ t_dictionary* crear_diccionario(t_contexto_de_ejecucion* reg)
    return dicc;
 }
 
+t_dictionary* crear_diccionario_tipos_registros(void)
+{
+   t_dictionary* dicc = dictionary_create();
+   reg_type_code* de_8 = malloc(sizeof(reg_type_code));
+   *de_8 = U_DE_8;
+   reg_type_code* de_32 = malloc(sizeof(reg_type_code));
+   *de_32 = U_DE_32;
+   dictionary_put(dicc, "AX", de_8);
+   dictionary_put(dicc, "BX", de_8);
+   dictionary_put(dicc, "CX", de_8);
+   dictionary_put(dicc, "DX", de_8);
+   dictionary_put(dicc, "EAX", de_32);
+   dictionary_put(dicc, "EBX", de_32);
+   dictionary_put(dicc, "ECX", de_32);
+   dictionary_put(dicc, "EDX", de_32);
+   dictionary_put(dicc, "SI", de_32);
+   dictionary_put(dicc, "DI", de_32);
+   return dicc;
+}
+
 int tamanio_de_desalojo(void) {
     return 4*sizeof(uint8_t) + 7*sizeof(uint32_t) + sizeof(motivo_desalojo_code);
 }

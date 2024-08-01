@@ -62,6 +62,7 @@ int main(int argc, char *argv[])
 	init_tlb();
 
 	t_dictionary *diccionario = crear_diccionario(&reg);
+	t_dictionary *diccionario_tipo_registro = crear_diccionario_tipos_registros();
 	char *instruccion;
 	reg = recibir_contexto_ejecucion();
 	while (1)
@@ -74,8 +75,16 @@ int main(int argc, char *argv[])
 		switch (op_code)
 		{ // las de enviar y recibir memoria hay que modificar, para hacerlas genericas
 		case SET:{
-			int* registro = dictionary_get(diccionario, arg[1]);
-			*(int*)registro = atoi(arg[2]);
+			reg_type_code tipo_registro = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[1]);
+			void* registro = dictionary_get(diccionario, arg[1]);
+			if (tipo_registro == U_DE_8) {
+				*(uint8_t*)registro = atoi(arg[2]);
+				log_debug(log_cpu_gral, "Se hizo SET de %u en %s", *(uint8_t*)registro, arg[1]); // temporal. Sacar luego
+			}
+			else if (tipo_registro == U_DE_32) {
+				*(uint32_t*)registro = atoi(arg[2]);
+				log_debug(log_cpu_gral, "Se hizo SET de %u en %s", *(uint32_t*)registro, arg[1]); // temporal. Sacar luego
+			}
 			break;}
 		case MOV_IN:{
 			int* registro_dato = dictionary_get(diccionario, arg[1]);
@@ -88,9 +97,28 @@ int main(int argc, char *argv[])
 			enviar_memoria(*(int*)registro_direccion, sizeof(*registro_dato), registro_dato);
 			break;}
 		case SUM:{
-			int* registro_destino = dictionary_get(diccionario, arg[1]);
-			int* registro_origen = dictionary_get(diccionario, arg[2]);
-			*(int*)registro_destino = *(int*)registro_destino + *(int*)registro_origen;
+			reg_type_code tipo_destino = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[1]);
+			reg_type_code tipo_origen = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[2]);
+			void* registro_destino = dictionary_get(diccionario, arg[1]);
+			void* registro_origen = dictionary_get(diccionario, arg[2]);
+
+			// que asco es esto. Ignorenlo pls..
+			if (tipo_origen == U_DE_32 && tipo_destino == U_DE_32) {
+				*(uint32_t*)registro_destino = *(uint32_t*)registro_destino + *(uint32_t*)registro_origen;
+				log_debug(log_cpu_gral, "Se hizo SUM de %s mas %s. suma = %u", arg[1], arg[2], *(uint32_t*)registro_destino); // temporal. Sacar luego
+			}
+			else if (tipo_origen == U_DE_32 && tipo_destino == U_DE_8) {
+				*(uint8_t*)registro_destino = *(uint8_t*)registro_destino + *(uint32_t*)registro_origen;
+				log_debug(log_cpu_gral, "Se hizo SUM de %s mas %s. suma = %u", arg[1], arg[2], *(uint8_t*)registro_destino); // temporal. Sacar luego
+			}
+			else if (tipo_origen == U_DE_8 && tipo_destino == U_DE_32) {
+				*(uint32_t*)registro_destino = *(uint32_t*)registro_destino + *(uint8_t*)registro_origen;
+				log_debug(log_cpu_gral, "Se hizo SUM de %s mas %s. suma = %u", arg[1], arg[2], *(uint32_t*)registro_destino); // temporal. Sacar luego
+			}
+			else if (tipo_origen == U_DE_8 && tipo_destino == U_DE_8) {
+				*(uint8_t*)registro_destino = *(uint8_t*)registro_destino + *(uint8_t*)registro_origen;
+				log_debug(log_cpu_gral, "Se hizo SUM de %s mas %s. suma = %u", arg[1], arg[2], *(uint8_t*)registro_destino); // temporal. Sacar luego
+			}
 			break;}
 		case SUB:{
 			int* registro_destino = dictionary_get(diccionario, arg[1]);

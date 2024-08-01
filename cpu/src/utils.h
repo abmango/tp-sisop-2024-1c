@@ -90,7 +90,11 @@ typedef struct{
     int direccion;
 } t_mmu;
 
-
+typedef enum
+{
+    U_DE_8,
+    U_DE_32
+} reg_type_code;
 
 // void SET (void* registro, void* elemento);
 // void MOV_IN (Registro Datos, Registro Dirección);
@@ -137,6 +141,7 @@ void* interrupt(void);
 execute_op_code decode(char* instruc);
 
 t_dictionary* crear_diccionario(t_contexto_de_ejecucion* reg);
+t_dictionary* crear_diccionario_tipos_registros(void);
 
 int tamanio_de_desalojo(void);
 

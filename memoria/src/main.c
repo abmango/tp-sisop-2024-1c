@@ -327,8 +327,6 @@ void atender_cpu(int socket)
 			log_debug(log_memoria_gral, "CPU ha Solicitado SIGUIENTE_INSTRUCCION");
 
 			recibido = recibir_paquete(socket);
-			log_debug(log_memoria_gral, "se recibieron %d elementos", list_size(recibido)); // temporal. sacar luego.
-
 			aux = list_get(recibido, 0);
 			int backup_pid_proceso = *(int*)aux; // agrego esto para poder loguear mas abajo
 
