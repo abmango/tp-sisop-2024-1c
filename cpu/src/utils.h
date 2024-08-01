@@ -119,7 +119,7 @@ t_contexto_de_ejecucion recibir_contexto_ejecucion(void);
 void* serializar_desalojo(t_desalojo desalojo);
 char* fetch(uint32_t PC, int pid);
 void* leer_memoria(int dir_logica, int tamanio);
-int check_interrupt();
+bool check_interrupt();
 t_list* mmu(int dir_logica, int tamanio);
 void enviar_memoria(int direccion, int tamanio, void* valor);
 void agregar_mmu_paquete(t_paquete* paq, int direccion_logica, int tamanio);

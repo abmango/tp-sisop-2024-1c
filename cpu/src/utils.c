@@ -239,7 +239,7 @@ bool check_interrupt(){
          }
          free(pid_recibido);
          free(interrupcion_recibida);
-         return true
+         return true;
       }else{
          log_debug(log_cpu_gral, "Interrupcion descartada al pid: %d", *pid_recibido);
       }
