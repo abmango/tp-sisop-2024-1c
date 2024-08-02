@@ -343,7 +343,7 @@ t_list* mmu(unsigned dir_logica, unsigned tamanio)
       tlb_update(num_pag, marco);
    }
    int dir_fisica = marco*tamanio_pagina + desplazamiento;
-   log_debug(log_cpu_gral,"Primera direccion fisica: %d", dir_fisica);
+   log_debug(log_cpu_gral,"Direccion fisica: %d", dir_fisica);
 
    t_list* format = list_create();
    t_mmu* aux3 = malloc(sizeof(t_mmu));
@@ -354,6 +354,7 @@ t_list* mmu(unsigned dir_logica, unsigned tamanio)
    dir_fisica = dir_fisica + tamanio_pagina - desplazamiento;
 
    while(tamanio > tamanio_pagina){
+      log_debug(log_cpu_gral,"Direccion fisica: %d", dir_fisica);
       aux3 = malloc(sizeof(t_mmu));
       aux3->direccion = dir_fisica;
       aux3->tamanio = tamanio_pagina;
@@ -362,12 +363,12 @@ t_list* mmu(unsigned dir_logica, unsigned tamanio)
 
       list_add(format,aux3);
    }
+   log_debug(log_cpu_gral,"Direccion fisica: %d", dir_fisica);
 
    aux3 = malloc(sizeof(t_mmu));
    aux3->direccion = dir_fisica;
    aux3->tamanio = tamanio;
    list_add(format, aux3);
-   free(aux3);
 
    return format;
 }
@@ -496,7 +497,7 @@ void tlb_update_fifo(int virtual_page, int physical_page) {
     // Encontrar la entrada más antigua (FIFO)
     int oldest_index = 0;
 
-    for (int i = 1; i < tlb.size; ++i) {
+    for (int i = 0; i < tlb.size; ++i) {
          if (!tlb.tlb_entry[i].valid) {
             oldest_index = i;
             break;
@@ -518,7 +519,7 @@ void tlb_update_fifo(int virtual_page, int physical_page) {
 void tlb_update_lru(int virtual_page, int physical_page) {
     // Encontrar la entrada menos recientemente usada (LRU)
     int least_recently_used = 0;
-    for (int i = 1; i < tlb.size; ++i) {
+    for (int i = 0; i < tlb.size; ++i) {
         if (!tlb.tlb_entry[i].valid) {
             least_recently_used = i;
             break;
@@ -542,13 +543,11 @@ void agregar_mmu_paquete(t_paquete* paq, unsigned direccion_logica, unsigned tam
 	aux = mmu(direccion_logica,tamanio);
 	t_mmu* aux2;
 
-   int contador = 0;
 	while(!list_is_empty(aux))
 	{
-		aux2 = list_remove(aux,contador);
+		aux2 = list_remove(aux,0);
 		agregar_a_paquete(paq, &(aux2->direccion), sizeof(int));
 		agregar_a_paquete(paq, &(aux2->tamanio), sizeof(int));
-      contador++;
 		free(aux2);
    }
 
