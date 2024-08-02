@@ -273,7 +273,7 @@ resultado_operacion acceso_espacio_usuario(t_buffer *data, t_list *solicitudes, 
     void* tamanio;
     switch (acceso){
     case LECTURA: // data vacia, copiar de memoria a buffer data (informacion pura sin verificar, no es tarea memoria)
-        crear_buffer_mem(data);
+        crear_buffer_mem(&data);
         for (int i=0; i<(list_size(solicitudes)/2); i++){
             direccion = list_get(solicitudes, i);
             tamanio = list_get(solicitudes, i+1);
@@ -435,11 +435,11 @@ int obtener_proceso(t_list *lista, int pid)
     return -1;
 }
 
-void crear_buffer_mem(t_buffer *new)
+void crear_buffer_mem(t_buffer** new)
 {
-    new = malloc(sizeof(t_buffer));
-    new->stream = NULL;
-    new->size = 0;
+    *new = malloc(sizeof(t_buffer));
+    (*new)->stream = NULL;
+    (*new)->size = 0;
 }
 
 void agregar_a_buffer_mem(t_buffer *ref, void *data, int tamanio)

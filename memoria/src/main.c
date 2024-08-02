@@ -232,6 +232,7 @@ void atender_cpu(int socket)
 	int operacion;
 	t_proceso *proceso;
 	int frame; 
+	
 
 	log_debug(log_memoria_gral, "Memoria lista para atender al cpu.");
 
@@ -275,7 +276,10 @@ void atender_cpu(int socket)
 			
 			recibido = recibir_paquete(socket);
 			log_debug(log_memoria_gral, "tamanio lista: %d", list_size(recibido));
-			data->stream = list_remove(recibido, (list_size(recibido)-1)); // obtiene el string
+			aux = list_remove(recibido, (list_size(recibido)-1)); // obtiene el string
+			crear_buffer_mem(&data);
+			log_debug(log_memoria_gral, "valor aux: %d", *(int*)aux);
+			data->stream = aux;
 			data->size = strlen((char*)data->stream);
 			result = acceso_espacio_usuario(data, recibido, ESCRITURA);
 
