@@ -151,7 +151,7 @@ t_list * cargar_instrucciones (char *directorio, int pid); // le agrego pid para
 int obtener_indice_frame(void *ref_frame); // recibe ref frame y calcula numero marco
 void * obtener_frame_libre(void);
 int obtener_proceso(t_list *lista, int pid); // busca proceso x pid y retorna la posicion en lista
-void crear_buffer_mem(t_buffer *new);
+void crear_buffer_mem(t_buffer **new);
 void agregar_a_buffer_mem(t_buffer *ref, void *data, int tamanio);
 resultado_operacion agregar_a_memoria(void *direccion, void *data, int cant_bytes);
 int offset_pagina(int desplazamiento, int tamanio_pagina);
