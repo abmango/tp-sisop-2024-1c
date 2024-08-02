@@ -116,6 +116,7 @@ void tlb_update_lru(int virtual_page, int physical_page);
 
 ////////////////////////////////////
 
+bool recibir_y_manejar_rta_handshake_memoria(void);
 bool recibir_y_manejar_handshake_kernel(int socket);
 t_paquete* desalojar_registros(int motiv);
 t_contexto_de_ejecucion recibir_contexto_ejecucion(void);

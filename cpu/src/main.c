@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
 	socket_memoria = crear_conexion(ip, puerto);
 
 	enviar_handshake(CPU, socket_memoria);
-	bool handshake_memoria_exitoso = recibir_y_manejar_rta_handshake(log_cpu_gral, "Memoria", socket_memoria);
+	bool handshake_memoria_exitoso = recibir_y_manejar_rta_handshake_memoria();
 	if (!handshake_memoria_exitoso) {
 		terminar_programa(config);
 		return EXIT_FAILURE;
@@ -174,7 +174,7 @@ int main(int argc, char *argv[])
 				log_debug(log_cpu_gral,"Error al recibir respuesta de resize");
 				exit(3);
 			};
-			recibir_codigo(socket_memoria); //paquete vacio, queda un entero, TEMPORAL
+			recibir_codigo(socket_memoria); //paquete vacio, queda un entero,
 
 			break;
 		}
