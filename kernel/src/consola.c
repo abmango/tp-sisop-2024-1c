@@ -83,6 +83,7 @@ void op_ejecutar_script(char* path, char* ip_memoria, char* puerto_memoria)
         }
         else if (strcmp(palabras_comando_a_ejecutar[0], "MULTIPROGRAMACION") == 0)
         {
+            op_multiprogramacion(atoi(palabras_comando_a_ejecutar[1]));
         }
         else if (strcmp(palabras_comando_a_ejecutar[0], "PROCESO_ESTADO") == 0)
         {
@@ -249,6 +250,10 @@ void op_iniciar_planificacion(void) {
     else {
         log_warning(log_kernel_gral, "La planificación no esta pausada.");
     }
+}
+
+void op_multiprogramacion(int nuevo_grado) {
+    
 }
 
 // ==========================================================================

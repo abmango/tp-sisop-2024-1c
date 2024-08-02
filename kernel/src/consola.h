@@ -18,7 +18,7 @@ void op_iniciar_proceso(char* path, char* ip_mem, char* puerto_mem);
 void op_finalizar_proceso(int pid);
 void op_detener_planificacion(void);
 void op_iniciar_planificacion(void);
-void op_multiprogramacion();
+void op_multiprogramacion(int nuevo_grado);
 void op_proceso_estado(void);
 
 // ==========================================================================
