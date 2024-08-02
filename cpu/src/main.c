@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
 
 	// Espero que se conecte el Kernel en puerto Dispatch
 	socket_kernel_dispatch = esperar_cliente(socket_escucha_dispatch);
-
+	// Recibo y contesto handshake. En caso de no ser aceptado, termina la ejecucion del módulo.
 	bool handshake_kernel_dispatch_aceptado = recibir_y_manejar_handshake_kernel(socket_kernel_dispatch);
 	if (!handshake_kernel_dispatch_aceptado) {
 		terminar_programa(config);
@@ -54,6 +54,8 @@ int main(int argc, char *argv[])
 	}
 	liberar_conexion(log_cpu_gral, "escucha_interrupt", socket_escucha_interrupt);
 
+	fcntl(socket_kernel_interrupt, F_SETFL, O_NONBLOCK); // agregué esto para que el recv() de check interrupt no se quede esperando
+
 	// Inicializar la TLB
 	init_tlb();
 
@@ -70,9 +72,7 @@ int main(int argc, char *argv[])
 		log_debug(log_cpu_gral, "pid: %d", reg.pid); // temporal. sacar luego
 
 		instruccion = fetch(reg.PC, reg.pid);
-
-		reg.PC++; // TEMPORAL. MODIF LUEGO
-		
+		reg.PC++;
 		char **arg = string_split(instruccion, " ");
 		execute_op_code op_code = decode(arg[0]);
 		switch (op_code)
@@ -268,8 +268,7 @@ int main(int argc, char *argv[])
 		default:
 			break;
 		}
-		// reg.PC++;
-		desalojado = check_interrupt(reg); // PARA TESTEAR LA SACO
+		check_interrupt(&desalojado);
 	}
 
 	// Liberar memoria de la TLB

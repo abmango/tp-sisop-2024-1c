@@ -7,6 +7,8 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <fcntl.h>
+#include <errno.h>
 #include <netdb.h>
 #include <string.h>
 #include <string.h>
@@ -119,7 +121,8 @@ t_contexto_de_ejecucion recibir_contexto_ejecucion(void);
 void* serializar_desalojo(t_desalojo desalojo);
 char* fetch(uint32_t PC, int pid);
 void* leer_memoria(int dir_logica, int tamanio);
-bool check_interrupt();
+void check_interrupt(bool* desaloja);
+int recibir_codigo_sin_espera(int socket);
 t_list* mmu(int dir_logica, int tamanio);
 void enviar_memoria(int direccion, int tamanio, void* valor);
 void agregar_mmu_paquete(t_paquete* paq, int direccion_logica, int tamanio);

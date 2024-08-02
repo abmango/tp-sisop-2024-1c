@@ -135,7 +135,7 @@ t_contexto_de_ejecucion recibir_contexto_ejecucion(void)
       log_error(log_cpu_gral, "Error al recibir contexto de ejecucion");
       exit(3);
    }
-   t_list* lista_buffer = list_create();
+   t_list* lista_buffer = NULL;
    lista_buffer = recibir_paquete(socket_kernel_dispatch);
    void* buffer = list_remove(lista_buffer, 0);
    int desplazamiento = 0;
@@ -204,9 +204,8 @@ void* leer_memoria(int dir_logica, int tamanio)
    
 }
 
-bool check_interrupt(){
+void check_interrupt(bool* desaloja){
    int codigo_paquete;
-   bool desalojado;
    while((codigo_paquete = recibir_codigo_sin_espera(socket_kernel_interrupt)) > 0){
       if(codigo_paquete != INTERRUPCION){
          log_error(log_cpu_gral, "Error al recibir interrupcion");
@@ -224,6 +223,7 @@ bool check_interrupt(){
                t_paquete* paq = desalojar_registros(INTERRUPTED_BY_QUANTUM);
                enviar_paquete(paq, socket_kernel_dispatch);
                eliminar_paquete(paq);
+               *desaloja = true;
                break;
             }
             case FINALIZAR:{
@@ -231,6 +231,7 @@ bool check_interrupt(){
                t_paquete* paq = desalojar_registros(INTERRUPTED_BY_USER);
                enviar_paquete(paq, socket_kernel_interrupt);
                eliminar_paquete(paq);
+               *desaloja = true;
                break;
             }
             default:
@@ -245,17 +246,24 @@ bool check_interrupt(){
       free(pid_recibido);
       free(interrupcion_recibida);
    }
-   return false;
 }
 
-recibir_codigo_sin_espera(int socket){
+int recibir_codigo_sin_espera(int socket){
    int cod;
 	if(recv(socket, &cod, sizeof(int), NULL) > 0)
 		return cod;
 	else
 	{
-		close(socket);
-		return -1;
+      if(errno == EAGAIN) {
+         log_debug(log_cpu_gral, "NO SE RECIBIO INTERRUPCION");
+         return 0;
+      }
+      else {
+         log_error(log_cpu_gral, "OCURRIO ERROR AL QUERER RECIBIR INTERRUPCION");
+         close(socket);
+         exit(3);
+         return -1;
+      }
 	}
 }
 
