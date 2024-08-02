@@ -277,6 +277,7 @@ resultado_operacion acceso_espacio_usuario(t_buffer *data, t_list *solicitudes, 
         for (int i=0; i<(list_size(solicitudes)/2); i++){
             direccion = list_get(solicitudes, i);
             tamanio = list_get(solicitudes, i+1);
+            i++;
             aux = (aux + *(int*)direccion);
 
             log_info(log_memoria_oblig, "PID: %i - Accion: LEER - Direccion fisica: %i - Tamaño %i", pid, *(int*)direccion, *(int*)tamanio);
