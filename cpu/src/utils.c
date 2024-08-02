@@ -64,25 +64,25 @@ bool recibir_y_manejar_rta_handshake_memoria(void) {
    }
    t_list* recibido = list_create();
    recibido = recibir_paquete(socket_memoria);
-   int codigo_hanshake = list_get(recibido, 0);
+   int codigo_hanshake = *(int*)list_get(recibido, 0);
 	switch (codigo_hanshake) {
 		case HANDSHAKE_OK:
       exito_handshake = true;
-		log_debug(logger, "Handshake con memoria fue aceptado.");
       tamanio_pagina = *(int*)list_get(recibido, 1);
+      log_debug(log_cpu_gral, "Handshake con memoria fue aceptado. tamanio pah = %d", tamanio_pagina);
 		break;
 		case HANDSHAKE_INVALIDO:
-		log_error(logger, "Handshake con memoria fue rechazado por ser invalido.");
+		log_error(log_cpu_gral, "Handshake con memoria fue rechazado por ser invalido.");
       tamanio_pagina = *(int*)list_get(recibido, 1);
 		break;
 		case -1:
-		log_error(logger, "op_code no esperado de memoria. Se esperaba HANDSHAKE.");
+		log_error(log_cpu_gral, "op_code no esperado de memoria. Se esperaba HANDSHAKE.");
 		break;
 		case -2:
-		log_error(logger, "al recibir la rta al handshake de memoria hubo un tamanio de buffer no esperado.");
+		log_error(log_cpu_gral, "al recibir la rta al handshake de memoria hubo un tamanio de buffer no esperado.");
 		break;
 		default:
-		log_error(logger, "error desconocido al recibir la rta al handshake de memoria.");
+		log_error(log_cpu_gral, "error desconocido al recibir la rta al handshake de memoria.");
 		break;
 	}
    list_destroy_and_destroy_elements(recibido, (void*)free);
@@ -316,10 +316,11 @@ t_list* mmu(unsigned dir_logica, unsigned tamanio)
 {
    int num_pag = dir_logica/tamanio_pagina;
    int desplazamiento = dir_logica - num_pag*tamanio_pagina;
+   log_debug(log_cpu_gral, "Dir Logica: %d. Num Pagina: %d. Desplazamiento: %d", dir_logica, num_pag, desplazamiento);
 
    int marco;
    if (!tlb_lookup(num_pag, &marco)) {
-      log_debug(log_cpu_gral, "TLB Miss: PID %d, Virtual page %u is not in TLB\n", reg.pid, dir_logica);
+      log_debug(log_cpu_gral, "TLB Miss: PID %d, Virtual page %d is not in TLB", reg.pid, num_pag);
       t_paquete* paq = crear_paquete(PEDIDO_PAGINA);
       agregar_a_paquete(paq, &(reg.pid), sizeof(int));
       agregar_a_paquete(paq, &num_pag, sizeof(int));
