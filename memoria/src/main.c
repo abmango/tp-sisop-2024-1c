@@ -253,9 +253,11 @@ void atender_cpu(int socket)
 				paquete = crear_paquete(ACCESO_LECTURA);
 				agregar_a_paquete(paquete, data->stream, data->size);
 				enviar_paquete(paquete, socket);
+				log_debug(log_memoria_gral, "Envio resultado exitoso solicitud ACCESO_LECTURA");
 			} else {
 				paquete = crear_paquete(MENSAJE_ERROR);
 				enviar_paquete(paquete, socket);
+				log_debug(log_memoria_gral, "Envio resultado fallido solicitud ACCESO_LECTURA");
 			}
 
 			// se limpia lo recibido
@@ -279,9 +281,11 @@ void atender_cpu(int socket)
 			if (result == CORRECTA){
 				paquete = crear_paquete(ACCESO_ESCRITURA);
 				enviar_paquete(paquete, socket);
+				log_debug(log_memoria_gral, "Envio resultado exitoso ACCESO_LECTURA");
 			} else {
 				paquete = crear_paquete(MENSAJE_ERROR);
 				enviar_paquete(paquete, socket);
+				log_debug(log_memoria_gral, "Envio resultado exitoso ACCESO_LECTURA");
 			}
 
 			// se limpia lo recibido
@@ -311,9 +315,11 @@ void atender_cpu(int socket)
 			if (result == CORRECTA){
 				paquete = crear_paquete(AJUSTAR_PROCESO);
 				enviar_paquete(paquete, socket);
+				log_debug(log_memoria_gral, "Envio resultado exitoso AJUSTAR_PROCESO");
 			} else if (result == INSUFICIENTE){
 				paquete = crear_paquete(OUT_OF_MEMORY); // lo robe de CPU 
 				enviar_paquete(paquete, socket);
+				log_debug(log_memoria_gral, "Envio resultado fallido AJUSTAR_PROCESO(out of memory)");
 			}
 
 			// se limpia lo recibido
@@ -390,6 +396,7 @@ void atender_cpu(int socket)
 				paquete = crear_paquete(MENSAJE_ERROR);
 				enviar_paquete(paquete, socket);
 				eliminar_paquete(paquete);
+				log_debug(log_memoria_gral, "Envio resultado fallido PEDIDO_PAGINA");
 				for (int i=0;i<list_size(recibido);i++){
 					aux = list_remove(recibido, 0);
 					free(aux);
@@ -405,11 +412,13 @@ void atender_cpu(int socket)
 			// verificamos si se obtuvo frame adecuadamente
 			if (frame == -1){
 				paquete = crear_paquete(MENSAJE_ERROR);
+				log_debug(log_memoria_gral, "Envio resultado fallido PEDIDO_PAGINA");
 			} else {
 				paquete = crear_paquete(SIGUIENTE_INSTRUCCION);
 				agregar_a_paquete(paquete, &frame, sizeof(int));
 			}
 			enviar_paquete(paquete, socket);
+			log_debug(log_memoria_gral, "Envio resultado exitoso PEDIDO_PAGINA, marco: %d", frame);
 
 			// se limpia lo recibido
 			for (int i=0; i<list_size(recibido); i++){
