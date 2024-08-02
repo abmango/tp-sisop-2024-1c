@@ -58,7 +58,6 @@ bool recibir_y_manejar_handshake_kernel(int socket) {
 
 t_paquete* desalojar_registros(int motiv)
 {
-   reg.PC++;
    t_desalojo desalojo;
    desalojo.contexto = reg;
    desalojo.motiv = motiv;

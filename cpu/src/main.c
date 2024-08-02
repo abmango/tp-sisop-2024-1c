@@ -65,10 +65,14 @@ int main(int argc, char *argv[])
 	{	
 		if(desalojado){
 			reg = recibir_contexto_ejecucion();
+			desalojado = false;
 		}	
 		log_debug(log_cpu_gral, "pid: %d", reg.pid); // temporal. sacar luego
 
 		instruccion = fetch(reg.PC, reg.pid);
+
+		reg.PC++; // TEMPORAL. MODIF LUEGO
+		
 		char **arg = string_split(instruccion, " ");
 		execute_op_code op_code = decode(arg[0]);
 		switch (op_code)
@@ -264,7 +268,8 @@ int main(int argc, char *argv[])
 		default:
 			break;
 		}
-		desalojado = check_interrupt(reg);
+		// reg.PC++;
+		desalojado = check_interrupt(reg); // PARA TESTEAR LA SACO
 	}
 
 	// Liberar memoria de la TLB
