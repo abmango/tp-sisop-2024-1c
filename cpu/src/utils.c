@@ -225,6 +225,8 @@ void check_interrupt(bool* desaloja){
                t_paquete* paq = desalojar_registros(INTERRUPTED_BY_QUANTUM);
                enviar_paquete(paq, socket_kernel_dispatch);
                eliminar_paquete(paq);
+               log_debug(log_cpu_gral, "Desalojo enviado.");
+               log_debug(log_cpu_oblig, "Desalojo enviado."); // temp
                *desaloja = true;
                break;
             }
@@ -232,8 +234,10 @@ void check_interrupt(bool* desaloja){
                log_debug(log_cpu_gral, "Interrupcion recibida, finalizando pid: %d", reg.pid);
                log_debug(log_cpu_oblig, "Interrupcion recibida, finalizando pid: %d", reg.pid); // temp
                t_paquete* paq = desalojar_registros(INTERRUPTED_BY_USER);
-               enviar_paquete(paq, socket_kernel_interrupt);
+               enviar_paquete(paq, socket_kernel_dispatch);
                eliminar_paquete(paq);
+               log_debug(log_cpu_gral, "Desalojo enviado.");
+               log_debug(log_cpu_oblig, "Desalojo enviado."); // temp
                *desaloja = true;
                break;
             }
@@ -243,8 +247,6 @@ void check_interrupt(bool* desaloja){
             exit(3);
             break;
          }
-         free(pid_recibido);
-         free(interrupcion_recibida);
       }else{
          log_debug(log_cpu_gral, "Interrupcion descartada al pid: %d. Yo tengo el pid: %d", *pid_recibido, reg.pid);
          log_debug(log_cpu_oblig, "Interrupcion descartada al pid: %d. Yo tengo el pid: %d", *pid_recibido, reg.pid); // temp
