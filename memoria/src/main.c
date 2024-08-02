@@ -230,7 +230,7 @@ void atender_cpu(int socket)
 	resultado_operacion result;
 	t_buffer *data = NULL;
 	int operacion;
-	t_proceso *proceso;
+	t_proceso *proceso = NULL;
 	int frame; 
 	
 
