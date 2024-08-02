@@ -211,15 +211,17 @@ void check_interrupt(bool* desaloja){
          log_error(log_cpu_gral, "Error al recibir interrupcion");
          exit(3);
       }
+      log_debug(log_cpu_oblig, "se recibio interrupcion"); // temp
       t_list* recibido = list_create();
       recibido = recibir_paquete(socket_kernel_interrupt);
-      t_interrupt_code* interrupcion_recibida = list_take(recibido, 0);
-      int* pid_recibido = list_take(recibido, 1);
+      t_interrupt_code* interrupcion_recibida = list_get(recibido, 0);
+      int* pid_recibido = list_get(recibido, 1);
       list_destroy(recibido);
       if(*pid_recibido == reg.pid){
          switch(*interrupcion_recibida){
             case DESALOJAR:{
                log_debug(log_cpu_gral, "Interrupcion recibida, desalojando pid: %d", reg.pid);
+               log_debug(log_cpu_oblig, "Interrupcion recibida, desalojando pid: %d", reg.pid); // temp
                t_paquete* paq = desalojar_registros(INTERRUPTED_BY_QUANTUM);
                enviar_paquete(paq, socket_kernel_dispatch);
                eliminar_paquete(paq);
@@ -228,6 +230,7 @@ void check_interrupt(bool* desaloja){
             }
             case FINALIZAR:{
                log_debug(log_cpu_gral, "Interrupcion recibida, finalizando pid: %d", reg.pid);
+               log_debug(log_cpu_oblig, "Interrupcion recibida, finalizando pid: %d", reg.pid); // temp
                t_paquete* paq = desalojar_registros(INTERRUPTED_BY_USER);
                enviar_paquete(paq, socket_kernel_interrupt);
                eliminar_paquete(paq);
@@ -236,14 +239,15 @@ void check_interrupt(bool* desaloja){
             }
             default:
             log_error(log_cpu_gral, "Cod Descononocido de Interrupcion.");
+            log_debug(log_cpu_oblig, "Cod Descononocido de Interrupcion."); // temp
             exit(3);
             break;
          }
          free(pid_recibido);
          free(interrupcion_recibida);
-         return true;
       }else{
-         log_debug(log_cpu_gral, "Interrupcion descartada al pid: %d", *pid_recibido);
+         log_debug(log_cpu_gral, "Interrupcion descartada al pid: %d. Yo tengo el pid: %d", *pid_recibido, reg.pid);
+         log_debug(log_cpu_oblig, "Interrupcion descartada al pid: %d. Yo tengo el pid: %d", *pid_recibido, reg.pid); // temp
       }
       free(pid_recibido);
       free(interrupcion_recibida);
@@ -254,8 +258,7 @@ int recibir_codigo_sin_espera(int socket){
    int cod;
    int bytes;
 	if((bytes = recv(socket, &cod, sizeof(int), NULL)) > 0) {
-      log_debug(log_cpu_gral, "Se recibio %d bytes en puerto interrupt.");
-      exit(3); // temporal
+      log_debug(log_cpu_gral, "Se recibio %d bytes en puerto interrupt.", bytes);
 		return cod;
    }
 	else

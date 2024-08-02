@@ -147,7 +147,7 @@ int main(int argc, char *argv[])
 			};
 			t_list* aux = list_create();
 			aux = recibir_paquete(socket_memoria);
-			int* respuesta = list_take(aux, 0);
+			int* respuesta = list_get(aux, 0);
 			list_destroy(aux);
 			//falta estructura de respuesta.
 
