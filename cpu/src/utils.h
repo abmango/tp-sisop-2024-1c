@@ -87,56 +87,6 @@ typedef enum
     U_DE_32
 } reg_type_code;
 
-// void SET (void* registro, void* elemento);
-// void MOV_IN (Registro Datos, Registro Dirección);
-// void MOV_OUT (Registro Dirección, Registro Datos);
-// void SUM (void* registro1, void* registro2);
-// void SUB (void* registro1, void* registro2);
-// void JNZ (uint32_t PC, uint32_t direccionInstruccion);
-// JNZ [registro] / [literal] JNZ AX 4
-// void RESIZE (Tamaño);
-// void COPY_STRING (Tamaño);
-// void WAIT (Recurso);
-// void SIGNAL (Recurso);
-// void IO_GEN_SLEEP (Interfaz, Unidades de trabajo);
-// void IO_STDIN_READ (Interfaz, Registro Dirección, Registro Tamaño);
-// void IO_STDOUT_WRITE (Interfaz, Registro Dirección, Registro Tamaño);
-// void IO_FS_CREATE (Interfaz, Nombre Archivo);
-// void IO_FS_DELETE (Interfaz, Nombre Archivo);
-// void IO_FS_TRUNCATE (Interfaz, Nombre Archivo, Registro Tamaño);
-// void IO_FS_WRITE (Interfaz, Nombre Archivo, Registro Dirección, Registro Tamaño, Registro Puntero Archivo);
-// void IO_FS_READ (Interfaz, Nombre Archivo, Registro Dirección, Registro Tamaño, Registro Puntero Archivo);
-// void EXIT();
-
-//#endif
-
-
-
-////////////////////////////////////
-
-bool recibir_y_manejar_handshake_kernel(int socket);
-
-t_paquete* desalojar_registros(int motiv);
-t_contexto_de_ejecucion recibir_contexto_ejecucion(void);
-void* serializar_desalojo(t_desalojo desalojo);
-char* fetch(uint32_t PC, int pid);
-void* leer_memoria(unsigned dir_logica, unsigned tamanio);
-void check_interrupt(bool* desaloja);
-int recibir_codigo_sin_espera(int socket);
-t_list* mmu(unsigned dir_logica, unsigned tamanio);
-void enviar_memoria(unsigned direccion, unsigned tamanio, void* valor);
-void agregar_mmu_paquete(t_paquete* paq, unsigned direccion_logica, unsigned tamanio);
-void desalojar_paquete(t_paquete* paq, bool* desalojado);
-
-
-execute_op_code decode(char* instruc);
-
-t_dictionary* crear_diccionario(t_contexto_de_ejecucion* reg);
-t_dictionary* crear_diccionario_tipos_registros(void);
-
-int tamanio_de_desalojo(void);
-
-void terminar_programa(t_config *config);
 
 // ====  Todo lo de la TLB:  ================================================
 // ==========================================================================
@@ -158,10 +108,30 @@ typedef struct {
 extern t_tlb tlb;
 
 void init_tlb();
-int tlb_lookup(int pid, int dir_logica, int* frame);
-void tlb_update(int pid, int virtual_page, int physical_page);
-void tlb_update_fifo(int pid, int virtual_page, int physical_page);
-void tlb_update_lru(int pid, int virtual_page, int physical_page);
-void tlb_flush();
+int tlb_lookup(int dir_logica, int* frame);
+void tlb_update(int virtual_page, int physical_page);
+void tlb_update_fifo(int virtual_page, int physical_page);
+void tlb_update_lru(int virtual_page, int physical_page);
+
+
+////////////////////////////////////
+
+bool recibir_y_manejar_handshake_kernel(int socket);
+t_paquete* desalojar_registros(int motiv);
+t_contexto_de_ejecucion recibir_contexto_ejecucion(void);
+void* serializar_desalojo(t_desalojo desalojo);
+char* fetch(uint32_t PC);
+void* leer_memoria(unsigned dir_logica, unsigned tamanio);
+void check_interrupt(bool* desaloja);
+int recibir_codigo_sin_espera(int socket);
+t_list* mmu(unsigned dir_logica, unsigned tamanio);
+void enviar_memoria(unsigned direccion, unsigned tamanio, void* valor);
+void agregar_mmu_paquete(t_paquete* paq, unsigned direccion_logica, unsigned tamanio);
+void desalojar_paquete(t_paquete* paq, bool* desalojado);
+execute_op_code decode(char* instruc);
+t_dictionary* crear_diccionario(t_contexto_de_ejecucion* reg);
+t_dictionary* crear_diccionario_tipos_registros(void);
+int tamanio_de_desalojo(void);
+void terminar_programa(t_config *config);
 
 #endif /* UTILS_H_ */

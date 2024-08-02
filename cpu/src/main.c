@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
 			desalojado = false;
 		}	
 
-		instruccion = fetch(reg.PC, reg.pid);
+		instruccion = fetch(reg.PC);
 		reg.PC++;
 		char **arg = string_split(instruccion, " ");
 		execute_op_code op_code = decode(arg[0]);
@@ -158,7 +158,7 @@ int main(int argc, char *argv[])
 			break;}
 		case JNZ:{
 			void* registro = dictionary_get(diccionario, arg[1]);
-			if (*(unsigned*)registro == 0)
+			if (*(unsigned*)registro != 0)
 			{
 				reg.PC = atoi(arg[2]);
 			}
@@ -166,6 +166,7 @@ int main(int argc, char *argv[])
 		case RESIZE:{// FALTA
 			t_paquete* paq = crear_paquete(AJUSTAR_PROCESO);
 			int tamanio = atoi(arg[1]);
+			agregar_a_paquete(paq, &(reg.pid),sizeof(int));
 			agregar_a_paquete(paq, &tamanio, sizeof(int));
 			enviar_paquete(paq, socket_memoria);
 			eliminar_paquete(paq);
@@ -173,14 +174,10 @@ int main(int argc, char *argv[])
 				log_debug(log_cpu_gral,"Error al recibir respuesta de resize");
 				exit(3);
 			};
-			t_list* aux = list_create();
-			aux = recibir_paquete(socket_memoria);
-			void* respuesta = list_get(aux, 0);
-			free(respuesta);
-			list_destroy(aux);
-			//falta estructura de respuesta.
+			recibir_codigo(socket_memoria); //paquete vacio, queda un entero, TEMPORAL
 
-			break;}
+			break;
+		}
 		case COPY_STRING:{
 			void* leido = leer_memoria(reg.reg_cpu_uso_general.SI, atoi(arg[1]));
 			enviar_memoria(reg.reg_cpu_uso_general.DI, atoi(arg[1]), leido);

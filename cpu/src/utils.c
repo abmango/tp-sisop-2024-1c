@@ -162,10 +162,10 @@ void* serializar_desalojo(t_desalojo desalojo)
 	return magic;
 }
 
-char* fetch(uint32_t PC, int pid)
+char* fetch(uint32_t PC)
 {
    t_paquete* paq = crear_paquete(SIGUIENTE_INSTRUCCION);
-   agregar_a_paquete(paq, &pid, sizeof(int));
+   agregar_a_paquete(paq, &(reg.pid), sizeof(int));
    agregar_a_paquete(paq, &PC, sizeof(uint32_t));
    enviar_paquete(paq, socket_memoria);
    eliminar_paquete(paq);
@@ -284,7 +284,7 @@ t_list* mmu(unsigned dir_logica, unsigned tamanio)
    int desplazamiento = dir_logica - num_pag*tamanio_pagina;
 
    int marco;
-   if (!tlb_lookup(reg.pid,num_pag, &marco)) {
+   if (!tlb_lookup(num_pag, &marco)) {
       log_debug(log_cpu_gral, "TLB Miss: PID %d, Virtual page %u is not in TLB\n", reg.pid, dir_logica);
       t_paquete* paq = crear_paquete(PEDIDO_PAGINA);
       agregar_a_paquete(paq, &(reg.pid), sizeof(int));
@@ -301,7 +301,7 @@ t_list* mmu(unsigned dir_logica, unsigned tamanio)
       list_destroy(aux);
 
       // Actualizar la TLB
-      tlb_update(&(reg.pid), num_pag, marco);
+      tlb_update(num_pag, marco);
     }
     else
     {
@@ -358,54 +358,6 @@ void enviar_memoria(unsigned dir_logica, unsigned tamanio, void* valor) //hay q 
    list = recibir_paquete(socket_memoria);
    list_destroy(list);
 }
-
-
-// INSTRUCCIONES A INTERPRETAR
-
-void funcionJNZ (uint32_t PC, uint32_t direccionInstruccion){
-	PC = direccionInstruccion;
-}
-
-// puede ser que acá el tipo de registro sea en realidad uint8_t* ??
-void set_uint8(uint32_t* registro, uint8_t* valor) {
-    *registro = *valor;
-}
-
-void set_uint32(uint32_t* registro, uint32_t* valor) {
-    *registro = *valor;
-}
-
-#define funcionSET(registro, valor) _Generic((*(registro)) + (valor), \
-    void: set_uint8, \
-    void: set_uint32 \
-)(x, y)
-
-void sum_uint8(uint8_t* registro1, uint8_t* registro2) {
-    *registro1 = *registro1 + *registro2;
-}
-
-void sum_uint32(uint32_t* registro1, uint32_t* registro2) {
-    *registro1 = *registro1 + *registro2;
-}
-
-#define funcionSUM(registro1, registro2) _Generic((*(registro1)) + (registro2), \
-    void: sum_uint8, \
-    void: sum_uint32 \
-)(x, y)
-
-
-void sub_uint8(uint8_t* registro1, uint8_t* registro2) {
-    *registro1 = *registro1 - *registro2;
-}
-
-void sub_uint32(uint32_t* registro1, uint32_t* registro2) {
-    *registro1 = *registro1 - *registro2;
-}
-
-#define funcionSUB(registro1, registro2) _Generic((*(registro1)) + (registro2), \
-    void: sum_uint8, \
-    void: sum_uint32 \
-)(x, y)
 
 t_dictionary* crear_diccionario(t_contexto_de_ejecucion* reg)
 {
@@ -475,9 +427,9 @@ void init_tlb() {
 }
 
 // Función para buscar en la TLB
-int tlb_lookup(int pid, int virtual_page,int* frame) {
+int tlb_lookup(int virtual_page,int* frame) {
     for (int i = 0; i < tlb.size; ++i) {
-        if (tlb.tlb_entry[i].page == virtual_page && pid == tlb.tlb_entry[i].pid && tlb.tlb_entry[i].valid == 1) {
+        if (tlb.tlb_entry[i].page == virtual_page && reg.pid == tlb.tlb_entry[i].pid && tlb.tlb_entry[i].valid == 1) {
             *frame = tlb.tlb_entry[i].frame;
             if(tlb.planificacion == "LRU"){
                tlb.tlb_entry[i].access_time = 0;
@@ -492,18 +444,18 @@ int tlb_lookup(int pid, int virtual_page,int* frame) {
 }
 
 // Algoritmos para actualizar la TLB
-void tlb_update(int pid, int virtual_page, int physical_page) {
+void tlb_update(int virtual_page, int physical_page) {
    if(tlb.planificacion == "FIFO"){
-      tlb_update_fifo(pid, virtual_page, physical_page);
+      tlb_update_fifo(virtual_page, physical_page);
    }
    if(tlb.planificacion == "LRU"){
-      tlb_update_lru(pid, virtual_page, physical_page);
+      tlb_update_lru(virtual_page, physical_page);
    }
 }
 
 
 
-void tlb_update_fifo(int pid, int virtual_page, int physical_page) {
+void tlb_update_fifo(int virtual_page, int physical_page) {
     // Encontrar la entrada más antigua (FIFO)
     int oldest_index = 0;
 
@@ -518,13 +470,13 @@ void tlb_update_fifo(int pid, int virtual_page, int physical_page) {
     }
 
     // Actualizar la entrada
-    tlb.tlb_entry[oldest_index].pid = pid;
+    tlb.tlb_entry[oldest_index].pid = reg.pid;
     tlb.tlb_entry[oldest_index].page = virtual_page;
     tlb.tlb_entry[oldest_index].frame = physical_page;
     tlb.tlb_entry[oldest_index].fifo_counter++;
 }
 
-void tlb_update_lru(int pid, int virtual_page, int physical_page) {
+void tlb_update_lru(int virtual_page, int physical_page) {
     // Encontrar la entrada menos recientemente usada (LRU)
     int least_recently_used = 0;
     for (int i = 1; i < tlb.size; ++i) {
@@ -539,18 +491,12 @@ void tlb_update_lru(int pid, int virtual_page, int physical_page) {
 
     // Actualizar la entrada
     tlb.tlb_entry[least_recently_used].valid = 1;
-    tlb.tlb_entry[least_recently_used].pid = pid;
+    tlb.tlb_entry[least_recently_used].pid = reg.pid;
     tlb.tlb_entry[least_recently_used].page = virtual_page;
     tlb.tlb_entry[least_recently_used].frame = physical_page;
     tlb.tlb_entry[least_recently_used].access_time = 0; // Se reinicia el tiempo de acceso
 }
 
-// Función para limpiar la TLB
-void tlb_flush() {
-    for (int i = 0; i < tlb.size; ++i) {
-        tlb.tlb_entry[i].valid = 0;
-    }
-}
 
 void agregar_mmu_paquete(t_paquete* paq, unsigned direccion_logica, unsigned tamanio){
    t_list* aux = list_create();
