@@ -381,7 +381,6 @@ void atender_cpu(int socket)
 			break;
 
 		case PEDIDO_PAGINA:
-			log_debug(log_memoria_gral, "CPU ha Solicitado PEDIDO_PAGINA");
 
 			recibido = recibir_paquete(socket);
 			aux = list_get(recibido, 0);
@@ -392,6 +391,7 @@ void atender_cpu(int socket)
 
 			// obtiene pagina pedida y chequeo
 			aux2 = list_get(recibido, 1);
+			log_debug(log_memoria_gral, "CPU ha Solicitado PEDIDO_PAGINA, PID: %d, PAG_VIRTUAL:%d", *(int*)aux, *(int*)aux2);
 			if (*(int*)aux2 < 0 || *(int*)aux2 > list_size(proceso->tabla_paginas)){
 				paquete = crear_paquete(MENSAJE_ERROR);
 				enviar_paquete(paquete, socket);

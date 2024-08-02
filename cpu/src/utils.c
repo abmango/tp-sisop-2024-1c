@@ -333,8 +333,8 @@ t_list* mmu(unsigned dir_logica, unsigned tamanio)
          log_error(log_cpu_gral,"error al recibir respuesta de pedido de pagina");
       }
       aux = recibir_paquete(socket_memoria);
-      int *aux2 = list_get(aux,0);
-      marco = *aux2;
+      void* aux2 = list_get(aux,0);
+      marco = *(int*)aux2;
       log_debug(log_cpu_gral,"Recibo pedido de TLB entry, PID: %d, Pag_virtual: %d, marco: %d", reg.pid, num_pag, marco);
       free(aux2);
       list_destroy(aux);
@@ -343,6 +343,7 @@ t_list* mmu(unsigned dir_logica, unsigned tamanio)
       tlb_update(num_pag, marco);
    }
    int dir_fisica = marco*tamanio_pagina + desplazamiento;
+   log_debug(log_cpu_gral,"Primera direccion fisica: %d", dir_fisica);
 
    t_list* format = list_create();
    t_mmu* aux3 = malloc(sizeof(t_mmu));
