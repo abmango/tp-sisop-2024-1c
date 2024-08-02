@@ -180,7 +180,7 @@ char* fetch(uint32_t PC, int pid)
    return instruccion;
 }
 
-void* leer_memoria(int dir_logica, int tamanio)
+void* leer_memoria(unsigned dir_logica, unsigned tamanio)
 {
    t_paquete* paq = crear_paquete(ACCESO_LECTURA);
    agregar_a_paquete(paq,&(reg.pid),sizeof(int));
@@ -189,7 +189,7 @@ void* leer_memoria(int dir_logica, int tamanio)
    
    enviar_paquete(paq,socket_memoria);
    eliminar_paquete(paq);
-   log_info(log_cpu_gral,"Envio pedido de lectura");
+   log_info(log_cpu_gral,"Envio pedido de lectura, PID: %d", reg.pid);
 
    t_list* aux = list_create();
    if (recibir_codigo(socket_memoria) != ACCESO_LECTURA){
@@ -278,7 +278,7 @@ int recibir_codigo_sin_espera(int socket){
 	}
 }
 
-t_list* mmu(int dir_logica, int tamanio)
+t_list* mmu(unsigned dir_logica, unsigned tamanio)
 {
    int num_pag = floor(dir_logica/tamanio_pagina); // falta desarrollar floor()
    int desplazamiento = dir_logica - num_pag*tamanio_pagina;
@@ -337,7 +337,7 @@ t_list* mmu(int dir_logica, int tamanio)
    return format;
 }
 
-void enviar_memoria(int dir_logica, int tamanio, void* valor) //hay q adaptar valor a string
+void enviar_memoria(unsigned dir_logica, unsigned tamanio, void* valor) //hay q adaptar valor a string
 {
    t_paquete* paq = crear_paquete(ACCESO_ESCRITURA);
    agregar_a_paquete(paq,&(reg.pid),sizeof(int));
@@ -348,7 +348,7 @@ void enviar_memoria(int dir_logica, int tamanio, void* valor) //hay q adaptar va
    
    enviar_paquete(paq,socket_memoria);
    eliminar_paquete(paq);
-   log_info(log_cpu_gral, "Envio pedido de escritura");
+   log_info(log_cpu_gral, "Envio pedido de escritura, PID:%d", reg.pid);
   
    if(recibir_codigo(socket_memoria != ACCESO_ESCRITURA)){
       log_error(log_cpu_gral, "Error en respuesta de escritura");
@@ -552,7 +552,7 @@ void tlb_flush() {
     }
 }
 
-void agregar_mmu_paquete(t_paquete* paq, int direccion_logica, int tamanio){
+void agregar_mmu_paquete(t_paquete* paq, unsigned direccion_logica, unsigned tamanio){
    t_list* aux = list_create();
 	aux = mmu(direccion_logica,tamanio);
 	t_mmu* aux2;
@@ -568,5 +568,11 @@ void agregar_mmu_paquete(t_paquete* paq, int direccion_logica, int tamanio){
    }
 
 	list_destroy(aux);
+}
+
+void desalojar_paquete(t_paquete* paq, bool* desalojado){
+   enviar_paquete(paq, socket_kernel_dispatch);
+   eliminar_paquete(paq);
+   *desalojado = true;
 }
 

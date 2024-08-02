@@ -120,12 +120,13 @@ t_paquete* desalojar_registros(int motiv);
 t_contexto_de_ejecucion recibir_contexto_ejecucion(void);
 void* serializar_desalojo(t_desalojo desalojo);
 char* fetch(uint32_t PC, int pid);
-void* leer_memoria(int dir_logica, int tamanio);
+void* leer_memoria(unsigned dir_logica, unsigned tamanio);
 void check_interrupt(bool* desaloja);
 int recibir_codigo_sin_espera(int socket);
-t_list* mmu(int dir_logica, int tamanio);
-void enviar_memoria(int direccion, int tamanio, void* valor);
-void agregar_mmu_paquete(t_paquete* paq, int direccion_logica, int tamanio);
+t_list* mmu(unsigned dir_logica, unsigned tamanio);
+void enviar_memoria(unsigned direccion, unsigned tamanio, void* valor);
+void agregar_mmu_paquete(t_paquete* paq, unsigned direccion_logica, unsigned tamanio);
+void desalojar_paquete(t_paquete* paq, bool* desalojado);
 
 
 execute_op_code decode(char* instruc);

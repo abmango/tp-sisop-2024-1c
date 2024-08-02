@@ -13,8 +13,6 @@
 
 void iterator(char* value);
 
-//t_config* iniciar_config(void);
 
-void paquete(int);
 
 #endif 

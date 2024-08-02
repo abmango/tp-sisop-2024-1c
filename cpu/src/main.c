@@ -69,7 +69,6 @@ int main(int argc, char *argv[])
 			reg = recibir_contexto_ejecucion();
 			desalojado = false;
 		}	
-		log_debug(log_cpu_gral, "pid: %d", reg.pid); // temporal. sacar luego
 
 		instruccion = fetch(reg.PC, reg.pid);
 		reg.PC++;
@@ -91,14 +90,25 @@ int main(int argc, char *argv[])
 			break;}
 		case MOV_IN:{
 			reg_type_code tipo_registro = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[1]);
-			int* registro_dato = dictionary_get(diccionario, arg[1]);
-			int* registro_direccion = dictionary_get(diccionario, arg[2]);
-			*(int*)registro_dato = *(int*)leer_memoria(*(int*)registro_direccion, sizeof(*registro_dato));
+			void* registro_dato = dictionary_get(diccionario, arg[1]);
+			void* registro_direccion = dictionary_get(diccionario, arg[2]);
+			if (tipo_registro == U_DE_8) {
+				*(uint8_t*)registro_dato = *(uint8_t*)leer_memoria(*(unsigned*)registro_direccion, sizeof(uint8_t));
+			}
+			if (tipo_registro == U_DE_32) {
+				*(uint32_t*)registro_dato = *(uint32_t*)leer_memoria(*(unsigned*)registro_direccion, sizeof(uint32_t));
+			}
 			break;}
 		case MOV_OUT:{
-			int* registro_direccion = dictionary_get(diccionario, arg[1]);
-			int* registro_dato = dictionary_get(diccionario, arg[2]);
-			enviar_memoria(*(int*)registro_direccion, sizeof(*registro_dato), registro_dato);
+			reg_type_code tipo_registro = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[2]);
+			void* registro_direccion = dictionary_get(diccionario, arg[1]);
+			void* registro_dato = dictionary_get(diccionario, arg[2]);
+			if (tipo_registro == U_DE_8) {
+				enviar_memoria(*(unsigned*)registro_direccion, sizeof(uint8_t), registro_dato);
+			}
+			if (tipo_registro == U_DE_32) {
+				enviar_memoria(*(unsigned*)registro_direccion, sizeof(uint32_t), registro_dato);
+			}
 			break;}
 		case SUM:{
 			reg_type_code tipo_destino = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[1]);
@@ -125,13 +135,30 @@ int main(int argc, char *argv[])
 			}
 			break;}
 		case SUB:{
-			int* registro_destino = dictionary_get(diccionario, arg[1]);
-			int* registro_origen = dictionary_get(diccionario, arg[2]);
-			*(int*)registro_destino = *(int*)registro_destino - *(int*)registro_origen;
+			reg_type_code tipo_destino = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[1]);
+			reg_type_code tipo_origen = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[2]);
+			void* registro_destino = dictionary_get(diccionario, arg[1]);
+			void* registro_origen = dictionary_get(diccionario, arg[2]);
+			if (tipo_origen == U_DE_32 && tipo_destino == U_DE_32) {
+				*(uint32_t*)registro_destino = *(uint32_t*)registro_destino - *(uint32_t*)registro_origen;
+				log_debug(log_cpu_gral, "Se hizo SUB de %s menos %s. resta = %u", arg[1], arg[2], *(uint32_t*)registro_destino); // temporal. Sacar luego
+			}
+			else if (tipo_origen == U_DE_32 && tipo_destino == U_DE_8) {
+				*(uint8_t*)registro_destino = *(uint8_t*)registro_destino - *(uint32_t*)registro_origen;
+				log_debug(log_cpu_gral, "Se hizo SUB de %s menos %s. resta = %u", arg[1], arg[2], *(uint8_t*)registro_destino); // temporal. Sacar luego
+			}
+			else if (tipo_origen == U_DE_8 && tipo_destino == U_DE_32) {
+				*(uint32_t*)registro_destino = *(uint32_t*)registro_destino - *(uint8_t*)registro_origen;
+				log_debug(log_cpu_gral, "Se hizo SUB de %s menos %s. resta = %u", arg[1], arg[2], *(uint32_t*)registro_destino); // temporal. Sacar luego
+			}
+			else if (tipo_origen == U_DE_8 && tipo_destino == U_DE_8) {
+				*(uint8_t*)registro_destino = *(uint8_t*)registro_destino - *(uint8_t*)registro_origen;
+				log_debug(log_cpu_gral, "Se hizo SUB de %s menos %s. resta = %u", arg[1], arg[2], *(uint8_t*)registro_destino); // temporal. Sacar luego
+			}
 			break;}
 		case JNZ:{
-			int* registro = dictionary_get(diccionario, arg[1]);
-			if (*(int*)registro == 0)
+			void* registro = dictionary_get(diccionario, arg[1]);
+			if (*(unsigned*)registro == 0)
 			{
 				reg.PC = atoi(arg[2]);
 			}
@@ -144,126 +171,118 @@ int main(int argc, char *argv[])
 			eliminar_paquete(paq);
 			if(recibir_codigo(socket_memoria) != AJUSTAR_PROCESO){
 				log_debug(log_cpu_gral,"Error al recibir respuesta de resize");
+				exit(3);
 			};
 			t_list* aux = list_create();
 			aux = recibir_paquete(socket_memoria);
-			int* respuesta = list_get(aux, 0);
+			void* respuesta = list_get(aux, 0);
+			free(respuesta);
 			list_destroy(aux);
 			//falta estructura de respuesta.
 
 			break;}
 		case COPY_STRING:{
 			void* leido = leer_memoria(reg.reg_cpu_uso_general.SI, atoi(arg[1]));
-			memcpy(&(reg.reg_cpu_uso_general.DI), leido, sizeof(uint32_t));
+			enviar_memoria(reg.reg_cpu_uso_general.DI, atoi(arg[1]), leido);
+			free(leido);
 			break;}
 		case WAIT_INSTRUCTION:{
 			t_paquete* paq = desalojar_registros(WAIT);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
-			enviar_paquete(paq, socket_kernel_dispatch);
-			eliminar_paquete(paq);
-			desalojado = true;
+			desalojar_paquete(paq, &desalojado);
 			break;}
 		case SIGNAL_INSTRUCTION:{
 			t_paquete* paq = desalojar_registros(SIGNAL);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
-			enviar_paquete(paq, socket_kernel_dispatch);
-			eliminar_paquete(paq);
-			desalojado = true;
+			desalojar_paquete(paq, &desalojado);
 			break;}
 		case IO_GEN_SLEEP:{
 			t_paquete* paq = desalojar_registros(GEN_SLEEP);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			int unidades = atoi(arg[2]);
 			agregar_a_paquete(paq, &unidades, sizeof(int));
-			enviar_paquete(paq, socket_kernel_dispatch);
-			eliminar_paquete(paq);
-			desalojado = true;
+			desalojar_paquete(paq, &desalojado);
 			break;}
 		case IO_STDIN_READ:{
 			t_paquete* paq = desalojar_registros(STDIN_READ);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			agregar_mmu_paquete(paq, atoi(arg[2]), atoi(arg[3]));
 			
-			enviar_paquete(paq, socket_kernel_dispatch);
-			eliminar_paquete(paq);
-
-			desalojado = true;
+			desalojar_paquete(paq, &desalojado);
 			break;}
 		case IO_STDOUT_WRITE:{
 			t_paquete* paq = desalojar_registros(STDOUT_WRITE);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			agregar_mmu_paquete(paq, atoi(arg[2]), atoi(arg[3]));
 			
-			enviar_paquete(paq, socket_kernel_dispatch);
-			eliminar_paquete(paq);
-
-			desalojado = true;
+			desalojar_paquete(paq, &desalojado);
 			break;}
 		case IO_FS_CREATE:{
 			t_paquete* paq = desalojar_registros(FS_CREATE);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			agregar_a_paquete(paq, arg[2], strlen(arg[2]) + 1);
-			enviar_paquete(paq, socket_kernel_dispatch);
-			eliminar_paquete(paq);
-
-			desalojado = true;
+			desalojar_paquete(paq, &desalojado);
 			break;}
 		case IO_FS_DELETE:{
 			t_paquete* paq = desalojar_registros(FS_DELETE);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			agregar_a_paquete(paq, arg[2], strlen(arg[2]) + 1);
-			enviar_paquete(paq, socket_kernel_dispatch);
-			eliminar_paquete(paq);
-
-			desalojado = true;
+			desalojar_paquete(paq, &desalojado);
 			break;}
 		case IO_FS_TRUNCATE:{
 			t_paquete* paq = desalojar_registros(FS_TRUNCATE);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			agregar_a_paquete(paq, arg[2], strlen(arg[2]) + 1);
-			int* registro_tamanio = dictionary_get(diccionario, arg[3]);
-			agregar_a_paquete(paq, registro_tamanio, sizeof(*registro_tamanio));
-			enviar_paquete(paq, socket_kernel_dispatch);
-			eliminar_paquete(paq);
-
-			desalojado = true;
+			reg_type_code tipo_registro = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[3]);
+			void* registro_tamanio = dictionary_get(diccionario, arg[3]);
+			if(tipo_registro = U_DE_8){
+				agregar_a_paquete(paq, registro_tamanio, sizeof(uint8_t));
+			}
+			if(tipo_registro = U_DE_32){
+				agregar_a_paquete(paq, registro_tamanio, sizeof(uint32_t));
+			}
+			desalojar_paquete(paq, &desalojado);
 			break;}
 		case IO_FS_WRITE:{
 			t_paquete* paq = desalojar_registros(FS_WRITE);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			agregar_a_paquete(paq, arg[2], strlen(arg[2]) + 1);
-			int* registro_direccion = dictionary_get(diccionario, arg[3]);
-			int* registro_tamanio = dictionary_get(diccionario, arg[4]);
-			int* registro_archivo = dictionary_get(diccionario, arg[5]);
-			agregar_mmu_paquete(paq, *registro_direccion, *registro_tamanio);
-			agregar_a_paquete(paq, registro_archivo, sizeof(*registro_archivo));
+			void* registro_direccion = dictionary_get(diccionario, arg[3]);
+			void* registro_tamanio = dictionary_get(diccionario, arg[4]);
+			void* registro_archivo = dictionary_get(diccionario, arg[5]);
+			reg_type_code tipo_registro = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[5]);
+			agregar_mmu_paquete(paq, *(unsigned*)registro_direccion, *(unsigned*)registro_tamanio);
+			if(tipo_registro = U_DE_8){
+				agregar_a_paquete(paq, registro_archivo, sizeof(uint8_t));
+			}
+			if(tipo_registro = U_DE_32){
+				agregar_a_paquete(paq, registro_archivo, sizeof(uint32_t));
+			}
 
-			enviar_paquete(paq, socket_kernel_dispatch);
-			eliminar_paquete(paq);
-
-			desalojado = true;
+			desalojar_paquete(paq, &desalojado);
 			break;}
 		case IO_FS_READ:{
 			t_paquete* paq = desalojar_registros(FS_READ);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			agregar_a_paquete(paq, arg[2], strlen(arg[2]) + 1);
-			int* registro_direccion = dictionary_get(diccionario, arg[3]);
-			int* registro_tamanio = dictionary_get(diccionario, arg[4]);
-			int* registro_archivo = dictionary_get(diccionario, arg[5]);
-			agregar_mmu_paquete(paq, *registro_direccion, *registro_tamanio);
-			agregar_a_paquete(paq, registro_archivo, sizeof(*registro_archivo));
+			void* registro_direccion = dictionary_get(diccionario, arg[3]);
+			void* registro_tamanio = dictionary_get(diccionario, arg[4]);
+			void* registro_archivo = dictionary_get(diccionario, arg[5]);
+			reg_type_code tipo_registro = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[5]);
+			agregar_mmu_paquete(paq, *(unsigned*)registro_direccion, *(unsigned*)registro_tamanio);
+			if(tipo_registro = U_DE_8){
+				agregar_a_paquete(paq, registro_archivo, sizeof(uint8_t));
+			}
+			if(tipo_registro = U_DE_32){
+				agregar_a_paquete(paq, registro_archivo, sizeof(uint32_t));
+			}
 
-			enviar_paquete(paq, socket_kernel_dispatch);
-			eliminar_paquete(paq);
-
-			desalojado = true;
+			desalojar_paquete(paq, &desalojado);
 
 			break;}
 		case EXIT:{
 			t_paquete* paq = desalojar_registros(SUCCESS);
-			enviar_paquete(paq, socket_kernel_dispatch);
-			eliminar_paquete(paq);
-			desalojado = true;
+			desalojar_paquete(paq, &desalojado);
 			break;}
 		default:
 			break;
