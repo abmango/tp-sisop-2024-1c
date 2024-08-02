@@ -17,7 +17,9 @@ int main(int argc, char* argv[]) {
 	pthread_mutex_init(&mutex_procesos_cargados, NULL);
 	procesos_cargados = list_create();
 
-	memoria = inicializar_memoria(config_get_int_value(config, "TAM_MEMORIA"), config_get_int_value(config, "TAM_PAGINA"));
+	int tamanio_de_pagina = config_get_int_value(config, "TAM_PAGINA");
+
+	memoria = inicializar_memoria(config_get_int_value(config, "TAM_MEMORIA"), tamanio_de_pagina);
 
 	char* puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
     socket_escucha = iniciar_servidor(puerto);
@@ -25,7 +27,7 @@ int main(int argc, char* argv[]) {
 	int socket_cpu = esperar_cliente(socket_escucha);
 
 	// En caso de handshake fallido con cpu, termina la ejecucion del módulo.
-	bool handshake_cpu_aceptado = recibir_y_manejar_handshake_cpu(socket_cpu);
+	bool handshake_cpu_aceptado = recibir_y_manejar_handshake_cpu(socket_cpu, tamanio_de_pagina);
 	if (!handshake_cpu_aceptado) {
 		terminar_programa(socket_cpu);
 		return EXIT_FAILURE;

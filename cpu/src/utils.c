@@ -280,7 +280,7 @@ int recibir_codigo_sin_espera(int socket){
 
 t_list* mmu(unsigned dir_logica, unsigned tamanio)
 {
-   int num_pag = floor(dir_logica/tamanio_pagina); // falta desarrollar floor()
+   int num_pag = dir_logica/tamanio_pagina;
    int desplazamiento = dir_logica - num_pag*tamanio_pagina;
 
    int marco;

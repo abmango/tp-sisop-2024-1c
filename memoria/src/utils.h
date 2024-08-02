@@ -102,8 +102,9 @@ typedef struct {
 /// @return               : retorna true en caso de handshake exitoso, false en caso contrario
 bool recibir_y_manejar_handshake_conexiones_temp(int socket, char** nombre_modulo);
 
+bool recibir_y_manejar_handshake_cpu(int socket, int tamanio_pagina);
 
-bool recibir_y_manejar_handshake_cpu(int socket);
+void enviar_rta_handshake_cpu(handshake_code handshake_codigo, int socket, int tamanio_pagina);
 
 /// @brief Inicia el espacio memoria, bitmap y el mutex
 /// @param tamano_memoria : recibido de config

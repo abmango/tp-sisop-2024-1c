@@ -56,7 +56,7 @@ bool recibir_y_manejar_handshake_conexiones_temp(int socket, char** nombre_modul
     return exito_handshake;
 }
 
-bool recibir_y_manejar_handshake_cpu(int socket) {
+bool recibir_y_manejar_handshake_cpu(int socket, int tamanio_pagina) {
     bool exito_handshake = false;
 
     int handshake_codigo = recibir_handshake(socket);
@@ -64,7 +64,7 @@ bool recibir_y_manejar_handshake_cpu(int socket) {
     switch (handshake_codigo) {
         case CPU:
         exito_handshake = true;
-        enviar_handshake(HANDSHAKE_OK, socket);
+        enviar_rta_handshake_cpu(HANDSHAKE_OK, socket, tamanio_pagina);
         log_debug(log_memoria_gral, "Handshake con CPU aceptado.");
         break;
         case -1:
@@ -76,13 +76,22 @@ bool recibir_y_manejar_handshake_cpu(int socket) {
         liberar_conexion(log_memoria_gral, "CPU", socket);
         break;
         default:
-        enviar_handshake(HANDSHAKE_INVALIDO, socket);
+        enviar_rta_handshake_cpu(HANDSHAKE_INVALIDO, socket, tamanio_pagina);
         log_error(log_memoria_gral, "Handshake invalido. Se esperaba CPU.");
         liberar_conexion(log_memoria_gral, "CPU", socket);
         break;
     }
     
     return exito_handshake;
+}
+
+void enviar_rta_handshake_cpu(handshake_code handshake_codigo, int socket, int tamanio_pagina)
+{
+	t_paquete* paquete = crear_paquete(HANDSHAKE);
+	agregar_a_paquete(paquete, &handshake_codigo, sizeof(handshake_code));
+    agregar_a_paquete(paquete, &tamanio_pagina, sizeof(int));
+	enviar_paquete(paquete, socket);
+	eliminar_paquete(paquete);
 }
 
 MemoriaPaginada* inicializar_memoria(int tamano_memoria, int tamano_pagina) {
