@@ -97,7 +97,8 @@ void enviar_rta_handshake_cpu(handshake_code handshake_codigo, int socket, int t
 MemoriaPaginada* inicializar_memoria(int tamano_memoria, int tamano_pagina) {
     // Verificar que el tamaño de la memoria sea un múltiplo del tamaño de página
     if (tamano_memoria % tamano_pagina != 0) {
-        return NULL; // Tamaño de memoria no válido
+        log_error(log_memoria_gral, "Tamanio de memoria no valido. No es multiplo del tamanio de pagina");
+        return NULL;
     }
     // Calcular el número de páginas
     // int num_paginas = tamano_memoria / tamano_pagina;
@@ -119,15 +120,17 @@ MemoriaPaginada* inicializar_memoria(int tamano_memoria, int tamano_pagina) {
     if (espacio_usuario == NULL) {
         // free(tablas_paginas->paginas);
         // free(tablas_paginas);
-        return NULL; // Error al asignar memoria para el espacio de usuario
+        log_error(log_memoria_gral, "No se pudo asignar memoria para el espacio de usuario");
+        return NULL;
     }
 
     // Crear la estructura de memoria paginada y devolverla
-    MemoriaPaginada *new_memoria = (MemoriaPaginada*)malloc(sizeof(MemoriaPaginada));
+    MemoriaPaginada *new_memoria = malloc(sizeof(MemoriaPaginada));
     if (new_memoria == NULL) {
         free(espacio_usuario);
         // free(tablas_paginas->paginas);
         // free(tablas_paginas);
+        log_error(log_memoria_gral, "No se pudo asignar memoria para la estructura de memoria paginada");
         return NULL; // Error al asignar memoria para la estructura de memoria paginada
     }
 
@@ -137,6 +140,8 @@ MemoriaPaginada* inicializar_memoria(int tamano_memoria, int tamano_pagina) {
     new_memoria->tamano_pagina = tamano_pagina;
     new_memoria->tamano_memoria = tamano_memoria;
     new_memoria->cantidad_marcos = tamano_memoria / tamano_pagina;
+    log_debug(log_memoria_gral, "Se inicializo la memoria. Tamanio: %d bytes. Cant de frames: %d", tamano_memoria, new_memoria->cantidad_marcos);
+
     pthread_mutex_init(&mutex_memoria, NULL);
 
     // Crear el bitarray de la memoria
@@ -146,8 +151,10 @@ MemoriaPaginada* inicializar_memoria(int tamano_memoria, int tamano_pagina) {
     } else { // Bitmap no puede ser menor q cantidadMarcos x eso + 1 (redondeo para abajo)
         aux_marcos++;
         espacio_bitmap_no_tocar = malloc(aux_marcos);
+        log_warning(log_memoria_gral, "cant marcos no es multiplo de 8.");
     }
     new_memoria->bitmap = bitarray_create_with_mode(espacio_bitmap_no_tocar, aux_marcos, LSB_FIRST);
+    log_debug(log_memoria_gral, "Se inicializo el bitmap. Tamanio: %d bytes", aux_marcos);
 
     return new_memoria;
 }
