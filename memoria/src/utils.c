@@ -231,6 +231,7 @@ resultado_operacion ajustar_tamano_proceso(t_proceso *proceso, int nuevo_size)
 
     retardo_operacion();
     if (tamano_a_ampliar > 0){
+        log_info(log_memoria_oblig, "PID: %i - Tamaño Actual: %i - Tamaño a Ampliar: %i",proceso->pid, (list_size(proceso->tabla_paginas) * memoria->tamano_pagina), nuevo_size);
         for (int i=0; i<paginas_a_modificar; i++){
             indice_aux = 0;
             aux = obtener_frame_libre();
@@ -242,15 +243,16 @@ resultado_operacion ajustar_tamano_proceso(t_proceso *proceso, int nuevo_size)
             list_add(proceso->tabla_paginas, aux);
             bitarray_set_bit(memoria->bitmap, indice_aux);
         }
-        printf("PID: <%i> - Tamaño Actual: <%i> - Tamaño a Ampliar: <%i>",proceso->pid,(list_size(proceso->tabla_paginas) * memoria->tamano_pagina), nuevo_size);
+        log_info(log_memoria_oblig, "PID: %i - Tamaño Actual: %i - Tamaño a Ampliar: %i",proceso->pid, (list_size(proceso->tabla_paginas) * memoria->tamano_pagina), nuevo_size);
     } else if (tamano_a_ampliar < 0) {
+        log_info(log_memoria_oblig, "PID: %i - Tamaño Actual: %i - Tamaño a Reducir: %i",proceso->pid, (list_size(proceso->tabla_paginas) * memoria->tamano_pagina), nuevo_size);
         for (int i=0; i<paginas_a_modificar; i++){
             aux = list_get(proceso->tabla_paginas, list_size(proceso->tabla_paginas) - 1);
             list_remove(proceso->tabla_paginas, list_size(proceso->tabla_paginas) - 1); // -1 para entrar en rango
             indice_aux = obtener_indice_frame(aux);
             bitarray_clean_bit(memoria->bitmap, indice_aux);
         }
-        printf("PID: <%i> - Tamaño Actual: <%i> - Tamaño a Reducir: <%i>",proceso->pid,(list_size(proceso->tabla_paginas) * memoria->tamano_pagina), nuevo_size);
+        log_info(log_memoria_oblig, "PID: %i - Tamaño Actual: %i - Tamaño a Reducir: %i",proceso->pid, (list_size(proceso->tabla_paginas) * memoria->tamano_pagina), nuevo_size);
     }
     return CORRECTA; // si se quizo poner el mismo tamaño se considera q se ajusto bien
 }

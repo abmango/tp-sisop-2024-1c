@@ -414,7 +414,7 @@ void atender_cpu(int socket)
 				paquete = crear_paquete(MENSAJE_ERROR);
 				log_debug(log_memoria_gral, "Envio resultado fallido PEDIDO_PAGINA");
 			} else {
-				paquete = crear_paquete(SIGUIENTE_INSTRUCCION);
+				paquete = crear_paquete(PEDIDO_PAGINA);
 				agregar_a_paquete(paquete, &frame, sizeof(int));
 			}
 			enviar_paquete(paquete, socket);
