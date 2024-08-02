@@ -172,10 +172,15 @@ int main(int argc, char *argv[])
 			agregar_a_paquete(paq, &tamanio, sizeof(int));
 			enviar_paquete(paq, socket_memoria);
 			eliminar_paquete(paq);
-			if(recibir_codigo(socket_memoria) != AJUSTAR_PROCESO){
+			int code = recibir_codigo(socket_memoria);
+			if(code != AJUSTAR_PROCESO){
 				log_debug(log_cpu_gral,"Error al recibir respuesta de resize");
 				exit(3);
-			};
+			}
+			if(code == OUT_OF_MEMORY){
+				log_debug(log_cpu_gral,"Error al recibir respuesta de resize, out of memory");
+				exit(3);
+			}
 			recibir_codigo(socket_memoria); //paquete vacio, queda un entero,
 
 			break;

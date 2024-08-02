@@ -140,6 +140,7 @@ MemoriaPaginada* inicializar_memoria(int tamano_memoria, int tamano_pagina) {
     new_memoria->tamano_pagina = tamano_pagina;
     new_memoria->tamano_memoria = tamano_memoria;
     new_memoria->cantidad_marcos = tamano_memoria / tamano_pagina;
+    new_memoria->ultimo_frame_verificado = 0;
     log_debug(log_memoria_gral, "Se inicializo la memoria. Tamanio: %d bytes. Cant de frames: %d", tamano_memoria, new_memoria->cantidad_marcos);
 
     pthread_mutex_init(&mutex_memoria, NULL);
@@ -261,23 +262,27 @@ resultado_operacion ajustar_tamano_proceso(t_proceso *proceso, int nuevo_size)
 // memoria asume "permite" que si cant_bytes sobrepasa la pagina se efectue, xq no le interesa... es tarea de MMU eso
 resultado_operacion acceso_espacio_usuario(t_buffer *data, t_list *solicitudes, t_acceso_esp_usu acceso)
 {
-    t_solicitud *pedido;
+    t_solicitud *pedido; // corregir/eliminar estructura de pedido
     void *aux;
-    aux = list_get(solicitudes, 0);
+    aux = list_remove(solicitudes, 0);
     int pid;
     pid = *(int*) aux;
+    free(aux);
     aux = memoria->espacio_usuario;
+    void* direccion;
+    void* tamanio;
     switch (acceso){
     case LECTURA: // data vacia, copiar de memoria a buffer data (informacion pura sin verificar, no es tarea memoria)
         crear_buffer_mem(data);
-        for (int i=1; i<list_size(solicitudes); i++){
-            pedido = list_get(solicitudes, i);
-            aux = (aux + pedido->desplazamiento);
+        for (int i=0; i<(list_size(solicitudes)/2); i++){
+            direccion = list_get(solicitudes, i);
+            tamanio = list_get(solicitudes, i+1);
+            aux = (aux + *(int*)direccion);
 
-            log_info(log_memoria_oblig, "PID: %i - Accion: LEER - Direccion fisica: %i - Tamaño %i", pid, pedido->desplazamiento, pedido->cant_bytes);
+            log_info(log_memoria_oblig, "PID: %i - Accion: LEER - Direccion fisica: %i - Tamaño %i", pid, *(int*)direccion, *(int*)tamanio);
 
             pthread_mutex_lock(&mutex_memoria);
-            agregar_a_buffer_mem(data, aux, pedido->cant_bytes);
+            agregar_a_buffer_mem(data, aux, *(int*)tamanio);
             pthread_mutex_unlock(&mutex_memoria);
 
             retardo_operacion();
@@ -290,17 +295,18 @@ resultado_operacion acceso_espacio_usuario(t_buffer *data, t_list *solicitudes, 
 
     case ESCRITURA:
         void *stream = data->stream;
-        for (int i=1; i<list_size(solicitudes); i++){
-            pedido = list_get(solicitudes, i);
-            aux = (aux + pedido->desplazamiento);
+        for (int i=0; i<(list_size(solicitudes)/2); i++){
+            direccion = list_get(solicitudes, i);
+            tamanio = list_get(solicitudes, i+1);
+            aux = (aux + *(int*)direccion);
 
-            log_info(log_memoria_gral, "PID: <%i> - Accion: <ESCRIBIR> - Direccion fisica: <%i> - Tamaño <%i>", pid, pedido->desplazamiento, pedido->cant_bytes);
+            log_info(log_memoria_gral, "PID: <%i> - Accion: <ESCRIBIR> - Direccion fisica: <%i> - Tamaño <%i>", pid, *(int*)direccion, *(int*)tamanio);
 
             pthread_mutex_lock(&mutex_memoria);
-            agregar_a_memoria(aux, stream, pedido->cant_bytes);
+            agregar_a_memoria(aux, stream, *(int*)tamanio);
             pthread_mutex_unlock(&mutex_memoria);
 
-            stream = stream + pedido->cant_bytes;
+            stream = stream + *(int*)tamanio;
             retardo_operacion();
         }
         if (stream == (data->stream + data->size)) // verifica que apunte a final buffer ?? verificar q sea correcto
@@ -400,18 +406,21 @@ void * obtener_frame_libre()
     void *aux = NULL;
     aux = memoria->espacio_usuario;
     for (int i=0; i < memoria->cantidad_marcos; i++){
-        memoria->ultimo_frame_verificado++; // pasa al siguiente frame
         if (memoria->ultimo_frame_verificado >= memoria->cantidad_marcos){
             memoria->ultimo_frame_verificado = 0; // si dio vuelta completa lo reinicia
         }
         // verifica frame
-        if ((bitarray_test_bit(memoria->bitmap,memoria->ultimo_frame_verificado)) == false )
+        if ((bitarray_test_bit(memoria->bitmap,memoria->ultimo_frame_verificado)) == false ){
             aux += (memoria->ultimo_frame_verificado * memoria->tamano_pagina);
+            log_debug(log_memoria_gral, "Se encontro frame libre: %d", memoria->ultimo_frame_verificado);
+            return aux;
+        }
+        memoria->ultimo_frame_verificado++;
     }
-    if (aux == memoria->espacio_usuario) 
+    if (aux == memoria->espacio_usuario){
+        log_debug(log_memoria_gral, "Error al buscar frame libre");
         return NULL;
-    else 
-        return (aux);
+    }
 }
 
 int obtener_proceso(t_list *lista, int pid)
