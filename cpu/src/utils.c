@@ -56,6 +56,40 @@ bool recibir_y_manejar_handshake_kernel(int socket) {
     return exito_handshake;
 }
 
+bool recibir_y_manejar_rta_handshake_memoria(void) { 
+   bool exito_handshake = false;
+   int codigo_paquete = recibir_codigo(socket_memoria);
+   if(codigo_paquete != HANDSHAKE){
+      log_error(log_cpu_gral,"error en handshake");
+   }
+   t_list* recibido = list_create();
+   recibido = recibir_paquete(socket_memoria);
+   int codigo_hanshake = list_get(recibido, 0);
+	switch (codigo_hanshake) {
+		case HANDSHAKE_OK:
+      exito_handshake = true;
+		log_debug(logger, "Handshake con memoria fue aceptado.");
+      tamanio_pagina = *(int*)list_get(recibido, 1);
+		break;
+		case HANDSHAKE_INVALIDO:
+		log_error(logger, "Handshake con memoria fue rechazado por ser invalido.");
+      tamanio_pagina = *(int*)list_get(recibido, 1);
+		break;
+		case -1:
+		log_error(logger, "op_code no esperado de memoria. Se esperaba HANDSHAKE.");
+		break;
+		case -2:
+		log_error(logger, "al recibir la rta al handshake de memoria hubo un tamanio de buffer no esperado.");
+		break;
+		default:
+		log_error(logger, "error desconocido al recibir la rta al handshake de memoria.");
+		break;
+	}
+   list_destroy_and_destroy_elements(recibido, (void*)free);
+
+   return exito_handshake;
+}
+
 t_paquete* desalojar_registros(int motiv)
 {
    t_desalojo desalojo;
@@ -280,7 +314,7 @@ int recibir_codigo_sin_espera(int socket){
 
 t_list* mmu(unsigned dir_logica, unsigned tamanio)
 {
-   int num_pag = floor(dir_logica/tamanio_pagina); // falta desarrollar floor()
+   int num_pag = dir_logica/tamanio_pagina;
    int desplazamiento = dir_logica - num_pag*tamanio_pagina;
 
    int marco;
