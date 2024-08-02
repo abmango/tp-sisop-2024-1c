@@ -235,6 +235,8 @@ void check_interrupt(bool* desaloja){
                break;
             }
             default:
+            log_error(log_cpu_gral, "Cod Descononocido de Interrupcion.");
+            exit(3);
             break;
          }
          free(pid_recibido);
@@ -250,8 +252,12 @@ void check_interrupt(bool* desaloja){
 
 int recibir_codigo_sin_espera(int socket){
    int cod;
-	if(recv(socket, &cod, sizeof(int), NULL) > 0)
+   int bytes;
+	if((bytes = recv(socket, &cod, sizeof(int), NULL)) > 0) {
+      log_debug(log_cpu_gral, "Se recibio %d bytes en puerto interrupt.");
+      exit(3); // temporal
 		return cod;
+   }
 	else
 	{
       if(errno == EAGAIN) {

@@ -189,6 +189,7 @@ void op_finalizar_proceso(int pid)
     if (proceso_esta_en_ejecucion(pid))
     {
         enviar_orden_de_interrupcion(FINALIZAR); // y luego lo maneja desde el planificador corto
+        log_debug(log_kernel_gral, "Interrupcion para Finalizar proceso %d enviada", pid);
     }
     else
     {
