@@ -105,9 +105,11 @@ int main(int argc, char *argv[])
 			void* registro_dato = dictionary_get(diccionario, arg[2]);
 			if (tipo_registro == U_DE_8) {
 				enviar_memoria(*(unsigned*)registro_direccion, sizeof(uint8_t), registro_dato);
+				//enviar_memoria(*(uint8_t*)registro_direccion, sizeof(uint8_t), registro_dato);
 			}
 			if (tipo_registro == U_DE_32) {
 				enviar_memoria(*(unsigned*)registro_direccion, sizeof(uint32_t), registro_dato);
+				//enviar_memoria(*(uint32_t*)registro_direccion, sizeof(uint32_t), registro_dato);
 			}
 			break;}
 		case SUM:{

@@ -453,9 +453,9 @@ void terminar_programa(t_config *config)
 // Función para inicializar la TLB
 void init_tlb() {
    tlb.size = config_get_int_value(config,"CANTIDAD_ENTRADAS_TLB");
-   tlb_entry entradas[tlb.size];
-   tlb.tlb_entry = entradas;
-   for (int i = 0; i < tlb.size; ++i) {
+   //tlb_entry entradas[tlb.size];
+   tlb.tlb_entry = malloc(tlb.size*sizeof(tlb_entry));
+   for (int i = 0; i < tlb.size; i++) {
        tlb.tlb_entry[i].valid = 0;  // Inicialmente, todas las entradas son inválidas
    }
    tlb.planificacion = config_get_string_value(config,"ALGORITMO_TLB");
@@ -464,7 +464,7 @@ void init_tlb() {
 
 // Función para buscar en la TLB
 int tlb_lookup(int virtual_page,int* frame) {
-    for (int i = 0; i < tlb.size; ++i) {
+    for (int i = 0; i < tlb.size; i++) { // REVISAR 1 O 0 AL INICIALIZAR
         if (tlb.tlb_entry[i].page == virtual_page && reg.pid == tlb.tlb_entry[i].pid && tlb.tlb_entry[i].valid == 1) {
             *frame = tlb.tlb_entry[i].frame;
             if(tlb.planificacion == "LRU"){

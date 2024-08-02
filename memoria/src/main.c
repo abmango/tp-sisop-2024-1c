@@ -274,6 +274,7 @@ void atender_cpu(int socket)
 			log_debug(log_memoria_gral, "CPU ha Solicitado ACCESO_ESCRITURA");
 			
 			recibido = recibir_paquete(socket);
+			log_debug(log_memoria_gral, "tamanio lista: %d", list_size(recibido));
 			data->stream = list_remove(recibido, list_size(recibido)-1); // obtiene el string
 			data->size = strlen(data->stream);
 			result = acceso_espacio_usuario(data, recibido, ESCRITURA);
