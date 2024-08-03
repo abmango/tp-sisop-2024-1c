@@ -253,7 +253,22 @@ int main(int argc, char *argv[])
 			log_info(log_cpu_gral, "PID: %d - Ejecutando: %s - %s %s %s", reg.pid, arg[0], arg[1], arg[2], arg[3]);
 			t_paquete* paq = desalojar_registros(STDIN_READ);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
-			agregar_mmu_paquete(paq, atoi(arg[2]), atoi(arg[3]));
+			void* registro_direccion = dictionary_get(diccionario, arg[2]);
+			void* registro_tamanio = dictionary_get(diccionario, arg[3]);
+			reg_type_code tipo_direccion = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[2]);
+			reg_type_code tipo_tamanio = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[3]);
+			if (registro_direccion == U_DE_32 && registro_tamanio == U_DE_32) {
+				agregar_mmu_paquete(paq, *(uint32_t*)registro_direccion, *(uint32_t*)registro_tamanio);
+			}
+			else if (registro_direccion == U_DE_32 && registro_tamanio == U_DE_8) {
+				agregar_mmu_paquete(paq, *(uint32_t*)registro_direccion, *(uint8_t*)registro_tamanio);
+			}
+			else if (registro_direccion == U_DE_8 && registro_tamanio == U_DE_32) {
+				agregar_mmu_paquete(paq, *(uint8_t*)registro_direccion, *(uint32_t*)registro_tamanio);
+			}
+			else if (registro_direccion == U_DE_8 && registro_tamanio == U_DE_8) {
+				agregar_mmu_paquete(paq, *(uint8_t*)registro_direccion, *(uint8_t*)registro_tamanio);
+			}
 			
 			desalojar_paquete(paq, &desalojado);
 			break;}
@@ -264,8 +279,7 @@ int main(int argc, char *argv[])
 			void* registro_direccion = dictionary_get(diccionario, arg[2]);
 			void* registro_tamanio = dictionary_get(diccionario, arg[3]);
 			reg_type_code tipo_direccion = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[2]);
-			reg_type_code tipo_tamanio = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[3]);
-			
+			reg_type_code tipo_tamanio = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[3]);	
 			if (registro_direccion == U_DE_32 && registro_tamanio == U_DE_32) {
 				agregar_mmu_paquete(paq, *(uint32_t*)registro_direccion, *(uint32_t*)registro_tamanio);
 			}
