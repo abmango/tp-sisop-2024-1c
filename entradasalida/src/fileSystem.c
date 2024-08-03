@@ -20,7 +20,7 @@ void iniciar_FS (t_config *config, char *nombre){ /* EN PROCESO DE MODIFICACION 
     /* obteniendo componentes del FileSystem */
     fs->tam_bloques = config_get_int_value(config, "BLOCK_SIZE");
     fs->cant_bloques = config_get_int_value(config, "BLOCK_COUNT");
-    PATH_BASE = config_get_string_value(config, "PATH_BASE_DIALFS"); 
+    PATH_BASE = config_get_string_value(config, "PATH_BASE_DIALFS");
     // conversion para usleep
     retraso_operacion = config_get_int_value(config, "TIEMPO_UNIDAD_TRABAJO")*MILISEG_A_MICROSEG;
     retraso_compresion = config_get_int_value(config, "RETRASO_COMPACTACION")*MILISEG_A_MICROSEG;
@@ -34,7 +34,7 @@ void iniciar_FS (t_config *config, char *nombre){ /* EN PROCESO DE MODIFICACION 
     string_append(&ruta_aux, "bloques.dat");
     int aux = (fs->tam_bloques * fs->cant_bloques) - 1; // tamaño en bytes 0-->tam_tot-1 
     fs->f_bloques = fopen(ruta_aux, "rb+"); // busca si ya existe, sino devuelve false
-    if (!fs->f_bloques){
+    if (fs->f_bloques==NULL){
         fs->f_bloques = fopen(ruta_aux, "wb+"); // abre para lectura-escritura en binario
         ftruncate(fs->f_bloques, aux); // solo linux
     }
@@ -51,7 +51,7 @@ void iniciar_FS (t_config *config, char *nombre){ /* EN PROCESO DE MODIFICACION 
     // crear archivo f_bitmap
     string_append(&ruta_aux, "bitmap.dat");
     fs->f_bitmap = fopen(ruta_aux, "rb+");
-    if (!fs->f_bitmap)
+    if (fs->f_bitmap==NULL)
     { // si no existe lo creamos
         fs->f_bitmap = fopen(ruta_aux, "wb+");
         size_aux = bitarray_get_max_bit(fs->bitmap);
@@ -428,9 +428,9 @@ void actualizar_f_bitmap (void){
 
 char *obtener_path_absoluto(char *ruta){
     char *aux = string_new();
-    string_append(aux, PATH_BASE);
-    string_append(aux, "/");
-    string_append(aux, ruta);
+    string_append(&aux, PATH_BASE);
+    //string_append(aux, "/");
+    string_append(&aux, ruta);
     return aux;
 }
 
