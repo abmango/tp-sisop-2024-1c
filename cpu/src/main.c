@@ -77,6 +77,7 @@ int main(int argc, char *argv[])
 		switch (op_code)
 		{ // las de enviar y recibir memoria hay que modificar, para hacerlas genericas
 		case SET:{
+			log_info(log_cpu_gral, "PID: %d - Ejecutando: %s - %s %s", reg.pid, arg[0], arg[1], arg[2]);
 			reg_type_code tipo_registro = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[1]);
 			void* registro = dictionary_get(diccionario, arg[1]);
 			if (tipo_registro == U_DE_8) {
@@ -89,6 +90,7 @@ int main(int argc, char *argv[])
 			}
 			break;}
 		case MOV_IN:{
+			log_info(log_cpu_gral, "PID: %d - Ejecutando: %s - %s %s", reg.pid, arg[0], arg[1], arg[2]);
 			reg_type_code tipo_registro_dato = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[1]);
 			reg_type_code tipo_registro_direccion = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[2]);
 			void* registro_dato = dictionary_get(diccionario, arg[1]);
@@ -119,6 +121,7 @@ int main(int argc, char *argv[])
 			}
 			break;}
 		case MOV_OUT:{
+			log_info(log_cpu_gral, "PID: %d - Ejecutando: %s - %s %s", reg.pid, arg[0], arg[1], arg[2]);
 			reg_type_code tipo_registro_direccion = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[1]);
 			reg_type_code tipo_registro_dato = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[2]);
 
@@ -139,6 +142,7 @@ int main(int argc, char *argv[])
 			}
 			break;}
 		case SUM:{
+			log_info(log_cpu_gral, "PID: %d - Ejecutando: %s - %s %s", reg.pid, arg[0], arg[1], arg[2]);
 			reg_type_code tipo_destino = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[1]);
 			reg_type_code tipo_origen = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[2]);
 			void* registro_destino = dictionary_get(diccionario, arg[1]);
@@ -163,6 +167,7 @@ int main(int argc, char *argv[])
 			}
 			break;}
 		case SUB:{
+			log_info(log_cpu_gral, "PID: %d - Ejecutando: %s - %s %s", reg.pid, arg[0], arg[1], arg[2]);
 			reg_type_code tipo_destino = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[1]);
 			reg_type_code tipo_origen = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[2]);
 			void* registro_destino = dictionary_get(diccionario, arg[1]);
@@ -185,13 +190,15 @@ int main(int argc, char *argv[])
 			}
 			break;}
 		case JNZ:{
+			log_info(log_cpu_gral, "PID: %d - Ejecutando: %s - %s %s", reg.pid, arg[0], arg[1], arg[2]);
 			void* registro = dictionary_get(diccionario, arg[1]);
 			if (*(unsigned*)registro != 0)
 			{
 				reg.PC = atoi(arg[2]);
 			}
 			break;}
-		case RESIZE:{// FALTA
+		case RESIZE:{
+			log_info(log_cpu_gral, "PID: %d - Ejecutando: %s - %s", reg.pid, arg[0], arg[1]);
 			t_paquete* paq = crear_paquete(AJUSTAR_PROCESO);
 			int tamanio = atoi(arg[1]);
 			agregar_a_paquete(paq, &(reg.pid),sizeof(int));
@@ -214,21 +221,25 @@ int main(int argc, char *argv[])
 			break;
 		}
 		case COPY_STRING:{
+			log_info(log_cpu_gral, "PID: %d - Ejecutando: %s - %s", reg.pid, arg[0], arg[1]);
 			void* leido = leer_memoria(reg.reg_cpu_uso_general.SI, atoi(arg[1]));
 			enviar_memoria(reg.reg_cpu_uso_general.DI, atoi(arg[1]), leido);
 			free(leido);
 			break;}
 		case WAIT_INSTRUCTION:{
+			log_info(log_cpu_gral, "PID: %d - Ejecutando: %s - %s", reg.pid, arg[0], arg[1]);
 			t_paquete* paq = desalojar_registros(WAIT);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			desalojar_paquete(paq, &desalojado);
 			break;}
 		case SIGNAL_INSTRUCTION:{
+			log_info(log_cpu_gral, "PID: %d - Ejecutando: %s - %s", reg.pid, arg[0], arg[1]);
 			t_paquete* paq = desalojar_registros(SIGNAL);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			desalojar_paquete(paq, &desalojado);
 			break;}
 		case IO_GEN_SLEEP:{
+			log_info(log_cpu_gral, "PID: %d - Ejecutando: %s - %s %s", reg.pid, arg[0], arg[1], arg[2]);
 			t_paquete* paq = desalojar_registros(GEN_SLEEP);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			int unidades = atoi(arg[2]);
@@ -236,6 +247,7 @@ int main(int argc, char *argv[])
 			desalojar_paquete(paq, &desalojado);
 			break;}
 		case IO_STDIN_READ:{
+			log_info(log_cpu_gral, "PID: %d - Ejecutando: %s - %s %s %s", reg.pid, arg[0], arg[1], arg[2], arg[3]);
 			t_paquete* paq = desalojar_registros(STDIN_READ);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			agregar_mmu_paquete(paq, atoi(arg[2]), atoi(arg[3]));
@@ -243,6 +255,7 @@ int main(int argc, char *argv[])
 			desalojar_paquete(paq, &desalojado);
 			break;}
 		case IO_STDOUT_WRITE:{
+			log_info(log_cpu_gral, "PID: %d - Ejecutando: %s - %s %s %s", reg.pid, arg[0], arg[1], arg[2],arg[3]);
 			t_paquete* paq = desalojar_registros(STDOUT_WRITE);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			agregar_mmu_paquete(paq, atoi(arg[2]), atoi(arg[3]));
@@ -250,18 +263,21 @@ int main(int argc, char *argv[])
 			desalojar_paquete(paq, &desalojado);
 			break;}
 		case IO_FS_CREATE:{
+			log_info(log_cpu_gral, "PID: %d - Ejecutando: %s - %s %s", reg.pid, arg[0], arg[1], arg[2]);
 			t_paquete* paq = desalojar_registros(FS_CREATE);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			agregar_a_paquete(paq, arg[2], strlen(arg[2]) + 1);
 			desalojar_paquete(paq, &desalojado);
 			break;}
 		case IO_FS_DELETE:{
+			log_info(log_cpu_gral, "PID: %d - Ejecutando: %s - %s %s", reg.pid, arg[0], arg[1], arg[2]);
 			t_paquete* paq = desalojar_registros(FS_DELETE);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			agregar_a_paquete(paq, arg[2], strlen(arg[2]) + 1);
 			desalojar_paquete(paq, &desalojado);
 			break;}
 		case IO_FS_TRUNCATE:{
+			log_info(log_cpu_gral, "PID: %d - Ejecutando: %s - %s %s %s", reg.pid, arg[0], arg[1], arg[2],arg[3]);	
 			t_paquete* paq = desalojar_registros(FS_TRUNCATE);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			agregar_a_paquete(paq, arg[2], strlen(arg[2]) + 1);
@@ -276,6 +292,7 @@ int main(int argc, char *argv[])
 			desalojar_paquete(paq, &desalojado);
 			break;}
 		case IO_FS_WRITE:{
+			log_info(log_cpu_gral, "PID: %d - Ejecutando: %s - %s %s %s %s %s", reg.pid, arg[0], arg[1], arg[2],arg[3], arg[4], arg[5]);
 			t_paquete* paq = desalojar_registros(FS_WRITE);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			agregar_a_paquete(paq, arg[2], strlen(arg[2]) + 1);
@@ -294,6 +311,7 @@ int main(int argc, char *argv[])
 			desalojar_paquete(paq, &desalojado);
 			break;}
 		case IO_FS_READ:{
+			log_info(log_cpu_gral, "PID: %d - Ejecutando: %s - %s %s %s %s %s", reg.pid, arg[0], arg[1], arg[2],arg[3], arg[4], arg[5]);
 			t_paquete* paq = desalojar_registros(FS_READ);
 			agregar_a_paquete(paq, arg[1], strlen(arg[1]) + 1);
 			agregar_a_paquete(paq, arg[2], strlen(arg[2]) + 1);
@@ -313,6 +331,7 @@ int main(int argc, char *argv[])
 
 			break;}
 		case EXIT:{
+			log_info(log_cpu_gral, "PID: %d - Ejecutando: %s", reg.pid, arg[0]);
 			t_paquete* paq = desalojar_registros(SUCCESS);
 			desalojar_paquete(paq, &desalojado);
 			break;}

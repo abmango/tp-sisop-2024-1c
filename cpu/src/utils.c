@@ -212,6 +212,7 @@ char* fetch(uint32_t PC)
    list = recibir_paquete(socket_memoria);
    char* instruccion = list_get(list,0);
    list_destroy(list);
+   log_info(log_cpu_gral, "PID: %d - FETCH - Program Counter: %d", reg.pid, reg.PC);
    log_info(log_cpu_gral, "Instruccion recibida: %s", instruccion);
    return instruccion;
 }
@@ -225,7 +226,7 @@ void* leer_memoria(unsigned dir_logica, unsigned tamanio)
    
    enviar_paquete(paq,socket_memoria);
    eliminar_paquete(paq);
-   log_info(log_cpu_gral,"Envio pedido de lectura, PID: %d", reg.pid);
+   log_info(log_cpu_gral, "PID: %d - Envio pedido de lectura, Tamanio: %u", reg.pid, tamanio);
 
    t_list* aux = list_create();
    if (recibir_codigo(socket_memoria) != ACCESO_LECTURA){
@@ -235,6 +236,7 @@ void* leer_memoria(unsigned dir_logica, unsigned tamanio)
    aux = recibir_paquete(socket_memoria);
    void* resultado = list_remove(aux, 0);
    list_destroy(aux);
+   log_info(log_cpu_gral, "PID: %d - recibo lectura, Tamanio: %u", reg.pid, tamanio);
    return resultado;
    
    
@@ -326,7 +328,8 @@ int buscar_tlb(int num_pag){
       aux = recibir_paquete(socket_memoria);
       void* aux2 = list_get(aux,0);
       marco = *(int*)aux2;
-      log_debug(log_cpu_gral,"Recibo pedido de TLB entry, PID: %d, Pag_virtual: %d, marco: %d", reg.pid, num_pag, marco);
+      
+      log_debug(log_cpu_gral,"PID: %d - OBTENER MARCO - Página: %d - Marco: %d", reg.pid, num_pag, marco);
       free(aux2);
       list_destroy(aux);
 
@@ -340,7 +343,7 @@ t_list* mmu(unsigned dir_logica, unsigned tamanio)
 {
    int num_pag = dir_logica/tamanio_pagina;
    int desplazamiento = dir_logica - num_pag*tamanio_pagina;
-   log_debug(log_cpu_gral, "Dir Logica: %d. Num Pagina: %d. Desplazamiento: %d, tamanio: %d", dir_logica, num_pag, desplazamiento, tamanio);
+   log_debug(log_cpu_gral, "PID: %d - TENGO PEDIDO - Dir Logica: %d. Num Pagina: %d. Desplazamiento: %d, tamanio: %d", reg.pid, dir_logica, num_pag, desplazamiento, tamanio);
 
    int marco = buscar_tlb(num_pag);
    num_pag += 1;
@@ -359,7 +362,7 @@ t_list* mmu(unsigned dir_logica, unsigned tamanio)
 
    aux3->direccion = dir_fisica;
    aux3->tamanio = cant_bytes;
-   log_debug(log_cpu_gral,"Direccion fisica: %d - Tamanio: %d", aux3->direccion, aux3->tamanio);
+   log_debug(log_cpu_gral,"PID: %d - ARMO PEDIDO - Direccion fisica: %d - Tamanio: %d",reg.pid, aux3->direccion, aux3->tamanio);
    list_add(format, aux3);
 
 
@@ -370,7 +373,7 @@ t_list* mmu(unsigned dir_logica, unsigned tamanio)
       aux3 = malloc(sizeof(t_mmu));
       aux3->direccion = dir_fisica;
       aux3->tamanio = tamanio_pagina;
-      log_debug(log_cpu_gral,"Direccion fisica: %d - Tamanio: %d", aux3->direccion, aux3->tamanio);
+      log_debug(log_cpu_gral,"PID: %d - ARMO PEDIDO - Direccion fisica: %d - Tamanio: %d",reg.pid, aux3->direccion, aux3->tamanio);
       dir_fisica += tamanio_pagina;
       tamanio-=tamanio_pagina;
 
@@ -382,7 +385,7 @@ t_list* mmu(unsigned dir_logica, unsigned tamanio)
       aux3 = malloc(sizeof(t_mmu));
       aux3->direccion = dir_fisica;
       aux3->tamanio = tamanio;
-      log_debug(log_cpu_gral,"Direccion fisica: %d - Tamanio: %d", aux3->direccion, aux3->tamanio);
+      log_debug(log_cpu_gral,"PID: %d - ARMO PEDIDO - Direccion fisica: %d - Tamanio: %d",reg.pid, aux3->direccion, aux3->tamanio);
       list_add(format, aux3);
    }
 
@@ -400,7 +403,7 @@ void enviar_memoria(unsigned dir_logica, unsigned tamanio, void* valor) //hay q 
    
    enviar_paquete(paq,socket_memoria);
    eliminar_paquete(paq);
-   log_info(log_cpu_gral, "Envio pedido de escritura, PID:%d, Tamanio: %u", reg.pid, tamanio);
+   log_info(log_cpu_gral, "PID: %d - Envio pedido de escritura, Tamanio: %u, valor: %u", reg.pid, tamanio, *(unsigned*)valor);
    
    if(recibir_codigo(socket_memoria)  != ACCESO_ESCRITURA){
       log_debug(log_cpu_gral, "Error en respuesta de escritura");
