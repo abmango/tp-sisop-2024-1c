@@ -166,16 +166,19 @@ void* rutina_ejecucion(void *nada)
 		eliminar_paquete(paquete);
 	break;
 	case ACCESO_LECTURA:
-		
+		log_debug(log_memoria_gral, "CPU ha Solicitado ACCESO_LECTURA");
+
 		recibido = recibir_paquete(socket_cliente);
 		result = acceso_espacio_usuario(data, recibido, LECTURA);
 		if (result == CORRECTA){
 			paquete = crear_paquete(ACCESO_LECTURA);
 			agregar_a_paquete(paquete, data->stream, data->size);
 			enviar_paquete(paquete, socket_cliente);
+			log_debug(log_memoria_gral, "Envio resultado exitoso solicitud ACCESO_LECTURA");
 		} else {
 			paquete = crear_paquete(MENSAJE_ERROR);
 			enviar_paquete(paquete, socket_cliente);
+			log_debug(log_memoria_gral, "Envio resultado fallido solicitud ACCESO_LECTURA");
 		}
 
 		// se limpia lo recibido
@@ -187,19 +190,27 @@ void* rutina_ejecucion(void *nada)
 		free(data);
 		eliminar_paquete(paquete);
 	break;
+
 	case ACCESO_ESCRITURA:
-		
+		log_debug(log_memoria_gral, "IO ha Solicitado ACCESO_ESCRITURA");
+
 		recibido = recibir_paquete(socket_cliente);
-		data->stream = list_remove(recibido, list_size(recibido)-1); // obtiene el string
-		data->size = strlen(data->stream);
+		log_debug(log_memoria_gral, "tamanio lista: %d", list_size(recibido));
+		aux = list_remove(recibido, (list_size(recibido)-1)); // obtiene el string
+		crear_buffer_mem(&data);
+		data->stream = aux;
+		data->size = strlen((char*)data->stream);
+		log_debug(log_memoria_gral, "Valor aux: %s - Longitud: %d", (char*)aux, data->size);
 		result = acceso_espacio_usuario(data, recibido, ESCRITURA);
 
 		if (result == CORRECTA){
 			paquete = crear_paquete(ACCESO_ESCRITURA);
 			enviar_paquete(paquete, socket_cliente);
+			log_debug(log_memoria_gral, "Envio resultado exitoso ACCESO_ESCRITURA");
 		} else {
 			paquete = crear_paquete(MENSAJE_ERROR);
 			enviar_paquete(paquete, socket_cliente);
+			log_debug(log_memoria_gral, "Envio resultado fallido ACCESO_ESCRITURA");
 		}
 
 		// se limpia lo recibido
@@ -286,11 +297,11 @@ void atender_cpu(int socket)
 			if (result == CORRECTA){
 				paquete = crear_paquete(ACCESO_ESCRITURA);
 				enviar_paquete(paquete, socket);
-				log_debug(log_memoria_gral, "Envio resultado exitoso ACCESO_LECTURA");
+				log_debug(log_memoria_gral, "Envio resultado exitoso ACCESO_ESCRITURA");
 			} else {
 				paquete = crear_paquete(MENSAJE_ERROR);
 				enviar_paquete(paquete, socket);
-				log_debug(log_memoria_gral, "Envio resultado fallido ACCESO_LECTURA");
+				log_debug(log_memoria_gral, "Envio resultado fallido ACCESO_ESCRITURA");
 			}
 
 			// se limpia lo recibido

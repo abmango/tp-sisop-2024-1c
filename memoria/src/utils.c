@@ -288,11 +288,12 @@ resultado_operacion acceso_espacio_usuario(t_buffer *data, t_list *solicitudes, 
             pthread_mutex_unlock(&mutex_memoria);
 
             retardo_operacion();
-
+            log_debug(log_memoria_gral, "Data: %s", (char*)data->stream);
         }
-        if (data->size == 0)
+        if (data->size == 0){
+            log_debug(log_memoria_gral, "Error al cargar data, sin tamaño");
             return ERROR;
-        else
+        } else
             return CORRECTA;
     break;
 
