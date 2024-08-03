@@ -344,13 +344,19 @@ t_list* mmu(unsigned dir_logica, unsigned tamanio)
 {
    int num_pag = dir_logica/tamanio_pagina;
    int desplazamiento = dir_logica - num_pag*tamanio_pagina;
-   log_debug(log_cpu_gral, "Dir Logica: %d. Num Pagina: %d. Desplazamiento: %d", dir_logica, num_pag, desplazamiento);
+   log_debug(log_cpu_gral, "Dir Logica: %d. Num Pagina: %d. Desplazamiento: %d, tamanio: %d", dir_logica, num_pag, desplazamiento, tamanio);
 
    int marco = buscar_tlb(num_pag);
    num_pag += 1;
    int dir_fisica = marco*tamanio_pagina + desplazamiento;
-   int cant_bytes = tamanio_pagina - desplazamiento;
-   tamanio -= cant_bytes; //lo que me falta aniadir
+   int cant_bytes;
+   if(tamanio_pagina-desplazamiento > tamanio){
+      cant_bytes = tamanio;
+      tamanio = 0;
+   } else {
+      cant_bytes = tamanio_pagina - desplazamiento;
+      tamanio -= cant_bytes;
+   }
 
    t_list* format = list_create();
    t_mmu* aux3 = malloc(sizeof(t_mmu));
