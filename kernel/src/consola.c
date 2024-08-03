@@ -64,7 +64,7 @@ void op_ejecutar_script(char* path, char* ip_memoria, char* puerto_memoria)
         return;
     }
 
-    char comando_a_ejecutar = NULL;
+    char* comando_a_ejecutar = NULL;
     size_t len = 0;
     char **palabras_comando_a_ejecutar;
 
