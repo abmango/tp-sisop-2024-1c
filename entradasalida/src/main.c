@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
 	iniciar_log_oblig();
 	
 	//nombre = argv[1];
-	nombre = string_from_format("SLP1"); // temp
+	nombre = string_from_format("MONITOR"); // temp
 
 	ip = config_get_string_value(config, "IP_KERNEL");
 	puerto = config_get_string_value(config, "PUERTO_KERNEL");
