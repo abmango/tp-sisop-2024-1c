@@ -192,9 +192,7 @@ bool recibir_y_verificar_cod_respuesta_empaquetado(t_log* logger, op_code cod_es
 
 	int cod_recibido = recibir_codigo(socket);
 	//t_list* lista = recibir_paquete(socket);
-	log_debug(logger, "paso 1");
 	recibir_codigo(socket);
-	log_debug(logger, "paso 2");
 	/*if(cod_recibido != -1 && list_size(lista) > 0) {
 		cod_recibido = -2;
 	}*/
