@@ -96,25 +96,25 @@ int main(int argc, char *argv[])
 			void* registro_dato = dictionary_get(diccionario, arg[1]);
 			void* registro_direccion = dictionary_get(diccionario, arg[2]);
 			if (tipo_registro_direccion == U_DE_32 && tipo_registro_dato == U_DE_32) {
-				uint32_t* aux = leer_memoria(*(uint32_t*)registro_direccion, sizeof(uint32_t));
+				uint32_t* aux = leer_memoria(*(uint32_t*)registro_direccion, sizeof(uint32_t), tipo_registro_direccion);
 				*(uint32_t*)registro_dato = *aux;
 				log_debug(log_cpu_gral, "Nuevo valor de registro -%s- : %u", arg[1], *aux);
 				free(aux);
 			}
 			else if (tipo_registro_direccion == U_DE_32 && tipo_registro_dato == U_DE_8) {
-				uint8_t* aux = leer_memoria(*(uint32_t*)registro_direccion, sizeof(uint8_t));
+				uint8_t* aux = leer_memoria(*(uint32_t*)registro_direccion, sizeof(uint8_t), tipo_registro_direccion);
 				*(uint8_t*)registro_dato = *aux;
 				log_debug(log_cpu_gral, "Nuevo valor de registro -%s- : %u", arg[1], *aux);
 				free(aux);
 			}
 			else if (tipo_registro_direccion == U_DE_8 && tipo_registro_dato == U_DE_32) {
-				uint32_t* aux = leer_memoria(*(uint8_t*)registro_direccion, sizeof(uint32_t));
+				uint32_t* aux = leer_memoria(*(uint8_t*)registro_direccion, sizeof(uint32_t), tipo_registro_direccion);
 				*(uint32_t*)registro_dato = *aux;
 				log_debug(log_cpu_gral, "Nuevo valor de registro -%s- : %u", arg[1], *aux);
 				free(aux);
 			}
 			else if (tipo_registro_direccion == U_DE_8 && tipo_registro_dato == U_DE_8) {
-				uint8_t* aux = leer_memoria(*(unsigned*)registro_direccion, sizeof(uint8_t));
+				uint8_t* aux = leer_memoria(*(uint8_t*)registro_direccion, sizeof(uint8_t), tipo_registro_direccion);
 				*(uint8_t*)registro_dato = *aux;
 				log_debug(log_cpu_gral, "Nuevo valor de registro -%s- : %u", arg[1], *aux);
 				free(aux);
@@ -129,16 +129,16 @@ int main(int argc, char *argv[])
 			void* registro_dato = dictionary_get(diccionario, arg[2]);
 
 			if (tipo_registro_direccion == U_DE_32 && tipo_registro_dato == U_DE_32) {
-				enviar_memoria(*(uint32_t*)registro_direccion, sizeof(uint32_t), registro_dato);
+				enviar_memoria(*(uint32_t*)registro_direccion, sizeof(uint32_t), registro_dato, tipo_registro_dato);
 			}
 			else if (tipo_registro_direccion == U_DE_32 && tipo_registro_dato == U_DE_8) {
-				enviar_memoria(*(uint32_t*)registro_direccion, sizeof(uint8_t), registro_dato);
+				enviar_memoria(*(uint32_t*)registro_direccion, sizeof(uint8_t), registro_dato, tipo_registro_dato);
 			}
 			else if (tipo_registro_direccion == U_DE_8 && tipo_registro_dato == U_DE_32) {
-				enviar_memoria(*(uint8_t*)registro_direccion, sizeof(uint32_t), registro_dato);
+				enviar_memoria(*(uint8_t*)registro_direccion, sizeof(uint32_t), registro_dato, tipo_registro_dato);
 			}
 			else if (tipo_registro_direccion == U_DE_8 && tipo_registro_dato == U_DE_8) {
-				enviar_memoria(*(uint8_t*)registro_direccion, sizeof(uint8_t), registro_dato);
+				enviar_memoria(*(uint8_t*)registro_direccion, sizeof(uint8_t), registro_dato, tipo_registro_dato);
 			}
 			break;}
 		case SUM:{
@@ -222,8 +222,8 @@ int main(int argc, char *argv[])
 		}
 		case COPY_STRING:{
 			log_info(log_cpu_gral, "PID: %d - Ejecutando: %s - %s", reg.pid, arg[0], arg[1]);
-			void* leido = leer_memoria(reg.reg_cpu_uso_general.SI, atoi(arg[1]));
-			enviar_memoria(reg.reg_cpu_uso_general.DI, atoi(arg[1]), leido);
+			void* leido = leer_memoria(reg.reg_cpu_uso_general.SI, atoi(arg[1]), U_DE_32);
+			enviar_memoria(reg.reg_cpu_uso_general.DI, atoi(arg[1]), leido, U_DE_32);
 			free(leido);
 			break;}
 		case WAIT_INSTRUCTION:{
@@ -339,6 +339,7 @@ int main(int argc, char *argv[])
 			break;
 		}
 		check_interrupt(&desalojado);
+		free(instruccion);
 	}
 
 	// Liberar memoria de la TLB

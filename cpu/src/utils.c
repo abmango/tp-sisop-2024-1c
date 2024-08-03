@@ -62,8 +62,7 @@ bool recibir_y_manejar_rta_handshake_memoria(void) {
    if(codigo_paquete != HANDSHAKE){
       log_error(log_cpu_gral,"error en handshake");
    }
-   t_list* recibido = list_create();
-   recibido = recibir_paquete(socket_memoria);
+   t_list* recibido = recibir_paquete(socket_memoria);
    int codigo_hanshake = *(int*)list_get(recibido, 0);
 	switch (codigo_hanshake) {
 		case HANDSHAKE_OK:
@@ -205,11 +204,10 @@ char* fetch(uint32_t PC)
    agregar_a_paquete(paq, &PC, sizeof(uint32_t));
    enviar_paquete(paq, socket_memoria);
    eliminar_paquete(paq);
-   t_list* list = list_create();
    if(recibir_codigo(socket_memoria) != SIGUIENTE_INSTRUCCION){
       log_error(log_cpu_gral,"Error en respuesta de siguiente instruccion");
    }
-   list = recibir_paquete(socket_memoria);
+   t_list* list = recibir_paquete(socket_memoria);
    char* instruccion = list_get(list,0);
    list_destroy(list);
    log_info(log_cpu_gral, "PID: %d - FETCH - Program Counter: %d", reg.pid, reg.PC);
@@ -217,26 +215,30 @@ char* fetch(uint32_t PC)
    return instruccion;
 }
 
-void* leer_memoria(unsigned dir_logica, unsigned tamanio)
+void* leer_memoria(unsigned dir_logica, unsigned tamanio, reg_type_code type)
 {
    t_paquete* paq = crear_paquete(ACCESO_LECTURA);
    agregar_a_paquete(paq,&(reg.pid),sizeof(int));
    
-   agregar_mmu_paquete(paq, dir_logica, tamanio);
+   int dir_fisica = agregar_mmu_paquete(paq, dir_logica, tamanio);
    
    enviar_paquete(paq,socket_memoria);
    eliminar_paquete(paq);
    log_info(log_cpu_gral, "PID: %d - Envio pedido de lectura, Tamanio: %u", reg.pid, tamanio);
 
-   t_list* aux = list_create();
    if (recibir_codigo(socket_memoria) != ACCESO_LECTURA){
       log_debug(log_cpu_gral,"Error con respuesta de acceso de lectura");
       exit(3);
    }
-   aux = recibir_paquete(socket_memoria);
+   t_list* aux = recibir_paquete(socket_memoria);
    void* resultado = list_remove(aux, 0);
    list_destroy(aux);
-   log_info(log_cpu_gral, "PID: %d - recibo lectura, Tamanio: %u", reg.pid, tamanio);
+   if(type == U_DE_8){
+      log_info(log_cpu_gral, "PID: %d - Acción: LEER - Dirección Física: %d - Valor: %u", reg.pid, dir_fisica, *(uint8_t*)resultado);
+   }
+   if(type == U_DE_32){
+      log_info(log_cpu_gral, "PID: %d - Acción: LEER - Dirección Física: %d - Valor: %u", reg.pid, dir_fisica, *(uint32_t*)resultado);
+   }
    return resultado;
    
    
@@ -339,7 +341,7 @@ int buscar_tlb(int num_pag){
    return marco;
 }
 
-t_list* mmu(unsigned dir_logica, unsigned tamanio)
+t_list* mmu(unsigned dir_logica, unsigned tamanio, int* dir_fisica_return)
 {
    int num_pag = dir_logica/tamanio_pagina;
    int desplazamiento = dir_logica - num_pag*tamanio_pagina;
@@ -349,6 +351,7 @@ t_list* mmu(unsigned dir_logica, unsigned tamanio)
    num_pag += 1;
    int dir_fisica = marco*tamanio_pagina + desplazamiento;
    int cant_bytes;
+   *dir_fisica_return = dir_fisica;
    if(tamanio_pagina-desplazamiento > tamanio){
       cant_bytes = tamanio;
       tamanio = 0;
@@ -392,19 +395,23 @@ t_list* mmu(unsigned dir_logica, unsigned tamanio)
    return format;
 }
 
-void enviar_memoria(unsigned dir_logica, unsigned tamanio, void* valor) //hay q adaptar valor a string
+void enviar_memoria(unsigned dir_logica, unsigned tamanio, void* valor, reg_type_code type) //hay q adaptar valor a string
 {
    t_paquete* paq = crear_paquete(ACCESO_ESCRITURA);
    agregar_a_paquete(paq,&(reg.pid),sizeof(int));
    
-   agregar_mmu_paquete(paq, dir_logica, tamanio);
+   int dir_fisica = agregar_mmu_paquete(paq, dir_logica, tamanio);
 
    agregar_a_paquete(paq, valor, tamanio);
    
    enviar_paquete(paq,socket_memoria);
    eliminar_paquete(paq);
-   log_info(log_cpu_gral, "PID: %d - Envio pedido de escritura, Tamanio: %u, valor: %u", reg.pid, tamanio, *(unsigned*)valor);
-   
+   if(type == U_DE_8){
+      log_info(log_cpu_gral, "PID: %d - Acción: ESCRIBIR - Dirección Física: %d - Valor: %u", reg.pid, dir_fisica, *(uint8_t*)valor);
+   }
+   if(type == U_DE_32){
+      log_info(log_cpu_gral, "PID: %d - Acción: ESCRIBIR - Dirección Física: %d - Valor: %u", reg.pid, dir_fisica, *(uint32_t*)valor);
+   }
    if(recibir_codigo(socket_memoria)  != ACCESO_ESCRITURA){
       log_debug(log_cpu_gral, "Error en respuesta de escritura");
       exit(3);
@@ -560,9 +567,10 @@ void tlb_update_lru(int virtual_page, int physical_page) {
 }
 
 
-void agregar_mmu_paquete(t_paquete* paq, unsigned direccion_logica, unsigned tamanio){
+int agregar_mmu_paquete(t_paquete* paq, unsigned direccion_logica, unsigned tamanio){
    t_list* aux = list_create();
-	aux = mmu(direccion_logica,tamanio);
+   int dir_fisica;
+	aux = mmu(direccion_logica,tamanio, &dir_fisica);
 	t_mmu* aux2;
 
 	while(!list_is_empty(aux))
@@ -574,6 +582,8 @@ void agregar_mmu_paquete(t_paquete* paq, unsigned direccion_logica, unsigned tam
    }
 
 	list_destroy(aux);
+
+   return dir_fisica;
 }
 
 void desalojar_paquete(t_paquete* paq, bool* desalojado){
