@@ -313,10 +313,7 @@ resultado_operacion acceso_espacio_usuario(t_buffer *data, t_list *solicitudes, 
             stream = stream + *(int*)tamanio;
             retardo_operacion();
         }
-        if (stream == (data->stream + data->size)) // verifica que apunte a final buffer ?? verificar q sea correcto
-            return CORRECTA;
-        else
-            return ERROR;
+        return CORRECTA;
     break;
 
     default: return ERROR;
