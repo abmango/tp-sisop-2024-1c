@@ -12,6 +12,7 @@ char *nombre_interfaz_FS;
 
 
 void iniciar_FS (t_config *config, char *nombre){ /* EN PROCESO DE MODIFICACION (PATH_BASE)*/
+    fs = malloc(sizeof(t_file_system));
     nombre_interfaz_FS = nombre;
     char *ruta_aux = string_new();
     size_t size_aux;
@@ -27,10 +28,10 @@ void iniciar_FS (t_config *config, char *nombre){ /* EN PROCESO DE MODIFICACION 
     /* Si no lo probamos hay q comentarlo */
     mkdir(PATH_BASE, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH); // En teoria esto deberia crear la carpeta del FS si no existiera
 
-    string_append(ruta_aux,PATH_BASE);
+    string_append(&ruta_aux,PATH_BASE);
 
     // verificar si es correcto - crear archivo con tam_tot
-    string_append(ruta_aux, "bloques.dat");
+    string_append(&ruta_aux, "bloques.dat");
     int aux = (fs->tam_bloques * fs->cant_bloques) - 1; // tamaño en bytes 0-->tam_tot-1 
     fs->f_bloques = fopen(ruta_aux, "rb+"); // busca si ya existe, sino devuelve false
     if (!fs->f_bloques){
@@ -48,7 +49,7 @@ void iniciar_FS (t_config *config, char *nombre){ /* EN PROCESO DE MODIFICACION 
     fs->bitmap = bitarray_create_with_mode(espacio_bitmap, aux, LSB_FIRST);
 
     // crear archivo f_bitmap
-    string_append(ruta_aux, "bitmap.dat");
+    string_append(&ruta_aux, "bitmap.dat");
     fs->f_bitmap = fopen(ruta_aux, "rb+");
     if (!fs->f_bitmap)
     { // si no existe lo creamos

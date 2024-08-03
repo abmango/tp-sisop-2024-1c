@@ -36,9 +36,6 @@ void* rutina_new(void* puntero_null) {
             log_error(log_kernel_gral, "No se pudo activar proceso por estar lleno el grado de multiprogramacion.");
             pthread_mutex_unlock(&mutex_procesos_activos);
             pthread_mutex_unlock(&mutex_grado_multiprogramacion);
-
-            // IMPORTANTE:
-            usleep(100000); // esto para probar. Si funca bien vemos como va quitándolo
             
             log_debug(log_kernel_gral, "Volviendo a intentar activar proceso...");
         }

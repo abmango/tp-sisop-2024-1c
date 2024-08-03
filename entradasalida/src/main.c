@@ -21,7 +21,7 @@ int main(int argc, char* argv[]) {
     t_config* config;
 	
     // si no le pasamos path, usa el default.config.
-	/*
+	
     if (argc == 2) {
         config = iniciar_config("default");
     }
@@ -36,14 +36,14 @@ int main(int argc, char* argv[]) {
 		imprimir_mensaje("error: parametros mal ingresados");
 		exit(3);
     }
-	*/
-	config = iniciar_config("default"); // temp
+	
+	//config = iniciar_config("default"); // temp
 
     iniciar_log_gral();
 	iniciar_log_oblig();
 	
-	//nombre = argv[1];
-	nombre = string_from_format("MONITOR"); // temp
+	nombre = argv[1];
+	//nombre = string_from_format("TECLADO"); // temp
 
 	ip = config_get_string_value(config, "IP_KERNEL");
 	puerto = config_get_string_value(config, "PUERTO_KERNEL");
