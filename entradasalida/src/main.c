@@ -35,8 +35,8 @@ int main(int argc, char* argv[]) {
     else {
 		imprimir_mensaje("error: parametros mal ingresados");
 		exit(3);
-    }*/
-	
+    }
+	*/
 	config = iniciar_config("FS"); // temp
 
     iniciar_log_gral();
@@ -371,6 +371,11 @@ void interfaz_dialFS(char* nombre, t_config* config, int conexion_kernel)
 	while (operacion == IO_OPERACION)
 	{
 		recibido = recibir_paquete(conexion_kernel);
+
+		if (recibido == NULL) {
+            log_error(log_io_gral, "Error al recibir paquete del Kernel");
+            break;
+        }
 
 		aux = list_remove(recibido, 0); // remueve int para dial_fs_op_code (queda solo lo que se necesita para FS y comunicacion de ser necesaria)
 		codigo_fs = *(int *)aux;

@@ -439,7 +439,7 @@ t_config *obtener_metadata(char *ruta){
     char *temp;
 
     temp = obtener_path_absoluto(ruta);
-    string_append(temp, ".config");
+    string_append(&temp, ".config");
 
     new = config_create(temp);
     if (! new)
@@ -649,7 +649,7 @@ void fs_write (int conexion, t_list *parametros, char *ip_mem, char *puerto_mem)
     if(list_size(parametros)==0)
     {
         log_error(log_io_gral, "No se recibió correctamente el paquete");
-        return NULL;
+        return;
     }
     
     // parametros = int, char*,int, bucle (int-int)
