@@ -22,9 +22,11 @@ void* rutina_exit(void* puntero_null) {
             // Esto capaz funcione mejor si se hace antes de mandar al proceso a EXIT.
             // Hay que ver que pasa al testear.
             pthread_mutex_lock(&mutex_cola_ready);
+            pthread_mutex_lock(&mutex_cola_ready_plus);
             pthread_mutex_lock(&mutex_lista_recurso_blocked);
             liberar_recursos_retenidos(proceso_a_destruir);
             pthread_mutex_unlock(&mutex_lista_recurso_blocked);
+            pthread_mutex_unlock(&mutex_cola_ready_plus);
             pthread_mutex_unlock(&mutex_cola_ready);
 
             log_debug(log_kernel_gral, "Inicia destruccion del proceso %d", proceso_a_destruir->pid);

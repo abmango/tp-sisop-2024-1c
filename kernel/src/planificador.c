@@ -158,16 +158,18 @@ void planific_corto_fifo(void) {
             case STDOUT_WRITE:
             cant_de_pares_direccion_tamanio = (list_size(desalojo_y_argumentos) - 2) / 2;
             nombre_interfaz = list_get(desalojo_y_argumentos, 1);
+            log_debug(log_kernel_gral, "Nombre de inrefaz recibido: %s, cant_de_pares_direccion_tamanio: %d", nombre_interfaz, cant_de_pares_direccion_tamanio);
 
             paquete = crear_paquete(IO_OPERACION);
             agregar_a_paquete(paquete, &(proceso_exec->pid), sizeof(int));
 
             for( ; cant_de_pares_direccion_tamanio > 0; cant_de_pares_direccion_tamanio--) {
-                dir = list_remove(desalojo_y_argumentos, 2);
+                dir = (int*)list_remove(desalojo_y_argumentos, 2);
                 agregar_a_paquete(paquete, dir, sizeof(int));
-                free(dir);
-                tamanio = list_remove(desalojo_y_argumentos, 2);
+                tamanio = (int*)list_remove(desalojo_y_argumentos, 2);
                 agregar_a_paquete(paquete, tamanio, sizeof(int));
+                log_debug(log_kernel_gral, "Direccion: %d, Tamanio: %d", *dir, *tamanio);
+                free(dir);
                 free(tamanio);
             }
 

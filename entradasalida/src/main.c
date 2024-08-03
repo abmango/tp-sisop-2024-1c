@@ -163,6 +163,7 @@ void interfaz_stdin(char* nombre, t_config* config, int conexion_kernel)
 
 		// revision si lo q resta en paquetes es par, sino error
 		if ( (list_size(recibido)% 2) != 0 ){
+			log_debug(log_io_gral, "Error list size");
 			eliminar_paquete(paquete);
 			paquete = crear_paquete(MENSAJE_ERROR);
 			enviar_paquete(paquete,conexion_kernel);
