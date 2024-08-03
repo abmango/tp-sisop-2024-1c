@@ -307,7 +307,9 @@ void op_iniciar_planificacion(void) {
 }
 
 void op_multiprogramacion(int nuevo_grado) {
-
+    pthread_mutex_lock(&mutex_grado_multiprogramacion);
+    grado_multiprogramacion = nuevo_grado;
+    pthread_mutex_unlock(&mutex_grado_multiprogramacion);
 }
 
 // ==========================================================================
