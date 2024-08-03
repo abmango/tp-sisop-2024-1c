@@ -98,12 +98,12 @@ bool crear_f (char *ruta_metadata){
         config_set_value(metadata, "BLOQUE", &(libres->bloque));
         config_set_value(metadata, "SIZE", "1");
 
-        log_info(log_io, "config creado");
+        log_debug(log_io_gral, "config creado");
     }
 
     libres->bloque = config_get_int_value(metadata,"BLOQUE");
     if (bitarray_test_bit(fs->bitmap, libres->bloque) == false) {
-        log_warning(log_io, "CORRUPCION: Archivo metadata indica un bloque que no esta reservado");
+        log_warning(log_io_gral, "CORRUPCION: Archivo metadata indica un bloque que no esta reservado");
     } // se podrian tomar medidas, x ahora es solo testeo simple
 
     // guardamos y cerramos archivo metadata
@@ -123,7 +123,7 @@ bool eliminar_f (char *ruta_metadata){
     t_config *metadata = config_create(ruta_metadata);
     if (! metadata){
         usleep(retraso_operacion);
-        log_warning(log_io, "archivo metadata no existe");
+        log_warning(log_io_gral, "archivo metadata no existe");
         return false;
     }
     bloque = config_get_int_value(metadata, "BLOQUE");
@@ -136,7 +136,7 @@ bool eliminar_f (char *ruta_metadata){
     config_destroy(metadata);
     if (remove(ruta_metadata)) {// si devuelve != 0 hubo error
         usleep(retraso_operacion);
-        log_warning(log_io, "Error al borrar archivo");
+        log_warning(log_io_gral, "Error al borrar archivo");
         return false;
     }
     usleep(retraso_operacion);
@@ -150,7 +150,7 @@ bool truncar_f (t_config *metadata, int nuevo_size, int pid){
     // obtener bloque inicial y cant bloques
     if (! metadata){
         usleep(retraso_operacion);
-        log_warning(log_io, "archivo metadata no existe");
+        log_warning(log_io_gral, "archivo metadata no existe");
         return false;
     }
     bloque = config_get_int_value(metadata, "BLOQUE");
@@ -169,15 +169,15 @@ bool truncar_f (t_config *metadata, int nuevo_size, int pid){
         libres = bloques_libres(nuevo_size);
         if (libres->no_contiguos < nuevo_size){
             usleep(retraso_operacion);
-            log_warning(log_io, "No hay espacio libre suficiente en FS");
+            log_warning(log_io_gral, "No hay espacio libre suficiente en FS");
             return false;
         }
         
         if (libres->bloque == -1){
             // Pedimos compactar FS
-            log_info(log_io, "PID: <%i> - Inicio Compactación", pid);
+            log_info(log_io_oblig, "PID: <%i> - Inicio Compactación", pid);
             compactar_FS();
-            log_info(log_io, "PID: <%i> - Fin Compactación", pid);
+            log_info(log_io_oblig, "PID: <%i> - Fin Compactación", pid);
 
             libres = bloques_libres(nuevo_size); // bbtenemos bloq
         }
@@ -278,7 +278,7 @@ char * leer_f (t_config *metadata, int offset, int cant_bytes){
     if (!metadata || calcular_bloques(offset + cant_bytes) > config_get_int_value(metadata, "SIZE"))
     { // Si no existe la metadata Ó los bloques a leer (deplazamiento dentro file + cant) sobrepasan el tamaño del file...
         usleep(retraso_operacion);
-        log_warning(log_io, "Error al leer archivo, archivo inexistente ó leyendo fuera del archivo");
+        log_warning(log_io_gral, "Error al leer archivo, archivo inexistente ó leyendo fuera del archivo");
         return data;
     } 
 
@@ -313,7 +313,7 @@ bool escribir_f (t_config *metadata, int offset, int cant_bytes, char *data){ /*
     if (!metadata || calcular_bloques(offset + cant_bytes) > config_get_int_value(metadata, "SIZE"))
     { // Si no existe la metadata Ó los bloques a leer (deplazamiento dentro file + cant) sobrepasan el tamaño del file...
         usleep(retraso_operacion);
-        log_warning(log_io, "Error al leer archivo, archivo inexistente ó leyendo fuera del archivo");
+        log_warning(log_io_gral, "Error al leer archivo, archivo inexistente ó leyendo fuera del archivo");
         return false;
     }
 
@@ -442,7 +442,7 @@ t_config *obtener_metadata(char *ruta){
 
     new = config_create(temp);
     if (! new)
-        log_warning(log_io, "archivo metadata no existe");
+        log_warning(log_io_gral, "archivo metadata no existe");
 
     return new;
 }
@@ -595,7 +595,7 @@ void fs_read (int conexion, t_list *parametros, char *ip_mem, char *puerto_mem){
 
     // Handshake con Memoria fallido. Libera la conexion, e informa del error a Kernel.
 	if(!handshake_aceptado) {
-		liberar_conexion(log_io, "Memoria", conexion_memoria);
+		liberar_conexion(log_io_gral, "Memoria", conexion_memoria);
 		eliminar_paquete(paquete);
 		crear_paquete(MENSAJE_ERROR);
 		enviar_paquete(paquete, conexion);
@@ -620,7 +620,7 @@ void fs_read (int conexion, t_list *parametros, char *ip_mem, char *puerto_mem){
 		paquete = crear_paquete(MENSAJE_ERROR);
 	}
 
-	liberar_conexion(log_io, "Memoria", conexion_memoria); // cierra conexion
+	liberar_conexion(log_io_gral, "Memoria", conexion_memoria); // cierra conexion
 
 	// avisa a kernel que termino 
 	enviar_paquete(paquete, conexion);
@@ -696,7 +696,7 @@ void fs_write (int conexion, t_list *parametros, char *ip_mem, char *puerto_mem)
 
     // Handshake con Memoria fallido. Libera la conexion, e informa del error a Kernel.
 	if(!handshake_aceptado) {
-		liberar_conexion(log_io, "Memoria", conexion_memoria);
+		liberar_conexion(log_io_gral, "Memoria", conexion_memoria);
 		eliminar_paquete(paquete);
 		crear_paquete(MENSAJE_ERROR);
 		enviar_paquete(paquete, conexion);
@@ -723,7 +723,7 @@ void fs_write (int conexion, t_list *parametros, char *ip_mem, char *puerto_mem)
         resultado = escribir_f(metadata, offset, cant_bytes, (char*)data);
 
         if (!resultado){
-            log_error(log_io, "No se pudo escribir en el archivo");
+            log_error(log_io_gral, "No se pudo escribir en el archivo");
             eliminar_paquete(paquete);
             crear_paquete(MENSAJE_ERROR);
         }
@@ -732,7 +732,7 @@ void fs_write (int conexion, t_list *parametros, char *ip_mem, char *puerto_mem)
 		paquete = crear_paquete(MENSAJE_ERROR);
 	}
 
-	liberar_conexion(log_io, "Memoria", conexion_memoria); // cierra conexion
+	liberar_conexion(log_io_gral, "Memoria", conexion_memoria); // cierra conexion
 
 	// avisa a kernel que termino 
 	enviar_paquete(paquete, conexion);

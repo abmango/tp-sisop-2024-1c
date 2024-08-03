@@ -61,10 +61,18 @@ bool manejar_rta_handshake(int rta_handshake, const char* nombre_servidor) {
     return exito_handshake;
 }
 
-void iniciar_logger()
+void iniciar_log_gral()
 {
-	log_io = log_create("entradaSalida.log", "EntradaSalida", true, LOG_LEVEL_DEBUG);
-	if(log_io == NULL){
+	log_io_gral = log_create("entradaSalida.log", "EntradaSalida", true, LOG_LEVEL_DEBUG);
+	if(log_io_gral == NULL){
+		printf("No se pudo crear un log");
+	}
+}
+
+void iniciar_log_oblig()
+{
+	log_io_oblig = log_create("entradaSalida.log", "EntradaSalida", true, LOG_LEVEL_INFO);
+	if(log_io_oblig == NULL){
 		printf("No se pudo crear un log");
 	}
 }
@@ -74,23 +82,23 @@ void logguear_operacion (int pid, t_io_type_code operacion)
     switch (operacion)
     {
         case GENERICA:
-            log_info(log_io,
+            log_info(log_io_oblig,
             "PID: <%i> - Operacion: <GENERICA>", pid);
             break;
         case STDIN:
-            log_info(log_io,
+            log_info(log_io_oblig,
             "PID: <%i> - Operacion: <STDIN>", pid);
             break;
         case STDOUT:
-            log_info(log_io,
+            log_info(log_io_oblig,
             "PID: <%i> - Operacion: <STDOUT>", pid);
             break;
         case DIALFS:
-            log_info(log_io,
+            log_info(log_io_oblig,
             "PID: <%i> - Operacion: <DIALFS>", pid);
             break;
         default:
-            log_warning (log_io,
+            log_warning (log_io_gral,
             "PID: <%i> - Operacion: <DESCONOCIDA>", pid);
             break;
     }
@@ -101,30 +109,30 @@ void logguear_DialFs (dial_fs_op_code operacion, int pid, char *nombre_f, int ta
     switch (operacion)
     {
     case CREAR_F:
-        log_warning (log_io,
+        log_info (log_io_oblig,
             "PID: <%i> - Crear Archivo: <%s>",pid, nombre_f);
         break;
     case ELIMINAR_F:
-        log_warning (log_io,
+        log_info (log_io_oblig,
             "PID: <%i> - Eliminar Archivo: <%s>", pid, nombre_f);
         break;
     case TRUNCAR_F:
-        log_warning (log_io,
+        log_info (log_io_oblig,
             "PID: <%i> - Truncar Archivo: <%s> - Tamaño: <%i>", 
             pid, nombre_f,tamanio);
         break;
     case LEER_F:
-        log_warning (log_io,
+        log_info (log_io_oblig,
             "PID: <%i> - Leer Archivo: <%s> - Tamaño a Leer: <%i> - Puntero a Archivo: <%i>", 
             pid, nombre_f, tamanio, offset);
         break;
     case ESCRIBIR_F:
-        log_warning (log_io,
+        log_info (log_io_oblig,
             "PID: <%i> - Leer Archivo: <%s> - Tamaño a Escribir: <%i> - Puntero a Archivo: <%i>", 
             pid, nombre_f, tamanio, offset);
         break;
     default:
-        log_warning (log_io,
+        log_warning (log_io_gral,
             "PID: <%i> - DialFS: <DESCONOCIDA>", pid);
             break;
         break;

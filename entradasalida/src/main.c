@@ -35,7 +35,8 @@ int main(int argc, char* argv[]) {
 		imprimir_mensaje("error: parametros mal ingresados");
 		exit(3);
     }
-    
+    iniciar_log_gral();
+	iniciar_log_oblig();
 	
 	nombre = argv[1];
 
@@ -191,7 +192,7 @@ void interfaz_stdin(char* nombre, t_config* config, int conexion_kernel)
 
 		// Handshake con Memoria fallido. Libera la conexion, e informa del error a Kernel.
 		if(!handshake_aceptado) {
-			liberar_conexion(log_io, "Memoria", conexion_memoria);
+			liberar_conexion(log_io_gral, "Memoria", conexion_memoria);
 			eliminar_paquete(paquete);
 			crear_paquete(MENSAJE_ERROR);
 			enviar_paquete(paquete, conexion_kernel);
@@ -212,7 +213,7 @@ void interfaz_stdin(char* nombre, t_config* config, int conexion_kernel)
 				paquete = crear_paquete(MENSAJE_ERROR);
 			}
 
-			liberar_conexion(log_io, "Memoria", conexion_memoria); // cierra conexion
+			liberar_conexion(log_io_gral, "Memoria", conexion_memoria); // cierra conexion
 
 			// avisa a kernel que termino 
 			enviar_paquete(paquete, conexion_kernel);
@@ -288,7 +289,7 @@ void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 
 		// Handshake con Memoria fallido. Libera la conexion, e informa del error a Kernel.
 		if(!handshake_aceptado) {
-			liberar_conexion(log_io, "Memoria", conexion_memoria);
+			liberar_conexion(log_io_gral, "Memoria", conexion_memoria);
 			eliminar_paquete(paquete);
 			crear_paquete(MENSAJE_ERROR);
 			enviar_paquete(paquete, conexion_kernel);
@@ -317,7 +318,7 @@ void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 				paquete = crear_paquete(MENSAJE_ERROR);
 			}
 			
-			liberar_conexion(log_io, nombre, conexion_memoria); // cierra conexión
+			liberar_conexion(log_io_gral, nombre, conexion_memoria); // cierra conexión
 
 			// avisa a kernel que terminó
 			enviar_paquete(paquete, conexion_kernel);
@@ -380,7 +381,7 @@ void interfaz_dialFS(char* nombre, t_config* config, int conexion_kernel)
 				fs_write(conexion_kernel, recibido, ip, puerto);
 				break;
 			default:
-				log_error(log_io, "Operación del FileSystem desconocida");
+				log_error(log_io_gral, "Operación del FileSystem desconocida");
 				break;
 		}
 		// limpiando recibido
@@ -404,7 +405,7 @@ void terminar_programa(char *nombre, int socket, t_config* config)
 {
 	// Y por ultimo, hay que liberar lo que utilizamos (conexion, log y config) 
 	 // con las funciones de las commons y del TP mencionadas en el enunciado /
-	liberar_conexion(log_io, nombre,socket);
+	liberar_conexion(log_io_gral, nombre,socket);
 	config_destroy(config);
 }
 

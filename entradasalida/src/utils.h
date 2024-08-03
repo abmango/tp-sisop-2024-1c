@@ -31,7 +31,8 @@ void enviar_handshake_a_memoria(char* nombre, int socket);
 // cambie de handshake_code a int xq un enum no tiene como valores validos los negativos
 bool manejar_rta_handshake(int rta_handshake, const char* nombre_servidor);
 
-void iniciar_logger(void);
+void iniciar_log_gral();
+void iniciar_log_oblig();
 
 /// @brief emite el log obligatorio
 /// @param pid 
