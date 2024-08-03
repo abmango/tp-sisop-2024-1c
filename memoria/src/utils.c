@@ -274,7 +274,7 @@ resultado_operacion acceso_espacio_usuario(t_buffer *data, t_list *solicitudes, 
     int i = 0;
     switch (acceso){
     case LECTURA: // data vacia, copiar de memoria a buffer data (informacion pura sin verificar, no es tarea memoria)
-        crear_buffer_mem(&data);
+        //crear_buffer_mem(&data);
         while(i<(list_size(solicitudes))){
             aux = memoria->espacio_usuario;
             direccion = list_get(solicitudes, i);
@@ -289,7 +289,7 @@ resultado_operacion acceso_espacio_usuario(t_buffer *data, t_list *solicitudes, 
             pthread_mutex_unlock(&mutex_memoria);
 
             retardo_operacion();
-            log_debug(log_memoria_gral, "Data: %s", (char*)(data->stream));
+            //log_debug(log_memoria_gral, "Data: %s", (char*)(data->stream));
         }
         if (data->size == 0){
             log_debug(log_memoria_gral, "Error al cargar data, sin tamaño");

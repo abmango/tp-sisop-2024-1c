@@ -260,6 +260,7 @@ void atender_cpu(int socket)
 			log_debug(log_memoria_gral, "CPU ha Solicitado ACCESO_LECTURA");
 		
 			recibido = recibir_paquete(socket);
+			crear_buffer_mem(&data);
 			result = acceso_espacio_usuario(data, recibido, LECTURA);
 			if (result == CORRECTA){
 				paquete = crear_paquete(ACCESO_LECTURA);
