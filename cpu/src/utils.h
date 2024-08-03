@@ -126,6 +126,7 @@ void* leer_memoria(unsigned dir_logica, unsigned tamanio);
 void check_interrupt(bool* desaloja);
 int recibir_codigo_sin_espera(int socket);
 t_list* mmu(unsigned dir_logica, unsigned tamanio);
+int buscar_tlb(int num_pag);
 void enviar_memoria(unsigned direccion, unsigned tamanio, void* valor);
 void agregar_mmu_paquete(t_paquete* paq, unsigned direccion_logica, unsigned tamanio);
 void desalojar_paquete(t_paquete* paq, bool* desalojado);

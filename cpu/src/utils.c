@@ -312,12 +312,7 @@ int recibir_codigo_sin_espera(int socket){
 	}
 }
 
-t_list* mmu(unsigned dir_logica, unsigned tamanio)
-{
-   int num_pag = dir_logica/tamanio_pagina;
-   int desplazamiento = dir_logica - num_pag*tamanio_pagina;
-   log_debug(log_cpu_gral, "Dir Logica: %d. Num Pagina: %d. Desplazamiento: %d", dir_logica, num_pag, desplazamiento);
-
+int buscar_tlb(int num_pag){
    int marco;
    if (!tlb_lookup(num_pag, &marco)) {
       t_paquete* paq = crear_paquete(PEDIDO_PAGINA);
@@ -342,6 +337,17 @@ t_list* mmu(unsigned dir_logica, unsigned tamanio)
       // Actualizar la TLB
       tlb_update(num_pag, marco);
    }
+   return marco;
+}
+
+t_list* mmu(unsigned dir_logica, unsigned tamanio)
+{
+   int num_pag = dir_logica/tamanio_pagina;
+   int desplazamiento = dir_logica - num_pag*tamanio_pagina;
+   log_debug(log_cpu_gral, "Dir Logica: %d. Num Pagina: %d. Desplazamiento: %d", dir_logica, num_pag, desplazamiento);
+
+   int marco = buscar_tlb(num_pag);
+   num_pag += 1;
    int dir_fisica = marco*tamanio_pagina + desplazamiento;
    int cant_bytes = tamanio_pagina - desplazamiento;
    tamanio -= cant_bytes; //lo que me falta aniadir
@@ -354,9 +360,11 @@ t_list* mmu(unsigned dir_logica, unsigned tamanio)
    log_debug(log_cpu_gral,"Direccion fisica: %d - Tamanio: %d", aux3->direccion, aux3->tamanio);
    list_add(format, aux3);
 
-   dir_fisica += cant_bytes;
 
    while(tamanio > tamanio_pagina){
+      marco = buscar_tlb(num_pag);
+      num_pag += 1;
+      dir_fisica = marco*tamanio_pagina;
       aux3 = malloc(sizeof(t_mmu));
       aux3->direccion = dir_fisica;
       aux3->tamanio = tamanio_pagina;
@@ -367,6 +375,8 @@ t_list* mmu(unsigned dir_logica, unsigned tamanio)
       list_add(format,aux3);
    }
    if(tamanio > 0){
+      marco = buscar_tlb(num_pag);
+      dir_fisica = marco*tamanio_pagina;
       aux3 = malloc(sizeof(t_mmu));
       aux3->direccion = dir_fisica;
       aux3->tamanio = tamanio;
@@ -488,10 +498,12 @@ int tlb_lookup(int virtual_page,int* frame) {
 
 // Algoritmos para actualizar la TLB
 void tlb_update(int virtual_page, int physical_page) {
-   if(tlb.planificacion == "FIFO"){
+   if(strcmp(tlb.planificacion, "FIFO") == 0){
+      log_debug(log_cpu_gral, "TLB acutalizo FIFO");
       tlb_update_fifo(virtual_page, physical_page);
    }
-   if(tlb.planificacion == "LRU"){
+   if(strcmp(tlb.planificacion, "LRU") == 0){
+      log_debug(log_cpu_gral, "TLB acutalizo LRU");
       tlb_update_lru(virtual_page, physical_page);
    }
 }
