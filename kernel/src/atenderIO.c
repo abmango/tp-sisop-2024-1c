@@ -5,6 +5,7 @@ void* rutina_atender_io(t_io_blocked* io) {
     t_pcb* proceso_que_vuelve_de_io = NULL;
 
     while(1) {
+        log_debug(log_kernel_gral, "esperando que termine");
         // Recibe aviso de si la IO realizó la operacion correctamente o si ocurrió un error.
         recibir_y_verificar_cod_respuesta_empaquetado(log_kernel_gral, IO_OPERACION, io->nombre, io->socket);
 

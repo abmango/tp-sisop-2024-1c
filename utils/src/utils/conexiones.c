@@ -191,10 +191,13 @@ bool recibir_y_verificar_cod_respuesta_empaquetado(t_log* logger, op_code cod_es
 	bool respuesta_exitosa = false;
 
 	int cod_recibido = recibir_codigo(socket);
-	t_list* lista = recibir_paquete(socket);
-	if(cod_recibido != -1 && list_size(lista) > 0) {
+	//t_list* lista = recibir_paquete(socket);
+	log_debug(logger, "paso 1");
+	recibir_codigo(socket);
+	log_debug(logger, "paso 2");
+	/*if(cod_recibido != -1 && list_size(lista) > 0) {
 		cod_recibido = -2;
-	}
+	}*/
 
 	if (cod_recibido == cod_esperado)
 	{
@@ -219,7 +222,7 @@ bool recibir_y_verificar_cod_respuesta_empaquetado(t_log* logger, op_code cod_es
 		}
 	}
 
-	list_destroy_and_destroy_elements(lista, (void*)free);
+	//list_destroy_and_destroy_elements(lista, (void*)free);
 
 	return respuesta_exitosa;
 }
