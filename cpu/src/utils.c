@@ -94,7 +94,6 @@ t_paquete* desalojar_registros(int motiv)
    t_desalojo desalojo;
    desalojo.contexto = reg;
    desalojo.motiv = motiv;
-   reg.pid = -1;
    void* buffer_desalojo = serializar_desalojo(desalojo);
    t_paquete* paq = crear_paquete(DESALOJO);
    agregar_a_paquete(paq, buffer_desalojo, tamanio_de_desalojo());
@@ -590,5 +589,6 @@ void desalojar_paquete(t_paquete* paq, bool* desalojado){
    enviar_paquete(paq, socket_kernel_dispatch);
    eliminar_paquete(paq);
    *desalojado = true;
+   reg.pid = -1;
 }
 
