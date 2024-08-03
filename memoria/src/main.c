@@ -290,7 +290,7 @@ void atender_cpu(int socket)
 			} else {
 				paquete = crear_paquete(MENSAJE_ERROR);
 				enviar_paquete(paquete, socket);
-				log_debug(log_memoria_gral, "Envio resultado exitoso ACCESO_LECTURA");
+				log_debug(log_memoria_gral, "Envio resultado fallido ACCESO_LECTURA");
 			}
 
 			// se limpia lo recibido

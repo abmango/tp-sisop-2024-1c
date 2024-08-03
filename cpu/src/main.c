@@ -111,6 +111,7 @@ int main(int argc, char *argv[])
 				enviar_memoria(*(unsigned*)registro_direccion, sizeof(uint32_t), registro_dato);
 				//enviar_memoria(*(uint32_t*)registro_direccion, sizeof(uint32_t), registro_dato);
 			}
+			log_debug(log_cpu_gral, "salio de mov_out");
 			break;}
 		case SUM:{
 			reg_type_code tipo_destino = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[1]);
