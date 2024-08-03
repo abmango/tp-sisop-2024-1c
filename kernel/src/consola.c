@@ -56,7 +56,7 @@ void *rutina_consola(void *puntero_NULL)
 ///////////////////////////////////////////////////////////////////
 void op_ejecutar_script(char* path, char* ip_memoria, char* puerto_memoria)
 {
-    FILE f = fopen(path, "r");
+    FILE* f = fopen(path, "r");
 
     if (f == NULL)
     {
