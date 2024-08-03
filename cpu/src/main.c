@@ -302,12 +302,25 @@ int main(int argc, char *argv[])
 			void* registro_direccion = dictionary_get(diccionario, arg[3]);
 			void* registro_tamanio = dictionary_get(diccionario, arg[4]);
 			void* registro_archivo = dictionary_get(diccionario, arg[5]);
-			reg_type_code tipo_registro = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[5]);
-			agregar_mmu_paquete(paq, *(unsigned*)registro_direccion, *(unsigned*)registro_tamanio);
-			if(tipo_registro = U_DE_8){
+			reg_type_code tipo_direccion = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[3]);
+			reg_type_code tipo_tamanio = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[4]);
+			reg_type_code tipo_archivo = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[5]);
+			if (registro_direccion == U_DE_32 && registro_tamanio == U_DE_32) {
+				agregar_mmu_paquete(paq, *(uint32_t*)registro_direccion, *(uint32_t*)registro_tamanio);
+			}
+			else if (registro_direccion == U_DE_32 && registro_tamanio == U_DE_8) {
+				agregar_mmu_paquete(paq, *(uint32_t*)registro_direccion, *(uint8_t*)registro_tamanio);
+			}
+			else if (registro_direccion == U_DE_8 && registro_tamanio == U_DE_32) {
+				agregar_mmu_paquete(paq, *(uint8_t*)registro_direccion, *(uint32_t*)registro_tamanio);
+			}
+			else if (registro_direccion == U_DE_8 && registro_tamanio == U_DE_8) {
+				agregar_mmu_paquete(paq, *(uint8_t*)registro_direccion, *(uint8_t*)registro_tamanio);
+			}
+			if(tipo_archivo = U_DE_8){
 				agregar_a_paquete(paq, registro_archivo, sizeof(uint8_t));
 			}
-			if(tipo_registro = U_DE_32){
+			if(tipo_archivo = U_DE_32){
 				agregar_a_paquete(paq, registro_archivo, sizeof(uint32_t));
 			}
 
@@ -321,12 +334,25 @@ int main(int argc, char *argv[])
 			void* registro_direccion = dictionary_get(diccionario, arg[3]);
 			void* registro_tamanio = dictionary_get(diccionario, arg[4]);
 			void* registro_archivo = dictionary_get(diccionario, arg[5]);
-			reg_type_code tipo_registro = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[5]);
-			agregar_mmu_paquete(paq, *(unsigned*)registro_direccion, *(unsigned*)registro_tamanio);
-			if(tipo_registro = U_DE_8){
+			reg_type_code tipo_direccion = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[3]);
+			reg_type_code tipo_tamanio = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[4]);
+			reg_type_code tipo_archivo = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[5]);
+			if (registro_direccion == U_DE_32 && registro_tamanio == U_DE_32) {
+				agregar_mmu_paquete(paq, *(uint32_t*)registro_direccion, *(uint32_t*)registro_tamanio);
+			}
+			else if (registro_direccion == U_DE_32 && registro_tamanio == U_DE_8) {
+				agregar_mmu_paquete(paq, *(uint32_t*)registro_direccion, *(uint8_t*)registro_tamanio);
+			}
+			else if (registro_direccion == U_DE_8 && registro_tamanio == U_DE_32) {
+				agregar_mmu_paquete(paq, *(uint8_t*)registro_direccion, *(uint32_t*)registro_tamanio);
+			}
+			else if (registro_direccion == U_DE_8 && registro_tamanio == U_DE_8) {
+				agregar_mmu_paquete(paq, *(uint8_t*)registro_direccion, *(uint8_t*)registro_tamanio);
+			}
+			if(tipo_archivo = U_DE_8){
 				agregar_a_paquete(paq, registro_archivo, sizeof(uint8_t));
 			}
-			if(tipo_registro = U_DE_32){
+			if(tipo_archivo = U_DE_32){
 				agregar_a_paquete(paq, registro_archivo, sizeof(uint32_t));
 			}
 

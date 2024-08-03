@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
 	iniciar_log_oblig();
 	
 	//nombre = argv[1];
-	nombre = string_from_format("SLP1"); // temp
+	nombre = string_from_format("MONITOR"); // temp
 
 	ip = config_get_string_value(config, "IP_KERNEL");
 	puerto = config_get_string_value(config, "PUERTO_KERNEL");
@@ -163,6 +163,7 @@ void interfaz_stdin(char* nombre, t_config* config, int conexion_kernel)
 
 		// revision si lo q resta en paquetes es par, sino error
 		if ( (list_size(recibido)% 2) != 0 ){
+			log_debug(log_io_gral, "Error list size");
 			eliminar_paquete(paquete);
 			paquete = crear_paquete(MENSAJE_ERROR);
 			enviar_paquete(paquete,conexion_kernel);
@@ -309,21 +310,24 @@ void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 			enviar_paquete(paquete, conexion_memoria);
 			eliminar_paquete(paquete);
 			
+			log_debug(log_io_gral, "Esperando Respuesta Memoria");
 			// se recibe directamente cod operacion + cadena con todo lo que habia en memoria
 			operacion = recibir_codigo(conexion_memoria);
 			if (operacion == ACCESO_LECTURA){
+				log_debug(log_io_gral, "Respuesta Afirmativa");
 				recibido = recibir_paquete(conexion_memoria);
 				paquete = crear_paquete(IO_OPERACION);
 				data = list_remove(recibido, 0);
 
 				// loguea y emite operacion
 				logguear_operacion(pid, STDOUT);
-				printf(data);
+				printf("%s",data);
 
 				free(data);
 				list_destroy(recibido);
 			} else {
 				paquete = crear_paquete(MENSAJE_ERROR);
+				log_warning(log_io_gral, "Respuesta errone");
 			}
 			
 			liberar_conexion(log_io_gral, nombre, conexion_memoria); // cierra conexión

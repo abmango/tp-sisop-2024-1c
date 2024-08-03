@@ -129,10 +129,10 @@ execute_op_code decode(char* instruc)
       return COPY_STRING;
    }
    if (strcmp(instruc, "WAIT") == 0){
-      return WAIT;
+      return WAIT_INSTRUCTION;
    }
    if (strcmp(instruc, "SIGNAL") == 0){
-      return SIGNAL;
+      return SIGNAL_INSTRUCTION;
    }
    if (strcmp(instruc, "IO_GEN_SLEEP") == 0){
       return IO_GEN_SLEEP;
