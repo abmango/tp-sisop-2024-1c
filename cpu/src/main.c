@@ -89,29 +89,54 @@ int main(int argc, char *argv[])
 			}
 			break;}
 		case MOV_IN:{
-			reg_type_code tipo_registro = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[1]);
+			reg_type_code tipo_registro_dato = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[1]);
+			reg_type_code tipo_registro_direccion = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[2]);
 			void* registro_dato = dictionary_get(diccionario, arg[1]);
 			void* registro_direccion = dictionary_get(diccionario, arg[2]);
-			if (tipo_registro == U_DE_8) {
-				*(uint8_t*)registro_dato = *(uint8_t*)leer_memoria(*(unsigned*)registro_direccion, sizeof(uint8_t));
+			if (tipo_registro_direccion == U_DE_32 && tipo_registro_dato == U_DE_32) {
+				uint32_t* aux = leer_memoria(*(uint32_t*)registro_direccion, sizeof(uint32_t));
+				*(uint32_t*)registro_dato = *aux;
+				log_debug(log_cpu_gral, "Nuevo valor de registro -%s- : %u", arg[1], *aux);
+				free(aux);
 			}
-			if (tipo_registro == U_DE_32) {
-				*(uint32_t*)registro_dato = *(uint32_t*)leer_memoria(*(unsigned*)registro_direccion, sizeof(uint32_t));
+			else if (tipo_registro_direccion == U_DE_32 && tipo_registro_dato == U_DE_8) {
+				uint8_t* aux = leer_memoria(*(uint32_t*)registro_direccion, sizeof(uint8_t));
+				*(uint8_t*)registro_dato = *aux;
+				log_debug(log_cpu_gral, "Nuevo valor de registro -%s- : %u", arg[1], *aux);
+				free(aux);
+			}
+			else if (tipo_registro_direccion == U_DE_8 && tipo_registro_dato == U_DE_32) {
+				uint32_t* aux = leer_memoria(*(uint8_t*)registro_direccion, sizeof(uint32_t));
+				*(uint32_t*)registro_dato = *aux;
+				log_debug(log_cpu_gral, "Nuevo valor de registro -%s- : %u", arg[1], *aux);
+				free(aux);
+			}
+			else if (tipo_registro_direccion == U_DE_8 && tipo_registro_dato == U_DE_8) {
+				uint8_t* aux = leer_memoria(*(unsigned*)registro_direccion, sizeof(uint8_t));
+				*(uint8_t*)registro_dato = *aux;
+				log_debug(log_cpu_gral, "Nuevo valor de registro -%s- : %u", arg[1], *aux);
+				free(aux);
 			}
 			break;}
 		case MOV_OUT:{
-			reg_type_code tipo_registro = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[2]);
+			reg_type_code tipo_registro_direccion = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[1]);
+			reg_type_code tipo_registro_dato = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[2]);
+
 			void* registro_direccion = dictionary_get(diccionario, arg[1]);
 			void* registro_dato = dictionary_get(diccionario, arg[2]);
-			if (tipo_registro == U_DE_8) {
-				enviar_memoria(*(unsigned*)registro_direccion, sizeof(uint8_t), registro_dato);
-				//enviar_memoria(*(uint8_t*)registro_direccion, sizeof(uint8_t), registro_dato);
+
+			if (tipo_registro_direccion == U_DE_32 && tipo_registro_dato == U_DE_32) {
+				enviar_memoria(*(uint32_t*)registro_direccion, sizeof(uint32_t), registro_dato);
 			}
-			if (tipo_registro == U_DE_32) {
-				enviar_memoria(*(unsigned*)registro_direccion, sizeof(uint32_t), registro_dato);
-				//enviar_memoria(*(uint32_t*)registro_direccion, sizeof(uint32_t), registro_dato);
+			else if (tipo_registro_direccion == U_DE_32 && tipo_registro_dato == U_DE_8) {
+				enviar_memoria(*(uint32_t*)registro_direccion, sizeof(uint8_t), registro_dato);
 			}
-			log_debug(log_cpu_gral, "salio de mov_out");
+			else if (tipo_registro_direccion == U_DE_8 && tipo_registro_dato == U_DE_32) {
+				enviar_memoria(*(uint8_t*)registro_direccion, sizeof(uint32_t), registro_dato);
+			}
+			else if (tipo_registro_direccion == U_DE_8 && tipo_registro_dato == U_DE_8) {
+				enviar_memoria(*(uint8_t*)registro_direccion, sizeof(uint8_t), registro_dato);
+			}
 			break;}
 		case SUM:{
 			reg_type_code tipo_destino = *(reg_type_code*)dictionary_get(diccionario_tipo_registro, arg[1]);
@@ -180,10 +205,12 @@ int main(int argc, char *argv[])
 			}
 			if(code == OUT_OF_MEMORY){
 				log_debug(log_cpu_gral,"Error al recibir respuesta de resize, out of memory");
-				exit(3);
+				t_paquete* paq = desalojar_registros(OUT_OF_MEMORY);
+				desalojar_paquete(paq, &desalojado);
+			}else{
+				log_debug(log_cpu_gral,"Resultado de resize exitoso");
 			}
 			recibir_codigo(socket_memoria); //paquete vacio, queda un entero,
-
 			break;
 		}
 		case COPY_STRING:{

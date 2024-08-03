@@ -95,6 +95,7 @@ t_paquete* desalojar_registros(int motiv)
    t_desalojo desalojo;
    desalojo.contexto = reg;
    desalojo.motiv = motiv;
+   reg.pid = -1;
    void* buffer_desalojo = serializar_desalojo(desalojo);
    t_paquete* paq = crear_paquete(DESALOJO);
    agregar_a_paquete(paq, buffer_desalojo, tamanio_de_desalojo());
@@ -165,6 +166,7 @@ execute_op_code decode(char* instruc)
 
 t_contexto_de_ejecucion recibir_contexto_ejecucion(void)
 {
+   log_debug(log_cpu_gral, "Esperando Contexto de ejecucion");
    if(recibir_codigo(socket_kernel_dispatch) != CONTEXTO_EJECUCION){
       log_error(log_cpu_gral, "Error al recibir contexto de ejecucion");
       exit(3);
@@ -255,35 +257,29 @@ void check_interrupt(bool* desaloja){
          switch(*interrupcion_recibida){
             case DESALOJAR:{
                log_debug(log_cpu_gral, "Interrupcion recibida, desalojando pid: %d", reg.pid);
-               log_debug(log_cpu_oblig, "Interrupcion recibida, desalojando pid: %d", reg.pid); // temp
                t_paquete* paq = desalojar_registros(INTERRUPTED_BY_QUANTUM);
                enviar_paquete(paq, socket_kernel_dispatch);
                eliminar_paquete(paq);
                log_debug(log_cpu_gral, "Desalojo enviado.");
-               log_debug(log_cpu_oblig, "Desalojo enviado."); // temp
                *desaloja = true;
                break;
             }
             case FINALIZAR:{
                log_debug(log_cpu_gral, "Interrupcion recibida, finalizando pid: %d", reg.pid);
-               log_debug(log_cpu_oblig, "Interrupcion recibida, finalizando pid: %d", reg.pid); // temp
                t_paquete* paq = desalojar_registros(INTERRUPTED_BY_USER);
                enviar_paquete(paq, socket_kernel_dispatch);
                eliminar_paquete(paq);
                log_debug(log_cpu_gral, "Desalojo enviado.");
-               log_debug(log_cpu_oblig, "Desalojo enviado."); // temp
                *desaloja = true;
                break;
             }
             default:
             log_error(log_cpu_gral, "Cod Descononocido de Interrupcion.");
-            log_debug(log_cpu_oblig, "Cod Descononocido de Interrupcion."); // temp
             exit(3);
             break;
          }
       }else{
          log_debug(log_cpu_gral, "Interrupcion descartada al pid: %d. Yo tengo el pid: %d", *pid_recibido, reg.pid);
-         log_debug(log_cpu_oblig, "Interrupcion descartada al pid: %d. Yo tengo el pid: %d", *pid_recibido, reg.pid); // temp
       }
       free(pid_recibido);
       free(interrupcion_recibida);
