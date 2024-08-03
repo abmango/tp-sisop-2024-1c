@@ -112,7 +112,7 @@ void interfaz_generica(char* nombre, t_config* config, int conexion_kernel)
 		// si data recibio valor muy alto se bloquea x mucho tiempo
 		//usleep(tiempo_en_microsegs);
 		log_debug(log_io_gral,"por dormir");
-		sleep(2);
+		usleep(tiempo_en_microsegs);
 		log_debug(log_io_gral,"ya dormi");
 
 		list_destroy_and_destroy_elements(recibido, (void*)free);
