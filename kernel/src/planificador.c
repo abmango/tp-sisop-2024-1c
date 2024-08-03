@@ -261,7 +261,7 @@ void planific_corto_fifo(void) {
             agregar_a_paquete(paquete, &fs_codigo, sizeof(int));
             agregar_a_paquete(paquete, &(proceso_exec->pid), sizeof(int));
             agregar_a_paquete(paquete, nombre_archivo, strlen(nombre_archivo) + 1);
-            agregar_a_paquete(paquete, *(int*)size_en_bytes, sizeof(int));
+            agregar_a_paquete(paquete, &size_en_bytes, sizeof(int));
 
             pthread_mutex_lock(&mutex_lista_io_blocked);
             io = encontrar_io(nombre_interfaz);
@@ -720,7 +720,7 @@ void planific_corto_rr(void) {
             agregar_a_paquete(paquete, &fs_codigo, sizeof(int));
             agregar_a_paquete(paquete, &(proceso_exec->pid), sizeof(int));
             agregar_a_paquete(paquete, nombre_archivo, strlen(nombre_archivo) + 1);
-            agregar_a_paquete(paquete, size_en_bytes, sizeof(int));
+            agregar_a_paquete(paquete, &size_en_bytes, sizeof(int));
 
             pthread_mutex_lock(&mutex_lista_io_blocked);
             io = encontrar_io(nombre_interfaz);
@@ -1187,7 +1187,7 @@ void planific_corto_vrr(void) {
             agregar_a_paquete(paquete, &fs_codigo, sizeof(int));
             agregar_a_paquete(paquete, &(proceso_exec->pid), sizeof(int));
             agregar_a_paquete(paquete, nombre_archivo, strlen(nombre_archivo) + 1);
-            agregar_a_paquete(paquete, size_en_bytes, sizeof(int));
+            agregar_a_paquete(paquete, &size_en_bytes, sizeof(int));
 
             pthread_mutex_lock(&mutex_lista_io_blocked);
             io = encontrar_io(nombre_interfaz);
