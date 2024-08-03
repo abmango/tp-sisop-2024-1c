@@ -85,6 +85,8 @@ int main(int argc, char* argv[]) {
 
 	puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
 	int socket_escucha = iniciar_servidor(puerto);
+	int yes = 1;
+	setsockopt(socket_escucha, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
 
 
 	// Servidor en bucle que espera y atiende conexiones de nuevas interfaces.
