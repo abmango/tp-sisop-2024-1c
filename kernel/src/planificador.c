@@ -261,7 +261,7 @@ void planific_corto_fifo(void) {
             agregar_a_paquete(paquete, &fs_codigo, sizeof(int));
             agregar_a_paquete(paquete, &(proceso_exec->pid), sizeof(int));
             agregar_a_paquete(paquete, nombre_archivo, strlen(nombre_archivo) + 1);
-            agregar_a_paquete(paquete, &size_en_bytes, sizeof(int));
+            agregar_a_paquete(paquete, *(int*)size_en_bytes, sizeof(int));
 
             pthread_mutex_lock(&mutex_lista_io_blocked);
             io = encontrar_io(nombre_interfaz);
@@ -308,10 +308,10 @@ void planific_corto_fifo(void) {
             int offset_en_archivo = *(int*)list_get(desalojo_y_argumentos, 3);
 
             paquete = crear_paquete(IO_OPERACION);
-            agregar_a_paquete(paquete, &fs_codigo, sizeof(int));
+            agregar_a_paquete(paquete, fs_codigo, sizeof(int));
             agregar_a_paquete(paquete, &(proceso_exec->pid), sizeof(int));
             agregar_a_paquete(paquete, nombre_archivo, strlen(nombre_archivo) + 1);
-            agregar_a_paquete(paquete, &offset_en_archivo, sizeof(int));
+            agregar_a_paquete(paquete, offset_en_archivo, sizeof(int));
 
             for( ; cant_de_pares_direccion_tamanio > 0; cant_de_pares_direccion_tamanio--) {
                 dir = list_remove(desalojo_y_argumentos, 4);
