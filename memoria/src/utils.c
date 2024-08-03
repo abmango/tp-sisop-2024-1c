@@ -271,13 +271,14 @@ resultado_operacion acceso_espacio_usuario(t_buffer *data, t_list *solicitudes, 
     aux = memoria->espacio_usuario;
     void* direccion;
     void* tamanio;
+    int i = 0;
     switch (acceso){
     case LECTURA: // data vacia, copiar de memoria a buffer data (informacion pura sin verificar, no es tarea memoria)
         crear_buffer_mem(&data);
-        for (int i=0; i<(list_size(solicitudes)/2); i++){
+        while(i<(list_size(solicitudes))){
             direccion = list_get(solicitudes, i);
             tamanio = list_get(solicitudes, i+1);
-            i++;
+            i = i + 2;
             aux = (aux + *(int*)direccion);
 
             log_info(log_memoria_oblig, "PID: %i - Accion: LEER - Direccion fisica: %i - Tamaño %i", pid, *(int*)direccion, *(int*)tamanio);
@@ -287,6 +288,7 @@ resultado_operacion acceso_espacio_usuario(t_buffer *data, t_list *solicitudes, 
             pthread_mutex_unlock(&mutex_memoria);
 
             retardo_operacion();
+
         }
         if (data->size == 0)
             return ERROR;
@@ -296,9 +298,10 @@ resultado_operacion acceso_espacio_usuario(t_buffer *data, t_list *solicitudes, 
 
     case ESCRITURA:
         void *stream = data->stream;
-        for (int i=0; i<(list_size(solicitudes)/2); i++){
+        while(i<(list_size(solicitudes))){
             direccion = list_get(solicitudes, i);
             tamanio = list_get(solicitudes, i+1);
+            i = i + 2;
             aux = (aux + *(int*)direccion);
 
             log_info(log_memoria_gral, "PID: <%i> - Accion: <ESCRIBIR> - Direccion fisica: <%i> - Tamaño <%i>", pid, *(int*)direccion, *(int*)tamanio);
@@ -310,10 +313,7 @@ resultado_operacion acceso_espacio_usuario(t_buffer *data, t_list *solicitudes, 
             stream = stream + *(int*)tamanio;
             retardo_operacion();
         }
-        if (stream == (data->stream + data->size)) // verifica que apunte a final buffer ?? verificar q sea correcto
-            return CORRECTA;
-        else
-            return ERROR;
+        return CORRECTA;
     break;
 
     default: return ERROR;

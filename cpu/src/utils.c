@@ -343,32 +343,36 @@ t_list* mmu(unsigned dir_logica, unsigned tamanio)
       tlb_update(num_pag, marco);
    }
    int dir_fisica = marco*tamanio_pagina + desplazamiento;
-   log_debug(log_cpu_gral,"Direccion fisica: %d", dir_fisica);
+   int cant_bytes = tamanio_pagina - desplazamiento;
+   tamanio -= cant_bytes; //lo que me falta aniadir
 
    t_list* format = list_create();
    t_mmu* aux3 = malloc(sizeof(t_mmu));
-   aux3->tamanio = tamanio_pagina - desplazamiento;
+
    aux3->direccion = dir_fisica;
+   aux3->tamanio = cant_bytes;
+   log_debug(log_cpu_gral,"Direccion fisica: %d - Tamanio: %d", aux3->direccion, aux3->tamanio);
    list_add(format, aux3);
-   tamanio -= tamanio_pagina - desplazamiento;
-   dir_fisica = dir_fisica + tamanio_pagina - desplazamiento;
+
+   dir_fisica += cant_bytes;
 
    while(tamanio > tamanio_pagina){
-      log_debug(log_cpu_gral,"Direccion fisica: %d", dir_fisica);
       aux3 = malloc(sizeof(t_mmu));
       aux3->direccion = dir_fisica;
       aux3->tamanio = tamanio_pagina;
+      log_debug(log_cpu_gral,"Direccion fisica: %d - Tamanio: %d", aux3->direccion, aux3->tamanio);
       dir_fisica += tamanio_pagina;
       tamanio-=tamanio_pagina;
 
       list_add(format,aux3);
    }
-   log_debug(log_cpu_gral,"Direccion fisica: %d", dir_fisica);
-
-   aux3 = malloc(sizeof(t_mmu));
-   aux3->direccion = dir_fisica;
-   aux3->tamanio = tamanio;
-   list_add(format, aux3);
+   if(tamanio > 0){
+      aux3 = malloc(sizeof(t_mmu));
+      aux3->direccion = dir_fisica;
+      aux3->tamanio = tamanio;
+      log_debug(log_cpu_gral,"Direccion fisica: %d - Tamanio: %d", aux3->direccion, aux3->tamanio);
+      list_add(format, aux3);
+   }
 
    return format;
 }
@@ -380,19 +384,20 @@ void enviar_memoria(unsigned dir_logica, unsigned tamanio, void* valor) //hay q 
    
    agregar_mmu_paquete(paq, dir_logica, tamanio);
 
-   agregar_a_paquete(paq, &valor, tamanio);
+   agregar_a_paquete(paq, valor, tamanio);
    
    enviar_paquete(paq,socket_memoria);
    eliminar_paquete(paq);
-   log_info(log_cpu_gral, "Envio pedido de escritura, PID:%d", reg.pid);
-  
-   if(recibir_codigo(socket_memoria != ACCESO_ESCRITURA)){
-      log_error(log_cpu_gral, "Error en respuesta de escritura");
+   log_info(log_cpu_gral, "Envio pedido de escritura, PID:%d, Tamanio: %u", reg.pid, tamanio);
+   
+   if(recibir_codigo(socket_memoria)  != ACCESO_ESCRITURA){
+      log_debug(log_cpu_gral, "Error en respuesta de escritura");
       exit(3);
    }
-   t_list* list = list_create();
-   list = recibir_paquete(socket_memoria);
-   list_destroy(list);
+   if(recibir_codigo(socket_memoria) != 0){
+      log_debug(log_cpu_gral, "Error en respuesta de escritura");
+      exit(3);
+   } 
 }
 
 t_dictionary* crear_diccionario(t_contexto_de_ejecucion* reg)
