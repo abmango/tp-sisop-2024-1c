@@ -429,7 +429,7 @@ void actualizar_f_bitmap (void){
 char *obtener_path_absoluto(char *ruta){
     char *aux = string_new();
     string_append(&aux, PATH_BASE);
-    //string_append(aux, "/");
+    string_append(&aux, "/");
     string_append(&aux, ruta);
     return aux;
 }
@@ -645,6 +645,12 @@ void fs_write (int conexion, t_list *parametros, char *ip_mem, char *puerto_mem)
     int operacion;
     t_list *recibido;
     bool resultado;
+
+    if(list_size(parametros)==0)
+    {
+        log_error(log_io_gral, "No se recibió correctamente el paquete");
+        return NULL;
+    }
     
     // parametros = int, char*,int, bucle (int-int)
 
