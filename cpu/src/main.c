@@ -28,10 +28,13 @@ int main(int argc, char *argv[])
 	// Inicio servidor de escucha en puerto Dispatch
 	puerto = config_get_string_value(config, "PUERTO_ESCUCHA_DISPATCH");
 	int socket_escucha_dispatch = iniciar_servidor(puerto);
+	int yes = 1;
+	setsockopt(socket_escucha_dispatch, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
 
 	// Inicio servidor de escucha en puerto Interrupt
 	puerto = config_get_string_value(config, "PUERTO_ESCUCHA_INTERRUPT");
 	int socket_escucha_interrupt = iniciar_servidor(puerto);
+	setsockopt(socket_escucha_interrupt, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
 
 
 	// Espero que se conecte el Kernel en puerto Dispatch

@@ -105,12 +105,15 @@ void interfaz_generica(char* nombre, t_config* config, int conexion_kernel)
 		tiempo_en_microsegs = tiempo*MILISEG_A_MICROSEG;
 
 		// si data recibio valor muy alto se bloquea x mucho tiempo
-		usleep(tiempo_en_microsegs);
+		//usleep(tiempo_en_microsegs);
+		log_debug(log_io_gral,"por dormir");
+		sleep(2);
+		log_debug(log_io_gral,"ya dormi");
 
-		list_destroy_and_destroy_elements(recibido, free);
+		list_destroy_and_destroy_elements(recibido, (void*)free);
 
 		// loguea operacion
-		logguear_operacion(pid, GEN_SLEEP);
+		logguear_operacion(pid, GENERICA);
 		
 		// avisa a kernel que termino
 		paquete = crear_paquete(IO_OPERACION);

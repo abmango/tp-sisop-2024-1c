@@ -23,6 +23,8 @@ int main(int argc, char* argv[]) {
 
 	char* puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
     socket_escucha = iniciar_servidor(puerto);
+	int yes = 1;
+	setsockopt(socket_escucha, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
 
 	int socket_cpu = esperar_cliente(socket_escucha);
 
