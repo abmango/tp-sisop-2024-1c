@@ -34,6 +34,7 @@ void *rutina_consola(void *puntero_NULL)
         }
         else if (strcmp(palabras_comando_ingresado[0], "MULTIPROGRAMACION") == 0)
         {
+            op_multiprogramacion(atoi(palabras_comando_ingresado[1]));
         }
         else if (strcmp(palabras_comando_ingresado[0], "PROCESO_ESTADO") == 0)
         {
@@ -53,6 +54,58 @@ void *rutina_consola(void *puntero_NULL)
 
 ///////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////
+void op_ejecutar_script(char* path, char* ip_memoria, char* puerto_memoria)
+{
+    FILE* f = fopen(path, "r");
+
+    if (f == NULL)
+    {
+        log_error(log_kernel_gral, "Script no encontrado");
+        return;
+    }
+
+    char* comando_a_ejecutar = NULL;
+    size_t len = 0;
+    char **palabras_comando_a_ejecutar;
+
+    while (getline(&comando_a_ejecutar, &len, f) != -1) // Usamos getline para leer líneas de longitud variable
+    {
+        comando_a_ejecutar[strcspn(comando_a_ejecutar, "\n")] = 0;  // Elimina el carácter de nueva línea
+        palabras_comando_a_ejecutar = string_split(comando_a_ejecutar, " ");
+
+        if (strcmp(palabras_comando_a_ejecutar[0], "INICIAR_PROCESO") == 0)
+        {
+            op_iniciar_proceso(palabras_comando_a_ejecutar[1], ip_memoria, puerto_memoria);
+        }
+        else if (strcmp(palabras_comando_a_ejecutar[0], "FINALIZAR_PROCESO") == 0)
+        {
+            op_finalizar_proceso(atoi(palabras_comando_a_ejecutar[1]));
+        }
+        else if (strcmp(palabras_comando_a_ejecutar[0], "DETENER_PLANIFICACION") == 0)
+        {
+            op_detener_planificacion();
+        }
+        else if (strcmp(palabras_comando_a_ejecutar[0], "INICIAR_PLANIFICACION") == 0)
+        {
+            op_iniciar_planificacion();
+        }
+        else if (strcmp(palabras_comando_a_ejecutar[0], "MULTIPROGRAMACION") == 0)
+        {
+            op_multiprogramacion(atoi(palabras_comando_a_ejecutar[1]));
+        }
+        else if (strcmp(palabras_comando_a_ejecutar[0], "PROCESO_ESTADO") == 0)
+        {
+            op_proceso_estado();
+        }
+
+        string_array_destroy(palabras_comando_a_ejecutar);
+    }
+
+    free(comando_a_ejecutar);  // Liberar la memoria asignada por getline
+    fclose(f);
+}
+
+/*
 void op_ejecutar_script(char* path, char* ip_memoria, char* puerto_memoria)
 {
     FILE *f = fopen(path, "r+b");
@@ -96,6 +149,7 @@ void op_ejecutar_script(char* path, char* ip_memoria, char* puerto_memoria)
 
     fclose(f);
 }
+*/
 
 void op_proceso_estado(void)
 {
@@ -253,7 +307,9 @@ void op_iniciar_planificacion(void) {
 }
 
 void op_multiprogramacion(int nuevo_grado) {
-    
+    pthread_mutex_lock(&mutex_grado_multiprogramacion);
+    grado_multiprogramacion = nuevo_grado;
+    pthread_mutex_unlock(&mutex_grado_multiprogramacion);
 }
 
 // ==========================================================================
