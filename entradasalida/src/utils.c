@@ -146,11 +146,13 @@ void agregar_dir_y_size_a_paquete(t_paquete *paquete, t_list *lista, int *bytes)
     while (!list_is_empty(lista)){
 			data = list_remove(lista, 0);
 			agregar_a_paquete(paquete, data, sizeof(int));
+            log_debug(log_io_gral, "dir: %i", *(int*)data);
 			free(data);
 
 			data = list_remove(lista, 0);
 			agregar_a_paquete(paquete, data, sizeof(int));
-			bytes += *(int*)data; 
+            log_debug(log_io_gral, "bytes: %i", *(int*)data);
+			*bytes += *(int*)data; 
 			free(data);
 		}
 }

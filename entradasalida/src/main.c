@@ -309,21 +309,24 @@ void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 			enviar_paquete(paquete, conexion_memoria);
 			eliminar_paquete(paquete);
 			
+			log_debug(log_io_gral, "Esperando Respuesta Memoria");
 			// se recibe directamente cod operacion + cadena con todo lo que habia en memoria
 			operacion = recibir_codigo(conexion_memoria);
 			if (operacion == ACCESO_LECTURA){
+				log_debug(log_io_gral, "Respuesta Afirmativa");
 				recibido = recibir_paquete(conexion_memoria);
 				paquete = crear_paquete(IO_OPERACION);
 				data = list_remove(recibido, 0);
 
 				// loguea y emite operacion
 				logguear_operacion(pid, STDOUT);
-				printf(data);
+				printf("%s",data);
 
 				free(data);
 				list_destroy(recibido);
 			} else {
 				paquete = crear_paquete(MENSAJE_ERROR);
+				log_warning(log_io_gral, "Respuesta errone");
 			}
 			
 			liberar_conexion(log_io_gral, nombre, conexion_memoria); // cierra conexión
