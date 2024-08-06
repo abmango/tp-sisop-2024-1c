@@ -7,58 +7,59 @@
 
 // Forma de ejecutar el módulo:
 // ./bin/entradasalida <nombreIO> <pathConfig>
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[])
+{
 
-    decir_hola("una Interfaz de Entrada/Salida");
+	decir_hola("una Interfaz de Entrada/Salida");
 
-    int conexion_kernel = 1;
-    char* ip;
-	char* puerto;
-	char* valor; // ME MARCA COMO QUE NO ESTA EN USO
-	char* tipo_interfaz; 
-	char* nombre;
+	int conexion_kernel = 1;
+	char *ip;
+	char *puerto;
+	char *valor; // ME MARCA COMO QUE NO ESTA EN USO
+	char *tipo_interfaz;
+	char *nombre;
 
-    t_config* config;
-	
-    // si no le pasamos path, usa el default.config.
-	
-    if (argc == 2) {
-        config = iniciar_config("default");
-    }
-    else if (argc == 3) {
-        config = config_create(argv[2]);
-    }
-    else if (argc == 1) {
+	t_config *config;
+
+	// si no le pasamos path, usa el default.config.
+
+	/*if (argc == 2) {
+		config = iniciar_config("default");
+	}
+	else if (argc == 3) {
+		config = config_create(argv[2]);
+	}
+	else if (argc == 1) {
 		imprimir_mensaje("error: al menos debe ingresar el nombre de la interfaz");
 		exit(3);
-    }
-    else {
+	}
+	else {
 		imprimir_mensaje("error: parametros mal ingresados");
 		exit(3);
-    }
-	
-	//config = iniciar_config("FS"); // temp
+	}*/
 
-    iniciar_log_gral();
+	config = iniciar_config("FS"); // temp
+
+	iniciar_log_gral();
 	iniciar_log_oblig();
-	
+
 	nombre = argv[1];
-	//nombre = string_from_format("FS"); // temp
+	nombre = string_from_format("FS"); // temp
 
 	ip = config_get_string_value(config, "IP_KERNEL");
 	puerto = config_get_string_value(config, "PUERTO_KERNEL");
-    conexion_kernel = crear_conexion(ip, puerto);
-	
+	conexion_kernel = crear_conexion(ip, puerto);
 
-	t_dictionary* diccionario_interfaces = crear_e_inicializar_diccionario_interfaces();
+	t_dictionary *diccionario_interfaces = crear_e_inicializar_diccionario_interfaces();
 	tipo_interfaz = config_get_string_value(config, "TIPO_INTERFAZ");
-	t_io_type_code cod_tipo_interfaz = *(int*)(dictionary_get(diccionario_interfaces, tipo_interfaz));
+	t_io_type_code cod_tipo_interfaz = *(int *)(dictionary_get(diccionario_interfaces, tipo_interfaz));
 
 	// handshake y se identifica ante kernel, dándole nombre y tipo de interfaz
 	enviar_handshake_e_identificacion(nombre, cod_tipo_interfaz, conexion_kernel);
 	bool handshake_aceptado = manejar_rta_handshake(recibir_handshake(conexion_kernel), "KERNEL");
 
-	if(handshake_aceptado) {
+	if (handshake_aceptado)
+	{
 		switch (cod_tipo_interfaz)
 		{
 		case GENERICA:
@@ -78,12 +79,12 @@ int main(int argc, char* argv[]) {
 		}
 	}
 
-    terminar_programa(nombre, conexion_kernel, config);
+	terminar_programa(nombre, conexion_kernel, config);
 
-    return 0;
+	return 0;
 }
 
-void interfaz_generica(char* nombre, t_config* config, int conexion_kernel)
+void interfaz_generica(char *nombre, t_config *config, int conexion_kernel)
 {
 	t_paquete *paquete;
 	t_list *recibido;
@@ -93,11 +94,12 @@ void interfaz_generica(char* nombre, t_config* config, int conexion_kernel)
 	int tiempo;
 	unsigned int tiempo_en_microsegs;
 	int pid;
-	op_code operacion;	
+	op_code operacion;
 
 	// Bucle hasta que kernel notifique cierre
 	operacion = recibir_codigo(conexion_kernel);
-	while (operacion == IO_OPERACION){
+	while (operacion == IO_OPERACION)
+	{
 		recibido = recibir_paquete(conexion_kernel);
 		// se asume que kernel no confunde id_interfaz, sino agregar if
 		// para elem 0 de la lista...
@@ -105,21 +107,21 @@ void interfaz_generica(char* nombre, t_config* config, int conexion_kernel)
 		pid = *(int *)data; // obtiene pid para log
 
 		data = list_get(recibido, 1);
-		tiempo = *(int*)data;
+		tiempo = *(int *)data;
 		tiempo *= unidadTrabajo;
-		tiempo_en_microsegs = tiempo*MILISEG_A_MICROSEG;
+		tiempo_en_microsegs = tiempo * MILISEG_A_MICROSEG;
 
 		// si data recibio valor muy alto se bloquea x mucho tiempo
-		//usleep(tiempo_en_microsegs);
-		log_debug(log_io_gral,"por dormir");
+		// usleep(tiempo_en_microsegs);
+		log_debug(log_io_gral, "por dormir");
 		usleep(tiempo_en_microsegs);
-		log_debug(log_io_gral,"ya dormi");
+		log_debug(log_io_gral, "ya dormi");
 
-		list_destroy_and_destroy_elements(recibido, (void*)free);
+		list_destroy_and_destroy_elements(recibido, (void *)free);
 
 		// loguea operacion
 		logguear_operacion(pid, GENERICA);
-		
+
 		// avisa a kernel que termino
 		paquete = crear_paquete(IO_OPERACION);
 		// agregar_a_paquete(paquete, &id_interfaz, sizeof(int));
@@ -131,18 +133,18 @@ void interfaz_generica(char* nombre, t_config* config, int conexion_kernel)
 	}
 }
 
-void interfaz_stdin(char* nombre, t_config* config, int conexion_kernel)
+void interfaz_stdin(char *nombre, t_config *config, int conexion_kernel)
 {
 	op_code operacion;
-	char* ip;
-	char* puerto;
+	char *ip;
+	char *puerto;
 	int conexion_memoria = 1;
 	t_paquete *paquete;
 	t_list *recibido;
 	char *data;
 	int bytes_totales_a_enviar, pid;
-	
-	/* NO ES NECESARIO POR CAMBIO PROTOCOLO */ 
+
+	/* NO ES NECESARIO POR CAMBIO PROTOCOLO */
 	// operacion = recibir_codigo(conexion_kernel);
 	// recibido = recibir_paquete(conexion_kernel);
 	// data = list_get(recibido, 0);
@@ -150,28 +152,31 @@ void interfaz_stdin(char* nombre, t_config* config, int conexion_kernel)
 
 	// Bucle hasta que kernel notifique cierre
 	operacion = recibir_codigo(conexion_kernel);
-	while (operacion == IO_OPERACION){
+	while (operacion == IO_OPERACION)
+	{
 		bytes_totales_a_enviar = 0;
 		recibido = recibir_paquete(conexion_kernel);
-		
+
 		// crea paquete y carga pid
 		paquete = crear_paquete(ACCESO_ESCRITURA);
 		data = list_remove(recibido, 0);
-		pid = *(int*)data;
+		pid = *(int *)data;
 		agregar_a_paquete(paquete, &pid, sizeof(int));
 		free(data);
 
 		// revision si lo q resta en paquetes es par, sino error
-		if ( (list_size(recibido)% 2) != 0 ){
+		if ((list_size(recibido) % 2) != 0)
+		{
 			log_debug(log_io_gral, "Error list size");
 			eliminar_paquete(paquete);
 			paquete = crear_paquete(MENSAJE_ERROR);
-			enviar_paquete(paquete,conexion_kernel);
+			enviar_paquete(paquete, conexion_kernel);
 			eliminar_paquete(paquete);
 			operacion = recibir_codigo(conexion_kernel);
 
 			// limpiando recibido
-			while (!list_is_empty(recibido)){
+			while (!list_is_empty(recibido))
+			{
 				data = list_remove(recibido, 0);
 				free(data);
 			}
@@ -182,13 +187,13 @@ void interfaz_stdin(char* nombre, t_config* config, int conexion_kernel)
 
 		// como dir y size son int los carga directamente al paquete
 		agregar_dir_y_size_a_paquete(paquete, recibido, &bytes_totales_a_enviar);
-		list_destroy(recibido); // 
-	
+		list_destroy(recibido); //
+
 		// Espera input de teclado (se podria agregar bucle)
 		data = readline("> ");
 		// si data sobrepasa bytes_totales_a_enviar no se agrega al paquete
 		agregar_a_paquete(paquete, data, bytes_totales_a_enviar);
-		free(data); //libera leido
+		free(data); // libera leido
 
 		// carga datos para conexion Memoria
 		ip = config_get_string_value(config, "IP_MEMORIA");
@@ -200,7 +205,8 @@ void interfaz_stdin(char* nombre, t_config* config, int conexion_kernel)
 		bool handshake_aceptado = manejar_rta_handshake(recibir_handshake(conexion_memoria), "Memoria");
 
 		// Handshake con Memoria fallido. Libera la conexion, e informa del error a Kernel.
-		if(!handshake_aceptado) {
+		if (!handshake_aceptado)
+		{
 			liberar_conexion(log_io_gral, "Memoria", conexion_memoria);
 			eliminar_paquete(paquete);
 			crear_paquete(MENSAJE_ERROR);
@@ -208,23 +214,27 @@ void interfaz_stdin(char* nombre, t_config* config, int conexion_kernel)
 			eliminar_paquete(paquete);
 		}
 		// Handshake con Memoria exitoso. Sigue la ejecución normal.
-		else {
+		else
+		{
 			// envia el paquete q fue cargando
-			enviar_paquete(paquete, conexion_memoria);	
-			eliminar_paquete(paquete);	
+			enviar_paquete(paquete, conexion_memoria);
+			eliminar_paquete(paquete);
 
 			operacion = recibir_codigo(conexion_memoria);
-			if(operacion == ACCESO_ESCRITURA){
+			if (operacion == ACCESO_ESCRITURA)
+			{
 				logguear_operacion(pid, STDIN);
 				paquete = crear_paquete(IO_OPERACION);
-			}else{
+			}
+			else
+			{
 				printf("ERROR EN MEMORIA");
 				paquete = crear_paquete(MENSAJE_ERROR);
 			}
 
 			liberar_conexion(log_io_gral, "Memoria", conexion_memoria); // cierra conexion
 
-			// avisa a kernel que termino 
+			// avisa a kernel que termino
 			enviar_paquete(paquete, conexion_kernel);
 			eliminar_paquete(paquete);
 		}
@@ -234,19 +244,19 @@ void interfaz_stdin(char* nombre, t_config* config, int conexion_kernel)
 	}
 }
 
-void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
+void interfaz_stdout(char *nombre, t_config *config, int conexion_kernel)
 {
 	op_code operacion;
-	char* ip;
-	char* puerto;
+	char *ip;
+	char *puerto;
 	int conexion_memoria = 1;
 	t_paquete *paquete;
 	t_list *recibido;
 	char *data;
 	int bytes_totales_a_enviar, pid;
-	
+
 	// Kernel Asigna id a interfaz (para futuros intercambios)
-	// se espera un paquete q solo tiene el id 
+	// se espera un paquete q solo tiene el id
 	// operacion = recibir_codigo(conexion_kernel);
 	// recibido = recibir_paquete(conexion_kernel);
 	// data = list_get(recibido, 0);
@@ -254,27 +264,30 @@ void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 
 	// Bucle hasta que kernel notifique cierre
 	operacion = recibir_codigo(conexion_kernel);
-	while (operacion == IO_OPERACION){
+	while (operacion == IO_OPERACION)
+	{
 		bytes_totales_a_enviar = 0;
 		recibido = recibir_paquete(conexion_kernel);
-		
+
 		// crea paquete y carga pid
 		paquete = crear_paquete(ACCESO_LECTURA);
 		data = list_remove(recibido, 0);
-		pid = *(int*)data;
+		pid = *(int *)data;
 		agregar_a_paquete(paquete, &pid, sizeof(int));
 		free(data);
 
 		// revision si lo que resta en paquetes es par, sino error
-		if ( (list_size(recibido)% 2) != 0 ){
+		if ((list_size(recibido) % 2) != 0)
+		{
 			eliminar_paquete(paquete);
 			paquete = crear_paquete(MENSAJE_ERROR);
-			enviar_paquete(paquete,conexion_kernel);
+			enviar_paquete(paquete, conexion_kernel);
 			eliminar_paquete(paquete);
 			operacion = recibir_codigo(conexion_kernel);
 
 			// limpiando recibido
-			while (!list_is_empty(recibido)){
+			while (!list_is_empty(recibido))
+			{
 				data = list_remove(recibido, 0);
 				free(data);
 			}
@@ -285,7 +298,7 @@ void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 
 		// como dir y size son int los carga directamente al  paquete
 		agregar_dir_y_size_a_paquete(paquete, recibido, &bytes_totales_a_enviar);
-		list_destroy(recibido); // 
+		list_destroy(recibido); //
 
 		// carga datos para conexion Memoria
 		ip = config_get_string_value(config, "IP_MEMORIA");
@@ -297,23 +310,26 @@ void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 		bool handshake_aceptado = manejar_rta_handshake(recibir_handshake(conexion_memoria), "Memoria");
 
 		// Handshake con Memoria fallido. Libera la conexion, e informa del error a Kernel.
-		if(!handshake_aceptado) {
+		if (!handshake_aceptado)
+		{
 			liberar_conexion(log_io_gral, "Memoria", conexion_memoria);
 			eliminar_paquete(paquete);
 			crear_paquete(MENSAJE_ERROR);
 			enviar_paquete(paquete, conexion_kernel);
-			eliminar_paquete(paquete);			
+			eliminar_paquete(paquete);
 		}
 		// Handshake con Memoria exitoso. Sigue la ejecución normal.
-		else {
+		else
+		{
 			// envia el paquete cargado con direcciones
 			enviar_paquete(paquete, conexion_memoria);
 			eliminar_paquete(paquete);
-			
+
 			log_debug(log_io_gral, "Esperando Respuesta Memoria");
 			// se recibe directamente cod operacion + cadena con todo lo que habia en memoria
 			operacion = recibir_codigo(conexion_memoria);
-			if (operacion == ACCESO_LECTURA){
+			if (operacion == ACCESO_LECTURA)
+			{
 				log_debug(log_io_gral, "Respuesta Afirmativa");
 				recibido = recibir_paquete(conexion_memoria);
 				paquete = crear_paquete(IO_OPERACION);
@@ -321,15 +337,17 @@ void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 
 				// loguea y emite operacion
 				logguear_operacion(pid, STDOUT);
-				printf("%s",data);
+				printf("%s", data);
 
 				free(data);
 				list_destroy(recibido);
-			} else {
+			}
+			else
+			{
 				paquete = crear_paquete(MENSAJE_ERROR);
 				log_warning(log_io_gral, "Respuesta errone");
 			}
-			
+
 			liberar_conexion(log_io_gral, nombre, conexion_memoria); // cierra conexión
 
 			// avisa a kernel que terminó
@@ -345,19 +363,19 @@ void interfaz_stdout(char* nombre, t_config* config, int conexion_kernel)
 	free(puerto);
 }
 
-void interfaz_dialFS(char* nombre, t_config* config, int conexion_kernel)
+void interfaz_dialFS(char *nombre, t_config *config, int conexion_kernel)
 {
 	op_code operacion;
-	char* ip;
-	char* puerto;
+	char *ip;
+	char *puerto;
 	t_list *recibido;
 	void *aux;
 	int codigo_fs;
-	
+
 	// pasan a dentro de las funciones
 	// int conexion_memoria = 1;
 	// t_paquete *paquete;
-	
+
 	// Carga datos para conexion memoria
 	ip = config_get_string_value(config, "IP_MEMORIA");
 	puerto = config_get_string_value(config, "PUERTO_MEMORIA");
@@ -366,22 +384,25 @@ void interfaz_dialFS(char* nombre, t_config* config, int conexion_kernel)
 	iniciar_FS(config, nombre);
 
 	// identificarse(nombre, DIALFS, conexion_kernel); // hay un problema con esto ?? (no tiene referencia) // ESTO YA NO VA. Se puede borrar sin problema
-
-	operacion = recibir_codigo(conexion_kernel);
-	while (operacion == IO_OPERACION)
+	while (true)
 	{
-		recibido = recibir_paquete(conexion_kernel);
 
-		if (recibido == NULL) {
-            log_error(log_io_gral, "Error al recibir paquete del Kernel");
-            break;
-        }
-
-		aux = list_remove(recibido, 0); // remueve int para dial_fs_op_code (queda solo lo que se necesita para FS y comunicacion de ser necesaria)
-		codigo_fs = *(int *)aux;
-
-		switch (codigo_fs)
+		operacion = recibir_codigo(conexion_kernel);
+		if (operacion == IO_OPERACION)
 		{
+			recibido = recibir_paquete(conexion_kernel);
+
+			if (recibido==NULL)
+			{
+				log_error(log_io_gral, "Error al recibir paquete del Kernel");
+				continue;
+			}
+
+			aux = list_remove(recibido, 0); // remueve int para dial_fs_op_code (queda solo lo que se necesita para FS y comunicacion de ser necesaria)
+			codigo_fs = *(int *)aux;
+
+			switch (codigo_fs)
+			{
 			case CREAR_F:
 				fs_create(conexion_kernel, recibido);
 				break;
@@ -400,15 +421,16 @@ void interfaz_dialFS(char* nombre, t_config* config, int conexion_kernel)
 			default:
 				log_error(log_io_gral, "Operación del FileSystem desconocida");
 				break;
+			}
+			// limpiando recibido
+			while (!list_is_empty(recibido))
+			{
+				aux = list_remove(recibido, 0);
+				free(aux);
+			}
+			list_destroy(recibido);
 		}
-		// limpiando recibido
-		while (!list_is_empty(recibido)){
-			aux = list_remove(recibido, 0);
-			free(aux);
-		}
-		list_destroy(recibido);
 	}
-
 
 	// en funciones write y read
 	// conexion_memoria = crear_conexion(ip, puerto);
@@ -418,31 +440,31 @@ void interfaz_dialFS(char* nombre, t_config* config, int conexion_kernel)
 	free(puerto);
 }
 
-void terminar_programa(char *nombre, int socket, t_config* config)
+void terminar_programa(char *nombre, int socket, t_config *config)
 {
-	// Y por ultimo, hay que liberar lo que utilizamos (conexion, log y config) 
-	 // con las funciones de las commons y del TP mencionadas en el enunciado /
-	liberar_conexion(log_io_gral, nombre,socket);
+	// Y por ultimo, hay que liberar lo que utilizamos (conexion, log y config)
+	// con las funciones de las commons y del TP mencionadas en el enunciado /
+	liberar_conexion(log_io_gral, nombre, socket);
 	config_destroy(config);
 }
 
 t_dictionary *crear_e_inicializar_diccionario_interfaces(void)
 {
-    t_dictionary *diccionario = dictionary_create();
-    t_io_type_code *nuevo_tipo_interfaz;
-    
-    nuevo_tipo_interfaz = malloc(sizeof(t_io_type_code));
-    *nuevo_tipo_interfaz = GENERICA;
-    dictionary_put(diccionario, "GENERICA", nuevo_tipo_interfaz);
-    nuevo_tipo_interfaz = malloc(sizeof(t_io_type_code));
-    *nuevo_tipo_interfaz = STDIN;
-    dictionary_put(diccionario, "STDIN", nuevo_tipo_interfaz);
-    nuevo_tipo_interfaz = malloc(sizeof(t_io_type_code));
-    *nuevo_tipo_interfaz = STDOUT;
-    dictionary_put(diccionario, "STDOUT", nuevo_tipo_interfaz);
-    nuevo_tipo_interfaz = malloc(sizeof(t_io_type_code));
-    *nuevo_tipo_interfaz = DIALFS;
-    dictionary_put(diccionario, "DIALFS", nuevo_tipo_interfaz);
+	t_dictionary *diccionario = dictionary_create();
+	t_io_type_code *nuevo_tipo_interfaz;
 
-    return diccionario;
+	nuevo_tipo_interfaz = malloc(sizeof(t_io_type_code));
+	*nuevo_tipo_interfaz = GENERICA;
+	dictionary_put(diccionario, "GENERICA", nuevo_tipo_interfaz);
+	nuevo_tipo_interfaz = malloc(sizeof(t_io_type_code));
+	*nuevo_tipo_interfaz = STDIN;
+	dictionary_put(diccionario, "STDIN", nuevo_tipo_interfaz);
+	nuevo_tipo_interfaz = malloc(sizeof(t_io_type_code));
+	*nuevo_tipo_interfaz = STDOUT;
+	dictionary_put(diccionario, "STDOUT", nuevo_tipo_interfaz);
+	nuevo_tipo_interfaz = malloc(sizeof(t_io_type_code));
+	*nuevo_tipo_interfaz = DIALFS;
+	dictionary_put(diccionario, "DIALFS", nuevo_tipo_interfaz);
+
+	return diccionario;
 }

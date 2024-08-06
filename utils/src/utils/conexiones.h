@@ -71,9 +71,9 @@ typedef enum
 typedef enum {
     CREAR_F,
     ELIMINAR_F,
-    ESCRIBIR_F,
+    TRUNCAR_F,
     LEER_F,
-	TRUNCAR_F
+	ESCRIBIR_F
 } dial_fs_op_code;
 
 typedef struct
