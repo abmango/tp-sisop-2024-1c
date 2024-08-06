@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
 
 	// si no le pasamos path, usa el default.config.
 
-	/*if (argc == 2) {
+	if (argc == 2) {
 		config = iniciar_config("default");
 	}
 	else if (argc == 3) {
@@ -36,15 +36,15 @@ int main(int argc, char *argv[])
 	else {
 		imprimir_mensaje("error: parametros mal ingresados");
 		exit(3);
-	}*/
+	}
 
-	config = iniciar_config("FS"); // temp
+	//config = iniciar_config("FS"); // temp
 
 	iniciar_log_gral();
 	iniciar_log_oblig();
 
 	nombre = argv[1];
-	nombre = string_from_format("FS"); // temp
+	//nombre = string_from_format("FS"); // temp
 
 	ip = config_get_string_value(config, "IP_KERNEL");
 	puerto = config_get_string_value(config, "PUERTO_KERNEL");
